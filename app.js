@@ -1,9 +1,10 @@
 /* ============================================================
-   TSUKI 🌙 — BUILD 3
-   SIGNATURE CYCLE INTELLIGENCE
+   TSUKI 🌙 — BUILD 4
+   TSUKI KNOWS ME — SIGNATURE PERSONAL INTELLIGENCE
    ============================================================ */
 
-const STORAGE_KEY = "tsuki-data-v3";
+const STORAGE_KEY = "tsuki-data-v4";
+const BUILD3_STORAGE_KEY = "tsuki-data-v3";
 const BUILD2_STORAGE_KEY = "tsuki-data-v2";
 const LEGACY_STORAGE_KEY = "tsuki-data-v1";
 
@@ -139,7 +140,7 @@ function standardDeviation(numbers) {
 
 const defaultData = {
 
-  schemaVersion: 3,
+  schemaVersion: 4,
 
   settings: {
     cycleLength: 28,
@@ -147,7 +148,8 @@ const defaultData = {
     sakura: true,
     reduceMotion: false,
     hideDetails: false,
-    discreet: true
+    discreet: true,
+    quietInterface: false
   },
 
   periods: [],
@@ -157,6 +159,13 @@ const defaultData = {
   relief: [],
 
   journal: [],
+
+  trips: [],
+
+  careProfile: {
+    options: [],
+    message: ""
+  },
 
   insightState: {
     saved: [],
@@ -212,7 +221,7 @@ function normalizeData(parsed) {
   return {
     ...clone(defaultData),
     ...(parsed || {}),
-    schemaVersion: 3,
+    schemaVersion: 4,
     settings: {
       ...defaultData.settings,
       ...(parsed?.settings || {})
@@ -227,6 +236,18 @@ function normalizeData(parsed) {
       parsed?.relief || [],
     journal:
       parsed?.journal || [],
+    trips:
+      Array.isArray(parsed?.trips)
+        ? parsed.trips
+        : [],
+    careProfile: {
+      ...defaultData.careProfile,
+      ...(parsed?.careProfile || {}),
+      options:
+        Array.isArray(parsed?.careProfile?.options)
+          ? parsed.careProfile.options
+          : []
+    },
     insightState: {
       saved:
         Array.isArray(parsed?.insightState?.saved)
@@ -248,7 +269,7 @@ function migrateBuild1(oldData) {
   const migrated = {
     ...clone(defaultData),
     ...oldData,
-    schemaVersion: 3,
+    schemaVersion: 4,
     settings: {
       ...defaultData.settings,
       ...(oldData.settings || {})
@@ -301,15 +322,34 @@ function migrateBuild1(oldData) {
 
 function loadData() {
   try {
-    const build3Saved =
+    const build4Saved =
       localStorage.getItem(
         STORAGE_KEY
       );
 
-    if (build3Saved) {
+    if (build4Saved) {
       return normalizeData(
-        JSON.parse(build3Saved)
+        JSON.parse(build4Saved)
       );
+    }
+
+    const build3Saved =
+      localStorage.getItem(
+        BUILD3_STORAGE_KEY
+      );
+
+    if (build3Saved) {
+      const migrated =
+        normalizeData(
+          JSON.parse(build3Saved)
+        );
+
+      localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify(migrated)
+      );
+
+      return migrated;
     }
 
     const build2Saved =
@@ -364,7 +404,7 @@ function loadData() {
 
 
 function saveData() {
-  data.schemaVersion = 3;
+  data.schemaVersion = 4;
 
   localStorage.setItem(
     STORAGE_KEY,
@@ -447,6 +487,46 @@ function averagePeriodLength() {
   return Math.round(
     average(durations)
   );
+}
+
+
+function assumedPeriodEnd(startValue) {
+  const start =
+    typeof startValue === "string"
+      ? parseDate(startValue)
+      : startValue;
+
+  if (!start) return null;
+
+  const configuredLength =
+    Math.max(
+      1,
+      Number(data.settings.periodLength) ||
+      averagePeriodLength()
+    );
+
+  return addDays(
+    start,
+    configuredLength - 1
+  );
+}
+
+
+function ensurePeriodEnd(startValue, endValue = "") {
+  if (endValue) return endValue;
+
+  const assumed = assumedPeriodEnd(startValue);
+  return assumed ? dateKey(assumed) : "";
+}
+
+
+function numberRange(values) {
+  const clean = values.filter(Number.isFinite);
+  if (!clean.length) return null;
+  return {
+    min: Math.min(...clean),
+    max: Math.max(...clean)
+  };
 }
 
 
@@ -760,7 +840,9 @@ function showScreen(name) {
   if (name === "going-out") renderGoingOut();
   if (name === "past-moons") renderPastMoons();
   if (name === "reports") renderReports();
+  if (name === "care-profile") renderCareProfile();
 }
+
 
 
 document
@@ -882,6 +964,8 @@ function renderToday() {
       todayLog.energy || "Not logged";
 
   renderHomeInsights();
+  renderSignatureToday();
+  applyGentlePrepWindow();
 }
 
 
@@ -916,7 +1000,9 @@ function startPeriodToday() {
   data.periods.push({
     id: uid(),
     start: today,
-    end: ""
+    end: ensurePeriodEnd(today),
+    context: "",
+    nextMoonNote: ""
   });
 
   data.logs[today] = {
@@ -931,7 +1017,7 @@ function startPeriodToday() {
   renderEverything();
 
   showToast(
-    "New cycle started 🌙"
+    `New cycle started · ${Number(data.settings.periodLength) || averagePeriodLength()} days marked 🌙`
   );
 }
 
@@ -975,11 +1061,43 @@ const editingPeriodId =
     "editingPeriodId"
   );
 
+const periodContext =
+  document.getElementById(
+    "periodContext"
+  );
+
+const periodContextCustom =
+  document.getElementById(
+    "periodContextCustom"
+  );
+
+periodContext.addEventListener(
+  "change",
+  () => {
+    periodContextCustom.classList.toggle(
+      "hidden",
+      periodContext.value !== "Custom"
+    );
+  }
+);
+
+periodStartDate.addEventListener(
+  "change",
+  () => {
+    if (!editingPeriodId.value && periodStartDate.value) {
+      periodEndDate.value = ensurePeriodEnd(periodStartDate.value);
+    }
+  }
+);
+
 
 function resetPeriodForm() {
   editingPeriodId.value = "";
   periodStartDate.value = "";
   periodEndDate.value = "";
+  periodContext.value = "";
+  periodContextCustom.value = "";
+  periodContextCustom.classList.add("hidden");
 
   document
     .getElementById(
@@ -1050,7 +1168,15 @@ document
         periodStartDate.value;
 
       const end =
-        periodEndDate.value;
+        ensurePeriodEnd(
+          start,
+          periodEndDate.value
+        );
+
+      const context =
+        periodContext.value === "Custom"
+          ? periodContextCustom.value.trim()
+          : periodContext.value;
 
       const error =
         validatePeriodDates(
@@ -1091,13 +1217,16 @@ document
         if (period) {
           period.start = start;
           period.end = end;
+          period.context = context;
         }
       }
       else {
         data.periods.push({
           id: uid(),
           start,
-          end
+          end,
+          context,
+          nextMoonNote: ""
         });
       }
 
@@ -1142,7 +1271,22 @@ function editPeriod(id) {
     period.start;
 
   periodEndDate.value =
-    period.end || "";
+    period.end || ensurePeriodEnd(period.start);
+
+  const knownContexts = [
+    "", "Travel", "High Stress", "Illness",
+    "Busy Month", "Poor Sleep", "Vacation"
+  ];
+
+  if (knownContexts.includes(period.context || "")) {
+    periodContext.value = period.context || "";
+    periodContextCustom.value = "";
+    periodContextCustom.classList.add("hidden");
+  } else {
+    periodContext.value = "Custom";
+    periodContextCustom.value = period.context || "";
+    periodContextCustom.classList.remove("hidden");
+  }
 
   document
     .getElementById(
@@ -1328,6 +1472,7 @@ function renderCycleHistory() {
                         : ""
                     }
                   </p>
+                  ${period.context ? `<span class="cycle-context-chip">${escapeHTML(period.context)}</span>` : ""}
                 </div>
 
                 <span>🌸</span>
@@ -1541,6 +1686,13 @@ function loadLogForm() {
 
   document
     .getElementById(
+      "tinyJoy"
+    )
+    .value =
+      saved.tinyJoy || "";
+
+  document
+    .getElementById(
       "dailyNotes"
     )
     .value =
@@ -1578,6 +1730,13 @@ document
           getCheckedValue("sleep"),
         symptoms:
           getSymptoms(),
+        tinyJoy:
+          document
+            .getElementById(
+              "tinyJoy"
+            )
+            .value
+            .trim(),
         notes:
           document
             .getElementById(
@@ -1821,6 +1980,217 @@ function renderCalendar() {
 
 
 /* ============================================================
+   TSUKI SIGNATURE — FORECAST, ECHOES & PREP
+   ============================================================ */
+
+function historicalLogsNearCycleDay(targetDay, tolerance = 1) {
+  return logsWithCycleContext().filter(
+    log => Math.abs(log.context.cycleDay - targetDay) <= tolerance
+  );
+}
+
+function summarizePersonalDay(targetDay) {
+  const logs = historicalLogsNearCycleDay(targetDay, 1);
+  const cycles = distinctCount(logs.map(log => log.context.cycleId));
+  const mood = frequency(logs.map(log => log.mood));
+  const energy = frequency(logs.map(log => log.energy));
+  const symptom = frequency(logs.flatMap(log => log.symptoms || []));
+
+  return {
+    samples: logs.length,
+    cycles,
+    mood: mood ? mood[0] : null,
+    energy: energy ? energy[0] : null,
+    symptom: symptom ? symptom[0] : null
+  };
+}
+
+function renderTsukiForecast() {
+  const container = document.getElementById("tsukiForecast");
+  if (!container) return;
+
+  const day = currentCycleDay();
+  if (!day) {
+    container.innerHTML = `<article class="forecast-empty">Log your period to start your personal forecast 🌙</article>`;
+    return;
+  }
+
+  container.innerHTML = Array.from({ length: 7 }, (_, index) => {
+    const targetDay = day + index;
+    const summary = summarizePersonalDay(targetDay);
+    const date = addDays(new Date(), index);
+    let icon = "🌙";
+    let text = "Still learning";
+
+    if (summary.cycles >= 2) {
+      if (summary.symptom) {
+        icon = summary.symptom === "Headache" ? "☁️" : summary.symptom === "Fatigue" ? "💤" : "🌸";
+        text = summary.symptom;
+      } else if (summary.energy) {
+        icon = summary.energy === "Low" ? "🫧" : "✨";
+        text = `${summary.energy} energy`;
+      } else if (summary.mood) {
+        icon = "💗";
+        text = summary.mood;
+      }
+    }
+
+    return `
+      <article class="forecast-day ${index === 0 ? "today-forecast" : ""}">
+        <small>${index === 0 ? "Today" : date.toLocaleDateString(undefined, { weekday: "short" })}</small>
+        <span>${icon}</span>
+        <strong>Day ${targetDay}</strong>
+        <em>${escapeHTML(text)}</em>
+      </article>
+    `;
+  }).join("");
+}
+
+function renderTonightTomorrow() {
+  const card = document.getElementById("tonightTomorrowCard");
+  if (!card) return;
+  const day = currentCycleDay();
+  if (!day) {
+    card.innerHTML = `<span>🌙</span><div><strong>Tonight / Tomorrow</strong><p>Once Tsuki knows your cycle, this becomes a tiny personal heads-up for the next day.</p></div>`;
+    return;
+  }
+  const tomorrow = summarizePersonalDay(day + 1);
+  if (tomorrow.cycles < 2) {
+    card.innerHTML = `<span>🌙</span><div><strong>Tonight / Tomorrow</strong><p>Tomorrow is around Cycle Day ${day + 1}. Tsuki is still learning what your own history usually looks like there.</p></div>`;
+    return;
+  }
+  const bits = [];
+  if (tomorrow.energy) bits.push(`${tomorrow.energy.toLowerCase()} energy`);
+  if (tomorrow.mood) bits.push(`${tomorrow.mood.toLowerCase()} mood`);
+  if (tomorrow.symptom) bits.push(tomorrow.symptom.toLowerCase());
+  card.innerHTML = `<span>🌙</span><div><strong>Tonight / Tomorrow</strong><p>Tomorrow is around Cycle Day ${day + 1}. In ${tomorrow.cycles} past cycles, your logs around this point often included ${escapeHTML(bits.join(", ") || "a similar rhythm")}. This is only a personal-history hint.</p></div>`;
+}
+
+
+function renderWhatUsuallyComesNext() {
+  const card = document.getElementById("whatNextCard");
+  if (!card) return;
+  const day = currentCycleDay();
+  if (!day) {
+    card.innerHTML = `<span>🔮</span><div><strong>What usually comes next?</strong><p>Add cycle history and daily logs so Tsuki can compare similar days.</p></div>`;
+    return;
+  }
+
+  const upcoming = [1, 2, 3]
+    .map(offset => ({ offset, summary: summarizePersonalDay(day + offset) }))
+    .filter(item => item.summary.cycles >= 2 && (item.summary.symptom || item.summary.energy || item.summary.mood));
+
+  if (!upcoming.length) {
+    card.innerHTML = `<span>🔮</span><div><strong>What usually comes next?</strong><p>Tsuki is still collecting enough similar days to answer this reliably.</p></div>`;
+    return;
+  }
+
+  const first = upcoming[0];
+  const detail = first.summary.symptom || (first.summary.energy ? `${first.summary.energy.toLowerCase()} energy` : first.summary.mood);
+  card.innerHTML = `<span>🔮</span><div><strong>What usually comes next?</strong><p>About ${first.offset} day${first.offset === 1 ? "" : "s"} from now, you often logged <b>${escapeHTML(detail)}</b> in ${first.summary.cycles} previous cycles.</p></div>`;
+}
+
+function bestHelpfulRelief() {
+  const scores = new Map();
+  data.relief.forEach(item => {
+    if (!item.action) return;
+    const entry = scores.get(item.action) || { action: item.action, positive: 0, total: 0 };
+    entry.total += 1;
+    if (item.helpful === "Helped a lot" || item.helpful === "Helped a little") entry.positive += 1;
+    scores.set(item.action, entry);
+  });
+  return Array.from(scores.values()).sort((a, b) => b.positive - a.positive || b.total - a.total)[0] || null;
+}
+
+function renderBeforeItHits() {
+  const card = document.getElementById("beforeItHitsCard");
+  if (!card) return;
+  const windowData = estimatedWindow();
+  if (!windowData) {
+    card.innerHTML = `<span>🫧</span><div><strong>Before it hits</strong><p>Tsuki will prepare a gentle reminder once it can estimate your next period window.</p></div>`;
+    return;
+  }
+
+  const days = daysBetween(parseDate(todayKey()), windowData.start);
+  const relief = bestHelpfulRelief();
+  if (days > 7) {
+    card.innerHTML = `<span>🫧</span><div><strong>Before it hits</strong><p>Your estimated window is ${formatDate(windowData.start)}–${formatDate(windowData.end)}. Nothing to prep yet.</p></div>`;
+    return;
+  }
+
+  const missing = data.periodKit.filter(item => !item.packed).length;
+  const reliefText = relief && relief.positive > 0 ? ` You previously marked ${escapeHTML(relief.action)} as helpful.` : "";
+  card.innerHTML = `<span>🫧</span><div><strong>Before it hits</strong><p>Your estimated window is close.${missing ? ` ${missing} Moon Bag item${missing === 1 ? " is" : "s are"} not ready.` : " Your Moon Bag is ready."}${reliefText}</p></div>`;
+}
+
+function renderTsukiEchoes() {
+  const card = document.getElementById("tsukiEchoesCard");
+  if (!card) return;
+  const day = currentCycleDay();
+  if (!day) {
+    card.innerHTML = `<span>🌗</span><div><strong>Tsuki Echoes</strong><p>Days like today will appear here after you build some history.</p></div>`;
+    return;
+  }
+  const logs = historicalLogsNearCycleDay(day, 0);
+  const cycles = distinctCount(logs.map(log => log.context.cycleId));
+  if (cycles < 2) {
+    card.innerHTML = `<span>🌗</span><div><strong>Tsuki Echoes · Day ${day}</strong><p>Tsuki needs at least two past cycles with a log around this exact cycle day.</p></div>`;
+    return;
+  }
+  const symptom = frequency(logs.flatMap(log => log.symptoms || []));
+  const mood = frequency(logs.map(log => log.mood));
+  const joyCount = logs.filter(log => log.tinyJoy).length;
+  const bits = [];
+  if (symptom) bits.push(`${symptom[0]} appeared most often`);
+  if (mood) bits.push(`${mood[0]} was the most common mood`);
+  if (joyCount) bits.push(`${joyCount} tiny joy${joyCount === 1 ? "" : "s"} were saved`);
+  card.innerHTML = `<span>🌗</span><div><strong>Tsuki Echoes · Day ${day}</strong><p>${bits.length ? escapeHTML(bits.join(" · ")) : "You logged this cycle day before, but there is no strong detail to summarize yet."} · ${cycles} past cycles.</p></div>`;
+}
+
+function renderNextMoonMessage() {
+  const card = document.getElementById("nextMoonMessageCard");
+  if (!card) return;
+  const periods = validPeriods();
+  const current = latestPeriod();
+  if (!current || periods.length < 2) {
+    card.classList.add("hidden");
+    return;
+  }
+  const previous = periods[periods.length - 2];
+  if (!previous.nextMoonNote) {
+    card.classList.add("hidden");
+    return;
+  }
+  const day = currentCycleDay();
+  if (!day || day > Math.max(7, averagePeriodLength() + 2)) {
+    card.classList.add("hidden");
+    return;
+  }
+  card.classList.remove("hidden");
+  card.innerHTML = `<span>💌</span><div><strong>A note from your last moon</strong><p>${escapeHTML(previous.nextMoonNote)}</p></div>`;
+}
+
+function applyGentlePrepWindow() {
+  const estimate = estimatedWindow();
+  document.body.classList.remove("prep-soon", "prep-now");
+  if (!estimate) return;
+  const today = parseDate(todayKey());
+  const daysToStart = daysBetween(today, estimate.start);
+  if (daysToStart <= 2 && today <= estimate.end) document.body.classList.add("prep-now");
+  else if (daysToStart <= 7 && daysToStart >= 0) document.body.classList.add("prep-soon");
+}
+
+function renderSignatureToday() {
+  renderTsukiForecast();
+  renderTonightTomorrow();
+  renderWhatUsuallyComesNext();
+  renderBeforeItHits();
+  renderTsukiEchoes();
+  renderNextMoonMessage();
+}
+
+
+/* ============================================================
    SIGNATURE INSIGHT ENGINE
    ============================================================ */
 
@@ -1940,7 +2310,11 @@ function completedCycles() {
       cycleLength,
       periodLength:
         periodDuration(period) ||
-        averagePeriodLength()
+        averagePeriodLength(),
+      context:
+        period.context || "",
+      nextMoonNote:
+        period.nextMoonNote || ""
     });
   }
 
@@ -2763,6 +3137,17 @@ function insightCardHTML(
         )}
       </p>
 
+      ${
+        insight.informational
+          ? ""
+          : `
+            <details class="evidence-drawer">
+              <summary>Why am I seeing this?</summary>
+              <p>Tsuki found ${insight.observations} matching observation${insight.observations === 1 ? "" : "s"} across ${insight.cycles} completed cycle${insight.cycles === 1 ? "" : "s"}. It only describes your own logs and does not infer a diagnosis or cause.</p>
+            </details>
+          `
+      }
+
       <div class="insight-meta">
 
         <span
@@ -3059,6 +3444,110 @@ function renderPhasePatternGrid() {
 }
 
 
+function renderMyNormal() {
+  const cycleRange = numberRange(cycleIntervals());
+  const periodRange = numberRange(completedPeriodDurations());
+  const cycleEl = document.getElementById("normalCycleRange");
+  const periodEl = document.getElementById("normalPeriodRange");
+  const todayEl = document.getElementById("normalTodayText");
+
+  if (cycleEl) cycleEl.textContent = cycleRange ? `${cycleRange.min}–${cycleRange.max} days` : "Still learning";
+  if (periodEl) periodEl.textContent = periodRange ? `${periodRange.min}–${periodRange.max} days` : `${averagePeriodLength()} days estimated`;
+
+  if (todayEl) {
+    const day = currentCycleDay();
+    const summary = day ? summarizePersonalDay(day) : null;
+    if (!summary || summary.cycles < 2) todayEl.textContent = "Tsuki needs more similar days first.";
+    else {
+      const bits = [];
+      if (summary.mood) bits.push(`${summary.mood} mood`);
+      if (summary.energy) bits.push(`${summary.energy.toLowerCase()} energy`);
+      if (summary.symptom) bits.push(summary.symptom);
+      todayEl.textContent = bits.length ? `Around Day ${day}, your usual logs include ${bits.join(", ")}.` : `Day ${day} has no strong recurring detail yet.`;
+    }
+  }
+}
+
+function renderMoonMap() {
+  const container = document.getElementById("moonMap");
+  if (!container) return;
+  const phases = ["Period", "Follicular", "Mid-cycle", "Luteal"];
+  const icons = { Period: "🌸", Follicular: "🌱", "Mid-cycle": "✨", Luteal: "🌙" };
+  container.innerHTML = phases.map((phase, index) => {
+    const summary = phaseSummary(phase);
+    const detail = summary.symptom || summary.energy || summary.mood || "Learning";
+    return `<div class="moon-map-orbit orbit-${index + 1}"><span>${icons[phase]}</span><strong>${phase}</strong><small>${escapeHTML(detail)}</small></div>`;
+  }).join("");
+}
+
+function renderLearningMap() {
+  const container = document.getElementById("learningMap");
+  if (!container) return;
+  const completed = completedCycles().length;
+  const logs = allLogs().length;
+  const metrics = [
+    { label: "Cycle length", level: cycleIntervals().length >= 4 ? "Established" : cycleIntervals().length >= 2 ? "Recurring" : "Emerging" },
+    { label: "Period length", level: completedPeriodDurations().length >= 4 ? "Established" : completedPeriodDurations().length >= 2 ? "Recurring" : "Emerging" },
+    { label: "Symptom timing", level: completed >= 4 && logs >= 12 ? "Established" : completed >= 3 ? "Recurring" : "Emerging" },
+    { label: "Mood & energy", level: completed >= 4 && logs >= 16 ? "Established" : completed >= 2 && logs >= 8 ? "Recurring" : "Emerging" },
+    { label: "Relief patterns", level: data.relief.filter(item => item.helpful !== "Not sure").length >= 5 ? "Established" : data.relief.length >= 2 ? "Recurring" : "Emerging" }
+  ];
+  const icon = { Established: "●", Recurring: "◐", Emerging: "○" };
+  container.innerHTML = metrics.map(item => `<div class="learning-row ${item.level.toLowerCase()}"><span>${icon[item.level]}</span><strong>${item.label}</strong><em>${item.level}</em></div>`).join("");
+}
+
+function renderSymptomConstellations() {
+  const container = document.getElementById("symptomConstellations");
+  if (!container) return;
+  const pairs = new Map();
+  allLogs().forEach(log => {
+    const symptoms = [...new Set(log.symptoms || [])].sort();
+    for (let i = 0; i < symptoms.length; i++) {
+      for (let j = i + 1; j < symptoms.length; j++) {
+        const key = `${symptoms[i]} + ${symptoms[j]}`;
+        pairs.set(key, (pairs.get(key) || 0) + 1);
+      }
+    }
+  });
+  const best = Array.from(pairs.entries()).sort((a, b) => b[1] - a[1])[0];
+  container.innerHTML = best && best[1] >= 2
+    ? `<p><strong>${escapeHTML(best[0])}</strong> were logged together on ${best[1]} days.</p><small>Association only — Tsuki does not infer a cause.</small>`
+    : `<p>Log symptoms together over time and Tsuki can notice recurring combinations.</p>`;
+}
+
+function renderTinyJoyPattern() {
+  const container = document.getElementById("tinyJoyPattern");
+  if (!container) return;
+  const joyLogs = allLogs().filter(log => log.tinyJoy);
+  if (!joyLogs.length) {
+    container.innerHTML = `<p>No tiny joys logged yet. Add one during a daily check-in whenever something good happens.</p>`;
+    return;
+  }
+  const withPositiveMood = joyLogs.filter(log => log.mood === "Happy" || log.mood === "Calm").length;
+  container.innerHTML = `<p>You saved <strong>${joyLogs.length}</strong> tiny joy${joyLogs.length === 1 ? "" : "s"}.${withPositiveMood ? ` ${withPositiveMood} were on days you also logged Happy or Calm.` : ""}</p><small>Tsuki records this as a pattern, not a claim of causation.</small>`;
+}
+
+function renderLivingStory() {
+  const container = document.getElementById("livingTsukiStory");
+  if (!container) return;
+  const current = latestPeriod();
+  if (!current) {
+    container.innerHTML = `<h3>Your living story is waiting 🌙</h3><p class="story-empty">Start your first cycle and it will grow as you check in.</p>`;
+    return;
+  }
+  const start = parseDate(current.start);
+  const logs = allLogs().filter(log => parseDate(log.date) >= start);
+  const mood = frequency(logs.map(log => log.mood));
+  const symptom = frequency(logs.flatMap(log => log.symptoms || []));
+  const joys = logs.filter(log => log.tinyJoy).length;
+  const parts = [`Cycle Day ${currentCycleDay() || 1}`, `${logs.length} check-in${logs.length === 1 ? "" : "s"}`];
+  if (mood) parts.push(`most logged mood: ${mood[0]}`);
+  if (symptom) parts.push(`common symptom: ${symptom[0]}`);
+  if (joys) parts.push(`${joys} tiny joy${joys === 1 ? "" : "s"}`);
+  container.innerHTML = `<h3>This moon is still unfolding ✨</h3><p>${escapeHTML(parts.join(" · "))}</p><p class="muted small-text">This recap updates as you log more days.</p>`;
+}
+
+
 function renderInsights() {
   const allInsights =
     buildInsights();
@@ -3215,7 +3704,13 @@ function renderInsights() {
         ? symptom[0]
         : "—";
 
+  renderMyNormal();
+  renderMoonMap();
+  renderLearningMap();
+  renderSymptomConstellations();
+  renderTinyJoyPattern();
   renderPhasePatternGrid();
+  renderLivingStory();
   renderTsukiStory();
 }
 
@@ -3306,6 +3801,12 @@ function cycleStoryData(
         "None"
     );
 
+  const tinyJoys =
+    logs.filter(
+      log =>
+        log.tinyJoy
+    );
+
   const facts = [];
 
   if (mood) {
@@ -3338,6 +3839,12 @@ function cycleStoryData(
     );
   }
 
+  if (tinyJoys.length) {
+    facts.push(
+      `🌷 A tiny joy you saved: ${tinyJoys[tinyJoys.length - 1].tinyJoy}`
+    );
+  }
+
   return {
     cycle,
     logs,
@@ -3351,6 +3858,7 @@ function cycleStoryData(
         : null,
     strongerPainDays,
     lowEnergyDays,
+    tinyJoys,
     facts
   };
 }
@@ -3572,10 +4080,32 @@ function renderPastMoons() {
               )}
             </p>
 
+            ${story.tinyJoys?.length ? `<p class="moon-memory-joy">🌷 ${escapeHTML(story.tinyJoys[story.tinyJoys.length - 1].tinyJoy)}</p>` : ""}
+
+            ${cycle.context ? `<span class="cycle-context-chip">${escapeHTML(cycle.context)}</span>` : ""}
+
+            <div class="next-moon-note">
+              <label>💌 Note to my next moon</label>
+              <textarea data-next-moon-note="${cycle.id}" placeholder="What should future-you remember?">${escapeHTML(cycle.nextMoonNote || "")}</textarea>
+              <button type="button" data-save-next-moon="${cycle.id}">Save note</button>
+            </div>
+
           </article>
         `;
       }
     ).join("");
+
+  document.querySelectorAll("[data-save-next-moon]").forEach(button => {
+    button.addEventListener("click", () => {
+      const period = data.periods.find(item => item.id === button.dataset.saveNextMoon);
+      const field = document.querySelector(`[data-next-moon-note="${button.dataset.saveNextMoon}"]`);
+      if (!period || !field) return;
+      period.nextMoonNote = field.value.trim();
+      saveData();
+      renderNextMoonMessage();
+      showToast("Note saved for your next moon 💌");
+    });
+  });
 }
 
 
@@ -3613,6 +4143,25 @@ document
    BAD DAY MODE
    ============================================================ */
 
+let quietDayMood = "";
+
+document
+  .getElementById("toggleQuietInterface")
+  ?.addEventListener("click", () => {
+    data.settings.quietInterface = !data.settings.quietInterface;
+    saveData();
+    applySettings();
+    showToast(data.settings.quietInterface ? "Extra quiet mode on ☁️" : "Full interface restored 🌙");
+  });
+
+document.querySelectorAll("[data-quiet-mood]").forEach(button => {
+  button.addEventListener("click", () => {
+    quietDayMood = button.dataset.quietMood;
+    document.querySelectorAll("[data-quiet-mood]").forEach(item => item.classList.toggle("selected", item === button));
+  });
+});
+
+
 document
   .getElementById(
     "saveBadDay"
@@ -3633,6 +4182,8 @@ document
               )
               .value
           ),
+        mood:
+          quietDayMood || data.logs[key]?.mood || "",
         medication:
           document
             .getElementById(
@@ -3972,7 +4523,24 @@ document
   );
 
 
+function renderMoonBagIntelligence() {
+  const card = document.getElementById("moonBagIntelligence");
+  if (!card) return;
+  const total = data.periodKit.length;
+  const ready = data.periodKit.filter(item => item.packed).length;
+  const missing = total - ready;
+  const estimate = estimatedWindow();
+  let timing = "";
+  if (estimate) {
+    const days = daysBetween(parseDate(todayKey()), estimate.start);
+    if (days >= 0 && days <= 7) timing = ` Your estimated period window begins in about ${days} day${days === 1 ? "" : "s"}.`;
+  }
+  card.innerHTML = `<span>${missing ? "🎀" : "✅"}</span><div><p class="eyebrow">MOON BAG INTELLIGENCE</p><h3>${missing ? `${missing} item${missing === 1 ? "" : "s"} still to pack` : "Your Moon Bag is ready"}</h3><p>${ready}/${total || 0} items ready.${timing}</p></div>`;
+}
+
+
 function renderKit() {
+  renderMoonBagIntelligence();
   const container =
     document.getElementById(
       "kitList"
@@ -4031,6 +4599,7 @@ function renderKit() {
                 checkbox.checked;
 
               saveData();
+              renderKit();
               renderGoingOut();
             }
           }
@@ -4068,7 +4637,58 @@ function renderKit() {
    GOING OUT MODE
    ============================================================ */
 
+document
+  .getElementById("saveTrip")
+  ?.addEventListener("click", () => {
+    const name = document.getElementById("tripName").value.trim() || "Trip / event";
+    const start = document.getElementById("tripStart").value;
+    const end = document.getElementById("tripEnd").value || start;
+    if (!start) {
+      showToast("Choose a trip or event date first 🌙");
+      return;
+    }
+    if (parseDate(end) < parseDate(start)) {
+      showToast("Trip end cannot be before its start.");
+      return;
+    }
+    data.trips.unshift({ id: uid(), name, start, end });
+    saveData();
+    document.getElementById("tripName").value = "";
+    document.getElementById("tripStart").value = "";
+    document.getElementById("tripEnd").value = "";
+    renderTripOverlay();
+    showToast("Trip added to your cycle overlay ✈️");
+  });
+
+function tripPeriodOverlap(trip) {
+  const estimate = estimatedWindow();
+  if (!estimate) return false;
+  const start = parseDate(trip.start);
+  const end = parseDate(trip.end);
+  return start <= estimate.end && end >= estimate.start;
+}
+
+function renderTripOverlay() {
+  const container = document.getElementById("tripOverlay");
+  if (!container) return;
+  if (!data.trips.length) {
+    container.innerHTML = `<article class="soft-note">Save a trip, event, workday, or date and Tsuki will compare it with your estimated period window.</article>`;
+    return;
+  }
+  container.innerHTML = data.trips.slice(0, 8).map(trip => {
+    const overlap = tripPeriodOverlap(trip);
+    return `<article class="trip-overlay-card ${overlap ? "overlap" : "clear"}"><div><strong>${escapeHTML(trip.name)}</strong><small>${formatDate(parseDate(trip.start))}${trip.end !== trip.start ? `–${formatDate(parseDate(trip.end))}` : ""}</small><p>${overlap ? "🌙 This overlaps your current estimated period window. Consider your Moon Bag and saved comfort actions." : "✨ No overlap with your current estimated period window."}</p></div><button type="button" data-delete-trip="${trip.id}">×</button></article>`;
+  }).join("");
+  document.querySelectorAll("[data-delete-trip]").forEach(button => button.addEventListener("click", () => {
+    data.trips = data.trips.filter(item => item.id !== button.dataset.deleteTrip);
+    saveData();
+    renderTripOverlay();
+  }));
+}
+
+
 function renderGoingOut() {
+  renderTripOverlay();
   const day =
     currentCycleDay();
 
@@ -4159,6 +4779,34 @@ function renderGoingOut() {
       )
       .join("");
 }
+
+
+/* ============================================================
+   HOW TO CARE FOR ME
+   ============================================================ */
+
+function renderCareProfile() {
+  const profile = data.careProfile || { options: [], message: "" };
+  document.querySelectorAll('input[name="careOption"]').forEach(input => {
+    input.checked = profile.options.includes(input.value);
+  });
+  const message = document.getElementById("careMessage");
+  if (message) message.value = profile.message || "";
+  const preview = document.getElementById("carePreview");
+  if (!preview) return;
+  const options = profile.options.length ? profile.options.map(item => `<span>${escapeHTML(item)}</span>`).join("") : `<small>No comfort preferences saved yet.</small>`;
+  preview.innerHTML = `<p class="eyebrow">MY PRIVATE COMFORT CARD</p><h3>What helps me 💗</h3><div class="care-preview-tags">${options}</div>${profile.message ? `<p>${escapeHTML(profile.message)}</p>` : ""}<small>Stored locally. Nothing is shared automatically.</small>`;
+}
+
+document.getElementById("saveCareProfile")?.addEventListener("click", () => {
+  data.careProfile = {
+    options: Array.from(document.querySelectorAll('input[name="careOption"]:checked')).map(input => input.value),
+    message: document.getElementById("careMessage").value.trim()
+  };
+  saveData();
+  renderCareProfile();
+  showToast("Comfort card saved privately 💗");
+});
 
 
 /* ============================================================
@@ -4428,6 +5076,11 @@ function applySettings() {
     data.settings.hideDetails
   );
 
+  document.body.classList.toggle(
+    "quiet-interface",
+    Boolean(data.settings.quietInterface)
+  );
+
   document
     .querySelectorAll(
       ".sakura"
@@ -4490,7 +5143,7 @@ document
 
       const exportData = {
         app: "Tsuki",
-        version: 3,
+        version: 4,
         exportedAt:
           new Date()
             .toISOString(),
@@ -4568,6 +5221,10 @@ document
 
       localStorage.removeItem(
         STORAGE_KEY
+      );
+
+      localStorage.removeItem(
+        BUILD3_STORAGE_KEY
       );
 
       localStorage.removeItem(
@@ -4733,6 +5390,7 @@ function renderEverything() {
   renderGoingOut();
   renderPastMoons();
   renderReports();
+  renderCareProfile();
 }
 
 
@@ -4742,6 +5400,7 @@ function renderEverything() {
 
 function init() {
   loadSettingsUI();
+  applySettings();
   loadLogForm();
   renderEverything();
   updateOnlineStatus();

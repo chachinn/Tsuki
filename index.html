@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <title>Tsuki 🌙</title>
 
   <meta
@@ -122,6 +122,28 @@
 
       </div>
 
+      <section class="section-block signature-today">
+
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">TSUKI FORECAST</p>
+            <h3>Your next seven days</h3>
+          </div>
+          <span class="tiny-moon">🌙</span>
+        </div>
+
+        <div id="tsukiForecast" class="forecast-strip"></div>
+
+        <div class="signature-stack">
+          <article id="tonightTomorrowCard" class="signature-card"></article>
+          <article id="whatNextCard" class="signature-card"></article>
+          <article id="beforeItHitsCard" class="signature-card"></article>
+          <article id="tsukiEchoesCard" class="signature-card"></article>
+          <article id="nextMoonMessageCard" class="signature-card hidden"></article>
+        </div>
+
+      </section>
+
       <section class="section-block">
 
         <div class="section-heading">
@@ -214,6 +236,12 @@
             <span>🌙</span>
             <strong>Past Moons</strong>
             <small>Your cycle stories</small>
+          </button>
+
+          <button class="feature-card" data-open-screen="care-profile">
+            <span>💗</span>
+            <strong>How to Care for Me</strong>
+            <small>Your private support preferences</small>
           </button>
 
           <button class="feature-card" data-open-screen="calendar">
@@ -350,8 +378,28 @@
           class="input"
         >
 
+        <label class="field-label">Cycle context</label>
+
+        <select id="periodContext" class="input">
+          <option value="">No label</option>
+          <option value="Travel">✈️ Travel</option>
+          <option value="High Stress">☁️ High stress</option>
+          <option value="Illness">🫧 Illness</option>
+          <option value="Busy Month">📚 Busy month</option>
+          <option value="Poor Sleep">💤 Poor sleep</option>
+          <option value="Vacation">🌸 Vacation</option>
+          <option value="Custom">✨ Custom</option>
+        </select>
+
+        <input
+          id="periodContextCustom"
+          class="input hidden"
+          placeholder="Name this cycle..."
+        >
+
         <p class="muted small-text">
-          If your period is still ongoing, leave the end date blank and update it later.
+          Tsuki automatically fills the expected end using your usual period length.
+          You can correct it later when your actual period ends.
         </p>
 
         <button
@@ -637,6 +685,20 @@
 
         <article class="card">
 
+          <p class="card-label">Tiny joy</p>
+          <p class="muted small-text">A small good thing from today — completely optional.</p>
+
+          <input
+            id="tinyJoy"
+            class="input"
+            maxlength="100"
+            placeholder="Good coffee, sunshine, a funny message..."
+          >
+
+        </article>
+
+        <article class="card">
+
           <label class="field-label">
             Notes
           </label>
@@ -678,6 +740,16 @@
         It only surfaces timing patterns after enough repeated observations.
         These are personal observations, not diagnoses.
       </article>
+
+      <section class="section-block compact-block">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">TSUKI LEARNS ME</p>
+            <h3>What Tsuki knows so far</h3>
+          </div>
+        </div>
+        <div id="learningMap" class="learning-map"></div>
+      </section>
 
       <div class="insight-toolbar">
         <button
@@ -766,10 +838,53 @@
 
         </article>
 
+        <div class="normal-grid">
+          <article class="normal-card">
+            <small>My usual cycle range</small>
+            <strong id="normalCycleRange">Still learning</strong>
+          </article>
+          <article class="normal-card">
+            <small>My usual period range</small>
+            <strong id="normalPeriodRange">Still learning</strong>
+          </article>
+          <article class="normal-card wide">
+            <small>My normal today</small>
+            <strong id="normalTodayText">Tsuki needs more history first.</strong>
+          </article>
+        </div>
+
+        <article class="moon-map-card">
+          <div class="moon-map-center">🌕</div>
+          <div id="moonMap" class="moon-map"></div>
+        </article>
+
         <div id="phasePatternGrid" class="phase-pattern-grid"></div>
+
+        <div class="insight-duo">
+          <article class="card">
+            <p class="eyebrow">SYMPTOM CONSTELLATIONS</p>
+            <div id="symptomConstellations"></div>
+          </article>
+          <article class="card">
+            <p class="eyebrow">TINY JOYS</p>
+            <div id="tinyJoyPattern"></div>
+          </article>
+        </div>
 
       </section>
 
+
+      <section class="section-block">
+
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">LIVING TSUKI STORY</p>
+            <h3>This moon, so far</h3>
+          </div>
+        </div>
+        <article class="story-card living-story" id="livingTsukiStory"></article>
+
+      </section>
 
       <section class="section-block">
 
@@ -803,11 +918,15 @@
 
       <div class="bad-day-hero">
         <span>🌙</span>
-        <h2>Bad Day Mode</h2>
-        <p>We’ve got you.</p>
+        <h2>Quiet Day</h2>
+        <p>Only what matters. No pressure.</p>
       </div>
 
-      <article class="card">
+      <article class="card quiet-day-card">
+
+        <button id="toggleQuietInterface" class="wide-soft-button quiet-toggle">
+          ☁️ Extra quiet interface
+        </button>
 
         <button id="badDayPeriodStart" class="wide-soft-button">
           🩸 Period started today
@@ -825,6 +944,13 @@
           value="0"
           class="range"
         >
+
+        <label class="field-label">How do you feel?</label>
+        <div class="quiet-mood-row">
+          <button type="button" data-quiet-mood="Okay">🙂 Okay</button>
+          <button type="button" data-quiet-mood="Low">🥺 Low</button>
+          <button type="button" data-quiet-mood="Irritable">😤 Irritable</button>
+        </div>
 
         <label class="field-label">
           Medication taken
@@ -1016,6 +1142,8 @@
         <span>👜</span>
       </div>
 
+      <article id="moonBagIntelligence" class="moon-bag-card"></article>
+
       <article class="card">
 
         <div id="kitList"></div>
@@ -1075,6 +1203,25 @@
       </article>
 
       <section class="section-block">
+        <p class="eyebrow">TRIP × CYCLE</p>
+        <article class="card">
+          <input id="tripName" class="input" placeholder="Trip or event name">
+          <div class="trip-date-grid">
+            <label>
+              <small>Start</small>
+              <input id="tripStart" type="date" class="input">
+            </label>
+            <label>
+              <small>End</small>
+              <input id="tripEnd" type="date" class="input">
+            </label>
+          </div>
+          <button id="saveTrip" class="primary-button small">Save trip / event</button>
+        </article>
+        <div id="tripOverlay"></div>
+      </section>
+
+      <section class="section-block">
         <p class="eyebrow">YOUR BAG</p>
         <div id="goingOutKit"></div>
       </section>
@@ -1091,7 +1238,7 @@
 
       <div class="page-title">
         <div>
-          <p class="eyebrow">YOUR CYCLE LIBRARY</p>
+          <p class="eyebrow">MOON MEMORIES</p>
           <h2>Past Moons</h2>
         </div>
 
@@ -1231,6 +1378,44 @@
         Predictions are estimates and are not medical advice,
         diagnosis, or contraception.
       </article>
+
+    </section>
+
+
+    <!-- HOW TO CARE FOR ME -->
+    <section class="screen" data-screen="care-profile">
+
+      <button class="back-button" data-open-screen="today">← Back</button>
+
+      <div class="page-title">
+        <div>
+          <p class="eyebrow">HOW TO CARE FOR ME</p>
+          <h2>My comfort card</h2>
+        </div>
+        <span>💗</span>
+      </div>
+
+      <article class="soft-note">
+        Keep a private reminder of what support feels good to you. Tsuki does not share this automatically.
+      </article>
+
+      <article class="card">
+        <div class="care-option-grid">
+          <label><input type="checkbox" name="careOption" value="Give me space"><span>☁️ Give me space</span></label>
+          <label><input type="checkbox" name="careOption" value="Hugs help"><span>🫂 Hugs help</span></label>
+          <label><input type="checkbox" name="careOption" value="Bring snacks"><span>🍓 Bring snacks</span></label>
+          <label><input type="checkbox" name="careOption" value="Heat pack"><span>🔥 Heat pack</span></label>
+          <label><input type="checkbox" name="careOption" value="Quiet time"><span>🌙 Quiet time</span></label>
+          <label><input type="checkbox" name="careOption" value="Check in gently"><span>💌 Check in gently</span></label>
+        </div>
+
+        <label class="field-label">Anything else?</label>
+        <textarea id="careMessage" class="textarea" placeholder="What would help someone support you today?"></textarea>
+
+        <button id="saveCareProfile" class="primary-button small">Save my comfort card</button>
+      </article>
+
+      <article id="carePreview" class="care-preview"></article>
 
     </section>
 

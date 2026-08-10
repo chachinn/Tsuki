@@ -1,9 +1,9 @@
 /* ============================================================
-   TSUKI SERVICE WORKER — BUILD 3
+   TSUKI SERVICE WORKER — BUILD 4
    ============================================================ */
 
 const CACHE_NAME =
-  "tsuki-cache-v3";
+  "tsuki-cache-v4";
 
 
 const APP_SHELL = [

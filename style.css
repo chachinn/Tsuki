@@ -1,6 +1,6 @@
 /* ============================================================
    TSUKI 🌙
-   BUILD 2 — FULL CONSOLIDATED STYLESHEET
+   BUILD 4 — TSUKI KNOWS ME
    Light pink + moonlight cream + soft lavender
    ============================================================ */
 
@@ -1845,4 +1845,525 @@ body.reduce-motion *::after {
   .past-moon-stats {
     grid-template-columns: 1fr;
   }
+}
+
+/* ============================================================
+   BUILD 4 — TSUKI KNOWS ME
+   ============================================================ */
+
+html {
+  touch-action: manipulation;
+}
+
+.signature-today {
+  margin-top: 20px;
+}
+
+.tiny-moon {
+  font-size: 22px;
+}
+
+.forecast-strip {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(92px, 1fr);
+  gap: 8px;
+  overflow-x: auto;
+  padding: 2px 1px 8px;
+  scroll-snap-type: x proximity;
+  scrollbar-width: none;
+}
+
+.forecast-strip::-webkit-scrollbar {
+  display: none;
+}
+
+.forecast-day {
+  scroll-snap-align: start;
+  min-height: 128px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 12px 8px;
+  border: 1px solid rgba(233, 111, 156, 0.12);
+  border-radius: 20px;
+  background: rgba(255,255,255,.78);
+  box-shadow: var(--shadow-soft);
+  text-align: center;
+}
+
+.forecast-day.today-forecast {
+  background: linear-gradient(145deg, var(--pink-100), var(--lavender-100));
+  border-color: rgba(233, 111, 156, 0.25);
+}
+
+.forecast-day > span {
+  font-size: 24px;
+}
+
+.forecast-day small,
+.forecast-day em {
+  font-size: 9px;
+  color: var(--muted);
+  font-style: normal;
+}
+
+.forecast-day strong {
+  font-size: 11px;
+}
+
+.forecast-empty {
+  min-width: 250px;
+  padding: 16px;
+  background: var(--white);
+  border-radius: 18px;
+  color: var(--muted);
+}
+
+.signature-stack {
+  display: grid;
+  gap: 9px;
+  margin-top: 10px;
+}
+
+.signature-card {
+  display: grid;
+  grid-template-columns: 40px 1fr;
+  gap: 10px;
+  align-items: start;
+  padding: 14px;
+  border-radius: 19px;
+  border: 1px solid rgba(233,111,156,.11);
+  background: rgba(255,255,255,.82);
+  box-shadow: var(--shadow-soft);
+}
+
+.signature-card > span {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  background: var(--pink-100);
+  font-size: 21px;
+}
+
+.signature-card strong {
+  font-size: 13px;
+}
+
+.signature-card p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+body.prep-soon .hero-card {
+  box-shadow: 0 10px 32px rgba(203, 128, 177, 0.18);
+}
+
+body.prep-now .hero-card {
+  background: radial-gradient(circle at 50% 0%, #fff 0, transparent 42%), linear-gradient(145deg, var(--lavender-100), var(--pink-200));
+}
+
+.cycle-context-chip {
+  display: inline-flex;
+  margin-top: 5px;
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: var(--lavender-100);
+  color: var(--text);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.compact-block {
+  margin-top: 16px;
+}
+
+.learning-map {
+  display: grid;
+  gap: 7px;
+}
+
+.learning-row {
+  display: grid;
+  grid-template-columns: 26px 1fr auto;
+  align-items: center;
+  gap: 7px;
+  padding: 11px 12px;
+  border-radius: 15px;
+  background: var(--white);
+  box-shadow: var(--shadow-soft);
+}
+
+.learning-row span {
+  font-size: 17px;
+}
+
+.learning-row strong {
+  font-size: 11px;
+}
+
+.learning-row em {
+  font-size: 9px;
+  color: var(--muted);
+  font-style: normal;
+}
+
+.normal-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin: 10px 0 13px;
+}
+
+.normal-card {
+  padding: 13px;
+  border-radius: 17px;
+  background: linear-gradient(145deg, var(--pink-50), var(--lavender-100));
+  border: 1px solid rgba(216, 183, 237, .45);
+}
+
+.normal-card.wide {
+  grid-column: 1 / -1;
+}
+
+.normal-card small {
+  display: block;
+  color: var(--muted);
+  font-size: 9px;
+  margin-bottom: 5px;
+}
+
+.normal-card strong {
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.moon-map-card {
+  min-height: 270px;
+  position: relative;
+  margin: 14px 0;
+  border-radius: 28px;
+  overflow: hidden;
+  background: radial-gradient(circle at center, #fff8de 0 17%, transparent 18%), radial-gradient(circle at center, rgba(244,239,251,.8) 0 48%, transparent 49%), linear-gradient(145deg, #fff9fb, #f7efff);
+  border: 1px solid rgba(215,196,237,.55);
+}
+
+.moon-map-center {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 44px;
+  z-index: 2;
+}
+
+.moon-map {
+  position: absolute;
+  inset: 0;
+}
+
+.moon-map-orbit {
+  position: absolute;
+  width: 105px;
+  text-align: center;
+  padding: 8px;
+  border-radius: 15px;
+  background: rgba(255,255,255,.78);
+  box-shadow: var(--shadow-soft);
+}
+
+.moon-map-orbit span,
+.moon-map-orbit strong,
+.moon-map-orbit small {
+  display: block;
+}
+
+.moon-map-orbit strong { font-size: 10px; }
+.moon-map-orbit small { font-size: 8px; color: var(--muted); }
+.orbit-1 { top: 14px; left: 50%; transform: translateX(-50%); }
+.orbit-2 { left: 10px; top: 50%; transform: translateY(-50%); }
+.orbit-3 { right: 10px; top: 50%; transform: translateY(-50%); }
+.orbit-4 { bottom: 14px; left: 50%; transform: translateX(-50%); }
+
+.insight-duo {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 9px;
+}
+
+.insight-duo .card {
+  margin: 0;
+  min-height: 145px;
+}
+
+.insight-duo p:not(.eyebrow) {
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.insight-duo small {
+  color: var(--muted);
+  font-size: 9px;
+}
+
+.evidence-drawer {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px dashed rgba(216, 87, 136, .18);
+}
+
+.evidence-drawer summary {
+  cursor: pointer;
+  color: var(--pink-600);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.evidence-drawer p {
+  margin: 7px 0 0;
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.living-story {
+  background: linear-gradient(145deg, rgba(255,255,255,.9), var(--lavender-100));
+}
+
+.next-moon-note {
+  margin-top: 13px;
+  padding-top: 12px;
+  border-top: 1px dashed rgba(233,111,156,.2);
+}
+
+.next-moon-note label {
+  display: block;
+  font-size: 10px;
+  font-weight: 800;
+  margin-bottom: 6px;
+}
+
+.next-moon-note textarea {
+  width: 100%;
+  min-height: 66px;
+  border: 1px solid rgba(233,111,156,.14);
+  border-radius: 13px;
+  background: var(--pink-50);
+  padding: 10px;
+  font: inherit;
+  font-size: 11px;
+  resize: vertical;
+}
+
+.next-moon-note button {
+  margin-top: 7px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--pink-200);
+  color: var(--text);
+  padding: 8px 12px;
+  font-weight: 800;
+  font-size: 10px;
+}
+
+.quiet-toggle {
+  background: var(--lavender-100) !important;
+  margin-bottom: 10px;
+}
+
+.quiet-mood-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+
+.quiet-mood-row button {
+  border: 1px solid rgba(233,111,156,.12);
+  border-radius: 14px;
+  padding: 10px 4px;
+  background: var(--pink-50);
+  color: var(--text);
+  font-size: 10px;
+}
+
+.quiet-mood-row button.selected {
+  background: var(--pink-200);
+  border-color: var(--pink-400);
+}
+
+body.quiet-interface .app-header,
+body.quiet-interface .bottom-nav,
+body.quiet-interface .screen:not([data-screen="bad-day"]) {
+  display: none !important;
+}
+
+body.quiet-interface .main-content {
+  padding-bottom: calc(26px + var(--safe-bottom));
+}
+
+body.quiet-interface [data-screen="bad-day"] {
+  display: block !important;
+  animation: none;
+}
+
+body.quiet-interface [data-screen="bad-day"] .section-block {
+  opacity: .55;
+}
+
+.moon-bag-card {
+  display: grid;
+  grid-template-columns: 44px 1fr;
+  gap: 10px;
+  align-items: center;
+  padding: 16px;
+  margin-bottom: 12px;
+  border-radius: 21px;
+  background: linear-gradient(145deg, var(--lavender-100), var(--pink-100));
+  box-shadow: var(--shadow-soft);
+}
+
+.moon-bag-card > span {
+  font-size: 28px;
+}
+
+.moon-bag-card h3,
+.moon-bag-card p {
+  margin-bottom: 4px;
+}
+
+.moon-bag-card p:not(.eyebrow) {
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.trip-date-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.trip-date-grid small {
+  display: block;
+  margin: 0 0 5px 3px;
+  color: var(--muted);
+}
+
+.trip-overlay-card {
+  display: grid;
+  grid-template-columns: 1fr 34px;
+  gap: 8px;
+  padding: 14px;
+  margin-bottom: 8px;
+  border-radius: 18px;
+  background: var(--white);
+  border: 1px solid rgba(233,111,156,.11);
+}
+
+.trip-overlay-card.overlap {
+  background: linear-gradient(145deg, var(--pink-100), var(--lavender-100));
+}
+
+.trip-overlay-card strong,
+.trip-overlay-card small {
+  display: block;
+}
+
+.trip-overlay-card small,
+.trip-overlay-card p {
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.trip-overlay-card p {
+  margin: 6px 0 0;
+}
+
+.trip-overlay-card button {
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--pink-100);
+  color: var(--pink-600);
+}
+
+.care-option-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 7px;
+}
+
+.care-option-grid input {
+  display: none;
+}
+
+.care-option-grid span {
+  display: block;
+  padding: 11px;
+  border-radius: 14px;
+  background: var(--pink-50);
+  border: 1px solid rgba(233,111,156,.12);
+  font-size: 10px;
+}
+
+.care-option-grid input:checked + span {
+  background: var(--pink-200);
+  border-color: var(--pink-400);
+}
+
+.care-preview {
+  padding: 18px;
+  border-radius: 23px;
+  background: linear-gradient(145deg, #fff, var(--lavender-100));
+  box-shadow: var(--shadow-soft);
+}
+
+.care-preview h3 {
+  margin-bottom: 10px;
+}
+
+.care-preview-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.care-preview-tags span {
+  padding: 7px 9px;
+  border-radius: 999px;
+  background: var(--pink-100);
+  font-size: 9px;
+}
+
+.care-preview p:not(.eyebrow) {
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+@media (max-width: 390px) {
+  .insight-duo,
+  .normal-grid,
+  .care-option-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .normal-card.wide {
+    grid-column: auto;
+  }
+}
+
+.moon-memory-joy {
+  margin: 10px 0 0;
+  padding: 9px 11px;
+  border-radius: 14px;
+  background: var(--pink-50);
+  color: var(--text);
+  font-size: 10px;
 }
