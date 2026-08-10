@@ -2,12 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1, viewport-fit=cover"
-  >
-
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Tsuki 🌙</title>
 
   <meta
@@ -16,7 +11,6 @@
   >
 
   <meta name="theme-color" content="#f8c9d9">
-
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="Tsuki">
@@ -30,15 +24,9 @@
 
 <div id="app">
 
-  <!-- OFFLINE BANNER -->
   <div id="offlineBanner" class="offline-banner hidden">
     🌙 You’re offline. Your local Tsuki features still work.
   </div>
-
-
-  <!-- =========================================================
-       APP HEADER
-       ========================================================= -->
 
   <header class="app-header">
     <div class="brand">
@@ -60,24 +48,15 @@
     </button>
   </header>
 
-
-  <!-- =========================================================
-       MAIN APP
-       ========================================================= -->
-
   <main class="main-content">
 
-    <!-- =====================================================
-         TODAY
-         ===================================================== -->
-
+    <!-- TODAY -->
     <section class="screen active" data-screen="today">
 
       <div class="greeting">
         <p id="greetingText">Good morning 🌸</p>
         <h2>How are you today?</h2>
       </div>
-
 
       <article class="hero-card">
 
@@ -103,16 +82,23 @@
             <strong id="nextPeriodText">
               Not enough data yet
             </strong>
+
+            <span
+              id="predictionConfidence"
+              class="confidence-badge confidence-low"
+            >
+              Low confidence
+            </span>
           </div>
 
           <span class="sakura">🌸</span>
+        </div>
 
+        <div id="latePeriodNotice" class="late-period hidden">
+          🌙 Your estimated window has passed. Cycles can shift, so this is only an estimate.
         </div>
 
       </article>
-
-
-      <!-- QUICK STATUS -->
 
       <div class="mini-grid">
 
@@ -136,9 +122,6 @@
 
       </div>
 
-
-      <!-- QUICK ACTIONS -->
-
       <section class="section-block">
 
         <div class="section-heading">
@@ -150,34 +133,22 @@
 
         <div class="quick-actions">
 
-          <button
-            class="quick-action"
-            data-open-screen="log"
-          >
+          <button class="quick-action" data-open-screen="log">
             <span>📝</span>
             <strong>Daily Log</strong>
           </button>
 
-          <button
-            class="quick-action"
-            id="startPeriodButton"
-          >
+          <button class="quick-action" id="startPeriodButton">
             <span>🩸</span>
             <strong>Period Started</strong>
           </button>
 
-          <button
-            class="quick-action"
-            data-open-screen="bad-day"
-          >
+          <button class="quick-action" data-open-screen="bad-day">
             <span>☁️</span>
             <strong>Bad Day</strong>
           </button>
 
-          <button
-            class="quick-action"
-            data-open-screen="journal"
-          >
+          <button class="quick-action" data-open-screen="journal">
             <span>📖</span>
             <strong>Journal</strong>
           </button>
@@ -185,9 +156,6 @@
         </div>
 
       </section>
-
-
-      <!-- TSUKI NOTICED -->
 
       <section class="section-block">
 
@@ -197,10 +165,7 @@
             <h3>Little patterns</h3>
           </div>
 
-          <button
-            class="text-button"
-            data-open-screen="insights"
-          >
+          <button class="text-button" data-open-screen="insights">
             See all
           </button>
         </div>
@@ -209,14 +174,17 @@
 
       </section>
 
-
-      <!-- FEATURE SHORTCUTS -->
-
       <section class="section-block">
 
         <p class="eyebrow">YOUR TSUKI</p>
 
         <div class="feature-grid">
+
+          <button class="feature-card" data-open-screen="cycle-history">
+            <span>🌙</span>
+            <strong>Cycle History</strong>
+            <small>Add, edit & review periods</small>
+          </button>
 
           <button class="feature-card" data-open-screen="relief">
             <span>🫖</span>
@@ -242,6 +210,18 @@
             <small>Your recent cycles</small>
           </button>
 
+          <button class="feature-card" data-open-screen="past-moons">
+            <span>🌙</span>
+            <strong>Past Moons</strong>
+            <small>Your cycle stories</small>
+          </button>
+
+          <button class="feature-card" data-open-screen="calendar">
+            <span>📅</span>
+            <strong>Calendar</strong>
+            <small>See the whole month</small>
+          </button>
+
         </div>
 
       </section>
@@ -249,47 +229,33 @@
     </section>
 
 
-
-    <!-- =====================================================
-         CALENDAR
-         ===================================================== -->
-
+    <!-- CALENDAR -->
     <section class="screen" data-screen="calendar">
 
       <div class="page-title">
-
         <div>
           <p class="eyebrow">YOUR MONTH</p>
           <h2>Calendar</h2>
         </div>
 
         <span>🌸</span>
-
       </div>
-
 
       <article class="card calendar-card">
 
         <div class="calendar-header">
 
-          <button
-            class="icon-button"
-            id="previousMonth"
-          >
+          <button class="icon-button" id="previousMonth">
             ‹
           </button>
 
           <h3 id="calendarMonthTitle"></h3>
 
-          <button
-            class="icon-button"
-            id="nextMonth"
-          >
+          <button class="icon-button" id="nextMonth">
             ›
           </button>
 
         </div>
-
 
         <div class="calendar-weekdays">
           <span>Sun</span>
@@ -301,12 +267,9 @@
           <span>Sat</span>
         </div>
 
-
         <div id="calendarGrid" class="calendar-grid"></div>
 
-
         <div class="calendar-legend">
-
           <span>
             <i class="legend-dot period"></i>
             Period
@@ -321,38 +284,119 @@
             <i class="legend-dot logged"></i>
             Logged
           </span>
-
         </div>
 
       </article>
 
+      <button
+        class="secondary-button"
+        data-open-screen="cycle-history"
+      >
+        🌙 Manage Cycle History
+      </button>
 
       <article class="soft-note">
-        🌙 Predictions are estimates based on the cycle information
-        you log. Bodies don’t always follow a perfect calendar.
+        Predictions are estimates based on your logged history.
+        Tsuki widens the estimated window when your cycles vary more.
       </article>
 
     </section>
 
 
+    <!-- CYCLE HISTORY -->
+    <section class="screen" data-screen="cycle-history">
 
-    <!-- =====================================================
-         DAILY LOG
-         ===================================================== -->
+      <button class="back-button" data-open-screen="today">
+        ← Back
+      </button>
 
+      <div class="page-title">
+        <div>
+          <p class="eyebrow">YOUR HISTORY</p>
+          <h2>Cycle History</h2>
+        </div>
+
+        <span>🌙</span>
+      </div>
+
+      <article class="card">
+
+        <h3 id="periodFormTitle">
+          Add a period
+        </h3>
+
+        <input
+          type="hidden"
+          id="editingPeriodId"
+        >
+
+        <label class="field-label">
+          Period started
+        </label>
+
+        <input
+          id="periodStartDate"
+          type="date"
+          class="input"
+        >
+
+        <label class="field-label">
+          Period ended
+        </label>
+
+        <input
+          id="periodEndDate"
+          type="date"
+          class="input"
+        >
+
+        <p class="muted small-text">
+          If your period is still ongoing, leave the end date blank and update it later.
+        </p>
+
+        <button
+          id="savePeriodButton"
+          class="primary-button small"
+        >
+          Save period
+        </button>
+
+        <button
+          id="cancelPeriodEdit"
+          class="secondary-button hidden"
+        >
+          Cancel edit
+        </button>
+
+      </article>
+
+      <section class="section-block">
+
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">PAST MOONS</p>
+            <h3>Your periods</h3>
+          </div>
+        </div>
+
+        <div id="periodHistoryList"></div>
+
+      </section>
+
+    </section>
+
+
+    <!-- DAILY LOG -->
     <section class="screen" data-screen="log">
 
       <div class="page-title">
-
         <div>
           <p class="eyebrow">CHECK IN</p>
           <h2>Daily Log</h2>
         </div>
 
         <span>📝</span>
-
       </div>
-
 
       <form id="dailyLogForm">
 
@@ -370,9 +414,6 @@
           >
 
         </article>
-
-
-        <!-- FLOW -->
 
         <article class="card">
 
@@ -414,13 +455,9 @@
 
         </article>
 
-
-        <!-- PAIN -->
-
         <article class="card">
 
           <div class="card-row">
-
             <div>
               <p class="card-label">
                 Cramps / Pain
@@ -432,7 +469,6 @@
             </div>
 
             <strong id="painOutput">0</strong>
-
           </div>
 
           <input
@@ -454,9 +490,6 @@
           </div>
 
         </article>
-
-
-        <!-- MOOD -->
 
         <article class="card">
 
@@ -500,14 +533,9 @@
 
         </article>
 
-
-        <!-- ENERGY -->
-
         <article class="card">
 
-          <p class="card-label">
-            Energy
-          </p>
+          <p class="card-label">Energy</p>
 
           <div class="segmented">
 
@@ -530,14 +558,9 @@
 
         </article>
 
-
-        <!-- SLEEP -->
-
         <article class="card">
 
-          <p class="card-label">
-            Sleep
-          </p>
+          <p class="card-label">Sleep</p>
 
           <div class="segmented">
 
@@ -560,9 +583,6 @@
 
         </article>
 
-
-        <!-- SYMPTOMS -->
-
         <article class="card">
 
           <p class="card-label">
@@ -572,83 +592,48 @@
           <div class="tag-checkbox-grid">
 
             <label>
-              <input
-                type="checkbox"
-                name="symptom"
-                value="Bloating"
-              >
+              <input type="checkbox" name="symptom" value="Bloating">
               <span>🫧 Bloating</span>
             </label>
 
             <label>
-              <input
-                type="checkbox"
-                name="symptom"
-                value="Headache"
-              >
+              <input type="checkbox" name="symptom" value="Headache">
               <span>☁️ Headache</span>
             </label>
 
             <label>
-              <input
-                type="checkbox"
-                name="symptom"
-                value="Back Pain"
-              >
+              <input type="checkbox" name="symptom" value="Back Pain">
               <span>🌿 Back pain</span>
             </label>
 
             <label>
-              <input
-                type="checkbox"
-                name="symptom"
-                value="Tender Breasts"
-              >
+              <input type="checkbox" name="symptom" value="Tender Breasts">
               <span>🌸 Tender breasts</span>
             </label>
 
             <label>
-              <input
-                type="checkbox"
-                name="symptom"
-                value="Acne"
-              >
+              <input type="checkbox" name="symptom" value="Acne">
               <span>✨ Acne / skin</span>
             </label>
 
             <label>
-              <input
-                type="checkbox"
-                name="symptom"
-                value="Cravings"
-              >
+              <input type="checkbox" name="symptom" value="Cravings">
               <span>🍓 Cravings</span>
             </label>
 
             <label>
-              <input
-                type="checkbox"
-                name="symptom"
-                value="Nausea"
-              >
+              <input type="checkbox" name="symptom" value="Nausea">
               <span>🍵 Nausea</span>
             </label>
 
             <label>
-              <input
-                type="checkbox"
-                name="symptom"
-                value="Fatigue"
-              >
+              <input type="checkbox" name="symptom" value="Fatigue">
               <span>💤 Fatigue</span>
             </label>
 
           </div>
 
         </article>
-
-
-        <!-- NOTES -->
 
         <article class="card">
 
@@ -664,7 +649,6 @@
 
         </article>
 
-
         <button
           type="submit"
           class="primary-button"
@@ -677,49 +661,56 @@
     </section>
 
 
-
-    <!-- =====================================================
-         INSIGHTS
-         ===================================================== -->
-
+    <!-- INSIGHTS -->
     <section class="screen" data-screen="insights">
 
       <div class="page-title">
-
         <div>
           <p class="eyebrow">YOUR RHYTHM</p>
           <h2>Tsuki Noticed</h2>
         </div>
 
         <span>✨</span>
-
       </div>
 
-
       <article class="soft-note">
-        Tsuki looks for patterns in what you log.
+        Tsuki looks for patterns across your completed cycles.
+        It only surfaces timing patterns after enough repeated observations.
         These are personal observations, not diagnoses.
       </article>
 
+      <div class="insight-toolbar">
+        <button
+          id="showAllInsights"
+          class="insight-filter active"
+          type="button"
+        >
+          ✨ All
+        </button>
+
+        <button
+          id="showSavedInsights"
+          class="insight-filter"
+          type="button"
+        >
+          ♡ Saved
+          <span id="savedInsightCount">0</span>
+        </button>
+      </div>
 
       <section class="section-block">
-
         <div id="insightList"></div>
-
       </section>
 
 
       <section class="section-block">
 
         <div class="section-heading">
-
           <div>
             <p class="eyebrow">MY PATTERN</p>
-            <h3>Your cycle at a glance</h3>
+            <h3>Your body’s rhythm</h3>
           </div>
-
         </div>
-
 
         <article class="card">
 
@@ -739,12 +730,21 @@
 
           </div>
 
-
           <div class="stats-grid">
 
             <div>
               <small>Average cycle</small>
               <strong id="statCycleLength">—</strong>
+            </div>
+
+            <div>
+              <small>Average period</small>
+              <strong id="statPeriodLength">—</strong>
+            </div>
+
+            <div>
+              <small>Cycle variability</small>
+              <strong id="statVariability">—</strong>
             </div>
 
             <div>
@@ -766,70 +766,52 @@
 
         </article>
 
+        <div id="phasePatternGrid" class="phase-pattern-grid"></div>
+
       </section>
 
-
-      <!-- TSUKI STORY -->
 
       <section class="section-block">
 
         <div class="section-heading">
-
           <div>
             <p class="eyebrow">TSUKI STORY</p>
-            <h3>Your recent story</h3>
+            <h3>Your latest completed cycle</h3>
           </div>
 
+          <button
+            class="text-button"
+            data-open-screen="past-moons"
+          >
+            Past Moons
+          </button>
         </div>
 
-        <article
-          class="story-card"
-          id="tsukiStory"
-        >
-        </article>
+        <article class="story-card" id="tsukiStory"></article>
 
       </section>
 
     </section>
 
 
-
-    <!-- =====================================================
-         BAD DAY MODE
-         ===================================================== -->
-
+    <!-- BAD DAY MODE -->
     <section class="screen" data-screen="bad-day">
 
-      <button
-        class="back-button"
-        data-open-screen="today"
-      >
+      <button class="back-button" data-open-screen="today">
         ← Back
       </button>
 
-
       <div class="bad-day-hero">
-
         <span>🌙</span>
-
         <h2>Bad Day Mode</h2>
-
-        <p>
-          We’ve got you.
-        </p>
-
+        <p>We’ve got you.</p>
       </div>
-
 
       <article class="card">
 
-        <button
-          id="badDayPeriodStart"
-          class="wide-soft-button"
-        >
+        <button id="badDayPeriodStart" class="wide-soft-button">
           🩸 Period started today
         </button>
-
 
         <label class="field-label">
           Pain level
@@ -844,7 +826,6 @@
           class="range"
         >
 
-
         <label class="field-label">
           Medication taken
         </label>
@@ -855,7 +836,6 @@
           placeholder="Optional — e.g. Ibuprofen"
         >
 
-
         <button
           id="saveBadDay"
           class="primary-button small"
@@ -864,7 +844,6 @@
         </button>
 
       </article>
-
 
       <section class="section-block">
 
@@ -911,32 +890,21 @@
     </section>
 
 
-
-    <!-- =====================================================
-         RELIEF TRACKER
-         ===================================================== -->
-
+    <!-- RELIEF -->
     <section class="screen" data-screen="relief">
 
-      <button
-        class="back-button"
-        data-open-screen="today"
-      >
+      <button class="back-button" data-open-screen="today">
         ← Back
       </button>
 
-
       <div class="page-title">
-
         <div>
           <p class="eyebrow">WHAT HELPS</p>
           <h2>Relief Tracker</h2>
         </div>
 
         <span>🫖</span>
-
       </div>
-
 
       <article class="card">
 
@@ -949,7 +917,6 @@
           class="input"
           placeholder="Heat pack, tea, rest..."
         >
-
 
         <label class="field-label">
           Did it help?
@@ -976,7 +943,6 @@
           </option>
         </select>
 
-
         <button
           id="addReliefButton"
           class="primary-button small"
@@ -986,38 +952,26 @@
 
       </article>
 
-
       <div id="reliefList"></div>
 
     </section>
 
 
-
-    <!-- =====================================================
-         JOURNAL
-         ===================================================== -->
-
+    <!-- JOURNAL -->
     <section class="screen" data-screen="journal">
 
-      <button
-        class="back-button"
-        data-open-screen="today"
-      >
+      <button class="back-button" data-open-screen="today">
         ← Back
       </button>
 
-
       <div class="page-title">
-
         <div>
           <p class="eyebrow">PRIVATE NOTES</p>
           <h2>Cycle Journal</h2>
         </div>
 
         <span>📖</span>
-
       </div>
-
 
       <article class="journal-paper">
 
@@ -1041,43 +995,30 @@
 
       </article>
 
-
       <div id="journalEntries"></div>
 
     </section>
 
 
-
-    <!-- =====================================================
-         PERIOD KIT
-         ===================================================== -->
-
+    <!-- PERIOD KIT -->
     <section class="screen" data-screen="kit">
 
-      <button
-        class="back-button"
-        data-open-screen="today"
-      >
+      <button class="back-button" data-open-screen="today">
         ← Back
       </button>
 
-
       <div class="page-title">
-
         <div>
           <p class="eyebrow">BE PREPARED</p>
           <h2>My Period Kit</h2>
         </div>
 
         <span>👜</span>
-
       </div>
-
 
       <article class="card">
 
         <div id="kitList"></div>
-
 
         <div class="inline-form">
 
@@ -1101,32 +1042,21 @@
     </section>
 
 
-
-    <!-- =====================================================
-         GOING OUT
-         ===================================================== -->
-
+    <!-- GOING OUT -->
     <section class="screen" data-screen="going-out">
 
-      <button
-        class="back-button"
-        data-open-screen="today"
-      >
+      <button class="back-button" data-open-screen="today">
         ← Back
       </button>
 
-
       <div class="page-title">
-
         <div>
           <p class="eyebrow">BEFORE YOU LEAVE</p>
           <h2>Going Out Mode</h2>
         </div>
 
         <span>🎀</span>
-
       </div>
-
 
       <article class="going-out-card">
 
@@ -1144,49 +1074,57 @@
 
       </article>
 
-
       <section class="section-block">
-
-        <p class="eyebrow">
-          YOUR BAG
-        </p>
-
+        <p class="eyebrow">YOUR BAG</p>
         <div id="goingOutKit"></div>
-
       </section>
 
     </section>
 
 
+    <!-- PAST MOONS -->
+    <section class="screen" data-screen="past-moons">
 
-    <!-- =====================================================
-         REPORTS
-         ===================================================== -->
-
-    <section class="screen" data-screen="reports">
-
-      <button
-        class="back-button"
-        data-open-screen="today"
-      >
+      <button class="back-button" data-open-screen="insights">
         ← Back
       </button>
 
+      <div class="page-title">
+        <div>
+          <p class="eyebrow">YOUR CYCLE LIBRARY</p>
+          <h2>Past Moons</h2>
+        </div>
+
+        <span>🌙</span>
+      </div>
+
+      <article class="soft-note">
+        Each completed cycle becomes a little Tsuki Story.
+        The recap is generated from what you actually logged during that cycle.
+      </article>
+
+      <div id="pastMoonsList"></div>
+
+    </section>
+
+
+    <!-- REPORTS -->
+    <section class="screen" data-screen="reports">
+
+      <button class="back-button" data-open-screen="today">
+        ← Back
+      </button>
 
       <div class="page-title">
-
         <div>
           <p class="eyebrow">YOUR HISTORY</p>
           <h2>Reports</h2>
         </div>
 
         <span>📊</span>
-
       </div>
 
-
       <div id="reportSummary"></div>
-
 
       <article class="soft-note">
         Reports summarize what you entered into Tsuki.
@@ -1196,31 +1134,21 @@
     </section>
 
 
-
-    <!-- =====================================================
-         ME / SETTINGS
-         ===================================================== -->
-
+    <!-- ME -->
     <section class="screen" data-screen="me">
 
       <div class="page-title">
-
         <div>
           <p class="eyebrow">YOUR TSUKI</p>
           <h2>Me</h2>
         </div>
 
         <span>🌙</span>
-
       </div>
-
 
       <article class="card">
 
-        <h3>
-          Cycle settings
-        </h3>
-
+        <h3>Cycle defaults</h3>
 
         <label class="field-label">
           Typical cycle length
@@ -1235,7 +1163,6 @@
           value="28"
         >
 
-
         <label class="field-label">
           Typical period length
         </label>
@@ -1249,6 +1176,10 @@
           value="5"
         >
 
+        <p class="muted small-text">
+          These are fallback values only. Once you log enough history,
+          Tsuki uses your own averages.
+        </p>
 
         <button
           id="saveSettings"
@@ -1259,79 +1190,41 @@
 
       </article>
 
-
       <article class="card">
 
-        <h3>
-          Privacy & data
-        </h3>
+        <h3>Privacy & data</h3>
 
-        <button
-          class="settings-row"
-          data-open-screen="privacy"
-        >
-          <span>
-            🔒 Privacy & Security
-          </span>
-
+        <button class="settings-row" data-open-screen="privacy">
+          <span>🔒 Privacy & Security</span>
           <span>›</span>
         </button>
 
-
-        <button
-          class="settings-row"
-          id="exportData"
-        >
-          <span>
-            📦 Export backup
-          </span>
-
+        <button class="settings-row" data-open-screen="cycle-history">
+          <span>🌙 Cycle History</span>
           <span>›</span>
         </button>
 
+        <button class="settings-row" id="exportData">
+          <span>📦 Export backup</span>
+          <span>›</span>
+        </button>
 
         <label class="settings-row">
-
-          <span>
-            🌸 Sakura accents
-          </span>
-
-          <input
-            id="sakuraToggle"
-            type="checkbox"
-            checked
-          >
-
+          <span>🌸 Sakura accents</span>
+          <input id="sakuraToggle" type="checkbox" checked>
         </label>
-
 
         <label class="settings-row">
-
-          <span>
-            ✨ Reduce motion
-          </span>
-
-          <input
-            id="motionToggle"
-            type="checkbox"
-          >
-
+          <span>✨ Reduce motion</span>
+          <input id="motionToggle" type="checkbox">
         </label>
 
-
-        <button
-          class="settings-row danger"
-          id="deleteAllData"
-        >
-          <span>
-            🗑️ Delete all Tsuki data
-          </span>
-
+        <button class="settings-row danger" id="deleteAllData">
+          <span>🗑️ Delete all Tsuki data</span>
           <span>›</span>
         </button>
 
       </article>
-
 
       <article class="soft-note">
         🌙 Tsuki is designed as a personal tracking tool.
@@ -1342,73 +1235,41 @@
     </section>
 
 
-
-    <!-- =====================================================
-         PRIVACY
-         ===================================================== -->
-
+    <!-- PRIVACY -->
     <section class="screen" data-screen="privacy">
 
-      <button
-        class="back-button"
-        data-open-screen="me"
-      >
+      <button class="back-button" data-open-screen="me">
         ← Back
       </button>
 
-
       <div class="page-title">
-
         <div>
           <p class="eyebrow">ALWAYS YOURS</p>
           <h2>Privacy</h2>
         </div>
 
         <span>🔒</span>
-
       </div>
-
 
       <article class="card">
 
         <label class="settings-row">
-
-          <span>
-            🙈 Hide cycle details
-          </span>
-
-          <input
-            id="hideDetailsToggle"
-            type="checkbox"
-          >
-
+          <span>🙈 Hide cycle details</span>
+          <input id="hideDetailsToggle" type="checkbox">
         </label>
 
-
         <label class="settings-row">
-
-          <span>
-            🔕 Discreet reminders
-          </span>
-
-          <input
-            id="discreetToggle"
-            type="checkbox"
-            checked
-          >
-
+          <span>🔕 Discreet reminders</span>
+          <input id="discreetToggle" type="checkbox" checked>
         </label>
 
       </article>
-
 
       <article class="privacy-card">
 
         <span>☁️</span>
 
-        <h3>
-          Your data stays with you
-        </h3>
+        <h3>Your data stays with you</h3>
 
         <p>
           This version of Tsuki stores your entries locally
@@ -1428,11 +1289,6 @@
 
   </main>
 
-
-
-  <!-- =========================================================
-       BOTTOM NAVIGATION
-       ========================================================= -->
 
   <nav class="bottom-nav">
 
@@ -1477,19 +1333,9 @@
 
   </nav>
 
-
-
-  <!-- =========================================================
-       TOAST
-       ========================================================= -->
-
-  <div
-    id="toast"
-    class="toast"
-  ></div>
+  <div id="toast" class="toast"></div>
 
 </div>
-
 
 <script src="./app.js"></script>
 

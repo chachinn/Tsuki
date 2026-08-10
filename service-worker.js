@@ -1,29 +1,20 @@
 /* ============================================================
-   TSUKI SERVICE WORKER
+   TSUKI SERVICE WORKER — BUILD 3
    ============================================================ */
 
 const CACHE_NAME =
-  "tsuki-cache-v1";
+  "tsuki-cache-v3";
 
 
 const APP_SHELL = [
-
   "./",
-
   "./index.html",
-
   "./style.css",
-
   "./app.js",
-
   "./manifest.json",
-
   "./icons/icon-192.png",
-
   "./icons/icon-512.png"
-
 ];
-
 
 
 /* ============================================================
@@ -49,12 +40,10 @@ self.addEventListener(
 
     );
 
-
     self.skipWaiting();
 
   }
 );
-
 
 
 /* ============================================================
@@ -91,12 +80,10 @@ self.addEventListener(
 
     );
 
-
     self.clients.claim();
 
   }
 );
-
 
 
 /* ============================================================
@@ -111,11 +98,8 @@ self.addEventListener(
       event.request.method !==
       "GET"
     ) {
-
       return;
-
     }
-
 
     event.respondWith(
 
@@ -127,11 +111,8 @@ self.addEventListener(
           cached => {
 
             if (cached) {
-
               return cached;
-
             }
-
 
             return fetch(
               event.request
@@ -144,15 +125,11 @@ self.addEventListener(
                   response.status !== 200 ||
                   response.type === "opaque"
                 ) {
-
                   return response;
-
                 }
-
 
                 const cloned =
                   response.clone();
-
 
                 caches
                   .open(
@@ -166,7 +143,6 @@ self.addEventListener(
                       )
                   );
 
-
                 return response;
 
               }
@@ -178,11 +154,9 @@ self.addEventListener(
                   event.request.mode ===
                   "navigate"
                 ) {
-
                   return caches.match(
                     "./index.html"
                   );
-
                 }
 
               }
