@@ -1,6 +1,6 @@
 /* ============================================================
-   TSUKI 🌙 — BUILD 4.2
-   PERIOD UX + PHASE-AWARE LOGGING + APPEARANCE
+   TSUKI 🌙 — BUILD 4.3
+   UI CLEANUP + DRAWER NAVIGATION
    ============================================================ */
 
 const STORAGE_KEY = "tsuki-data-v4";
@@ -876,6 +876,9 @@ function periodForDate(dateValue) {
    ============================================================ */
 
 function showScreen(name) {
+  if (typeof closeAppDrawer === "function") closeAppDrawer();
+  if (typeof closeQuickAdd === "function") closeQuickAdd();
+
   document
     .querySelectorAll(".screen")
     .forEach(screen => {
@@ -941,6 +944,113 @@ document
     );
   });
 
+
+/* ============================================================
+   BUILD 4.3 — DRAWER + QUICK ADD
+   ============================================================ */
+
+const appDrawer = document.getElementById("appDrawer");
+const drawerBackdrop = document.getElementById("drawerBackdrop");
+const menuButton = document.getElementById("menuButton");
+
+function openAppDrawer() {
+  if (!appDrawer || !drawerBackdrop) return;
+  appDrawer.classList.add("open");
+  drawerBackdrop.classList.remove("hidden");
+  appDrawer.setAttribute("aria-hidden", "false");
+  drawerBackdrop.setAttribute("aria-hidden", "false");
+  menuButton?.setAttribute("aria-expanded", "true");
+  document.body.classList.add("drawer-open");
+}
+
+function closeAppDrawer() {
+  if (!appDrawer || !drawerBackdrop) return;
+  appDrawer.classList.remove("open");
+  drawerBackdrop.classList.add("hidden");
+  appDrawer.setAttribute("aria-hidden", "true");
+  drawerBackdrop.setAttribute("aria-hidden", "true");
+  menuButton?.setAttribute("aria-expanded", "false");
+  document.body.classList.remove("drawer-open");
+}
+
+menuButton?.addEventListener("click", openAppDrawer);
+document.getElementById("closeMenuButton")?.addEventListener("click", closeAppDrawer);
+drawerBackdrop?.addEventListener("click", closeAppDrawer);
+appDrawer?.querySelectorAll("[data-open-screen]").forEach(button => {
+  button.addEventListener("click", closeAppDrawer);
+});
+
+document.getElementById("drawerAppearance")?.addEventListener("click", () => {
+  closeAppDrawer();
+  openAppearanceModal();
+});
+
+const quickAddSheet = document.getElementById("quickAddSheet");
+const quickAddBackdrop = document.getElementById("quickAddBackdrop");
+const quickAddButton = document.getElementById("quickAddButton");
+
+function openQuickAdd() {
+  if (!quickAddSheet || !quickAddBackdrop) return;
+  quickAddSheet.classList.add("open");
+  quickAddBackdrop.classList.remove("hidden");
+  quickAddSheet.setAttribute("aria-hidden", "false");
+  quickAddBackdrop.setAttribute("aria-hidden", "false");
+  quickAddButton?.setAttribute("aria-expanded", "true");
+  document.body.classList.add("quick-sheet-open");
+}
+
+function closeQuickAdd() {
+  if (!quickAddSheet || !quickAddBackdrop) return;
+  quickAddSheet.classList.remove("open");
+  quickAddBackdrop.classList.add("hidden");
+  quickAddSheet.setAttribute("aria-hidden", "true");
+  quickAddBackdrop.setAttribute("aria-hidden", "true");
+  quickAddButton?.setAttribute("aria-expanded", "false");
+  document.body.classList.remove("quick-sheet-open");
+}
+
+quickAddButton?.addEventListener("click", openQuickAdd);
+document.getElementById("closeQuickAdd")?.addEventListener("click", closeQuickAdd);
+quickAddBackdrop?.addEventListener("click", closeQuickAdd);
+
+document.querySelectorAll("[data-quick-add]").forEach(button => {
+  button.addEventListener("click", () => {
+    const action = button.dataset.quickAdd;
+    closeQuickAdd();
+
+    if (action === "period") {
+      resetPeriodForm();
+      showScreen("cycle-history");
+      requestAnimationFrame(openPeriodCalendar);
+      return;
+    }
+
+    const screens = {
+      log: "log",
+      "bad-day": "bad-day",
+      relief: "relief",
+      journal: "journal"
+    };
+
+    if (screens[action]) showScreen(screens[action]);
+  });
+});
+
+document.getElementById("toggleTodayPatterns")?.addEventListener("click", event => {
+  const details = document.getElementById("todayPatternDetails");
+  const button = event.currentTarget;
+  if (!details) return;
+  const isOpening = details.classList.contains("hidden");
+  details.classList.toggle("hidden", !isOpening);
+  button.setAttribute("aria-expanded", String(isOpening));
+  document.getElementById("todayPatternsChevron").textContent = isOpening ? "⌃" : "⌄";
+});
+
+document.addEventListener("keydown", event => {
+  if (event.key !== "Escape") return;
+  closeAppDrawer();
+  closeQuickAdd();
+});
 
 /* ============================================================
    TODAY
@@ -1096,16 +1206,6 @@ function startPeriodToday() {
     `New cycle started · ${Number(data.settings.periodLength) || averagePeriodLength()} days marked 🌙`
   );
 }
-
-
-document
-  .getElementById(
-    "startPeriodButton"
-  )
-  .addEventListener(
-    "click",
-    startPeriodToday
-  );
 
 
 document
@@ -3664,7 +3764,7 @@ function bindInsightActions() {
 function renderHomeInsights() {
   const insights =
     buildInsights()
-      .slice(0, 2);
+      .slice(0, 1);
 
   document
     .getElementById(

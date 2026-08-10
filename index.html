@@ -40,15 +40,72 @@
       </div>
     </div>
 
-    <button
-      class="icon-button"
-      id="privacyButton"
-      aria-label="Privacy"
-      title="Privacy"
-    >
-      🔒
-    </button>
+    <div class="header-actions">
+      <button
+        class="icon-button"
+        id="privacyButton"
+        aria-label="Hide or show private cycle details"
+        title="Privacy"
+      >
+        🔒
+      </button>
+
+      <button
+        class="icon-button menu-button"
+        id="menuButton"
+        aria-label="Open Tsuki menu"
+        aria-controls="appDrawer"
+        aria-expanded="false"
+        title="Menu"
+      >
+        ☰
+      </button>
+    </div>
   </header>
+
+  <div id="drawerBackdrop" class="drawer-backdrop hidden" aria-hidden="true"></div>
+
+  <aside id="appDrawer" class="app-drawer" aria-hidden="true" aria-label="Tsuki menu">
+    <div class="drawer-header">
+      <div>
+        <p class="eyebrow">YOUR TSUKI</p>
+        <h2>Menu</h2>
+      </div>
+      <button type="button" id="closeMenuButton" class="drawer-close" aria-label="Close menu">×</button>
+    </div>
+
+    <div class="drawer-scroll">
+      <section class="drawer-group">
+        <p class="drawer-group-title">TODAY TOOLS</p>
+        <button class="drawer-row" data-open-screen="log"><span class="drawer-row-icon">📝</span><span><strong>Daily Check-in</strong><small>Log how today feels</small></span><b>›</b></button>
+        <button class="drawer-row" data-open-screen="cycle-history"><span class="drawer-row-icon">🩸</span><span><strong>Log or edit period</strong><small>Choose dates from the calendar</small></span><b>›</b></button>
+        <button class="drawer-row" data-open-screen="bad-day"><span class="drawer-row-icon">☁️</span><span><strong>Quiet Day</strong><small>Low-effort logging</small></span><b>›</b></button>
+        <button class="drawer-row" data-open-screen="journal"><span class="drawer-row-icon">📖</span><span><strong>Journal</strong><small>Notes, tiny joys & memories</small></span><b>›</b></button>
+      </section>
+
+      <section class="drawer-group">
+        <p class="drawer-group-title">YOUR CYCLE</p>
+        <button class="drawer-row" data-open-screen="cycle-history"><span class="drawer-row-icon">🌙</span><span><strong>Cycle History</strong><small>Periods and cycle context</small></span><b>›</b></button>
+        <button class="drawer-row" data-open-screen="past-moons"><span class="drawer-row-icon">🌕</span><span><strong>Past Moons</strong><small>Your completed cycle stories</small></span><b>›</b></button>
+        <button class="drawer-row" data-open-screen="reports"><span class="drawer-row-icon">📊</span><span><strong>Reports</strong><small>Cycle summaries and trends</small></span><b>›</b></button>
+      </section>
+
+      <section class="drawer-group">
+        <p class="drawer-group-title">COMFORT & PLANNING</p>
+        <button class="drawer-row" data-open-screen="relief"><span class="drawer-row-icon">🫖</span><span><strong>Relief Tracker</strong><small>Remember what felt helpful</small></span><b>›</b></button>
+        <button class="drawer-row" data-open-screen="kit"><span class="drawer-row-icon">👜</span><span><strong>Period Kit</strong><small>Keep your Moon Bag ready</small></span><b>›</b></button>
+        <button class="drawer-row" data-open-screen="going-out"><span class="drawer-row-icon">🎀</span><span><strong>Going Out</strong><small>Plans, trips and prep</small></span><b>›</b></button>
+        <button class="drawer-row" data-open-screen="care-profile"><span class="drawer-row-icon">💗</span><span><strong>How to Care for Me</strong><small>Your support preferences</small></span><b>›</b></button>
+      </section>
+
+      <section class="drawer-group">
+        <p class="drawer-group-title">PERSONALIZE & PRIVATE</p>
+        <button class="drawer-row" id="drawerAppearance"><span class="drawer-row-icon">🎨</span><span><strong>Appearance</strong><small>Theme and wallpaper</small></span><b>›</b></button>
+        <button class="drawer-row" data-open-screen="privacy"><span class="drawer-row-icon">🔒</span><span><strong>Privacy</strong><small>Private display controls</small></span><b>›</b></button>
+        <button class="drawer-row" data-open-screen="me"><span class="drawer-row-icon">⚙️</span><span><strong>Settings & Data</strong><small>Defaults, backup and app settings</small></span><b>›</b></button>
+      </section>
+    </div>
+  </aside>
 
   <main class="main-content">
 
@@ -128,6 +185,15 @@
 
       </div>
 
+      <button class="today-checkin-cta" data-open-screen="log">
+        <span class="today-checkin-icon">📝</span>
+        <span class="today-checkin-copy">
+          <small>YOUR CHECK-IN</small>
+          <strong>How are you feeling today?</strong>
+        </span>
+        <span class="today-checkin-arrow">›</span>
+      </button>
+
       <section class="section-block signature-today">
 
         <div class="section-heading">
@@ -140,47 +206,18 @@
 
         <div id="tsukiForecast" class="forecast-strip"></div>
 
-        <div class="signature-stack">
+        <button type="button" id="toggleTodayPatterns" class="explore-patterns-button" aria-expanded="false">
+          <span>🌙</span>
+          <span><strong>Explore today’s patterns</strong><small>Tonight, what usually comes next & more</small></span>
+          <b id="todayPatternsChevron">⌄</b>
+        </button>
+
+        <div id="todayPatternDetails" class="signature-stack home-pattern-details hidden">
           <article id="tonightTomorrowCard" class="signature-card"></article>
           <article id="whatNextCard" class="signature-card"></article>
           <article id="beforeItHitsCard" class="signature-card"></article>
           <article id="tsukiEchoesCard" class="signature-card"></article>
           <article id="nextMoonMessageCard" class="signature-card hidden"></article>
-        </div>
-
-      </section>
-
-      <section class="section-block">
-
-        <div class="section-heading">
-          <div>
-            <p class="eyebrow">QUICK ACTIONS</p>
-            <h3>What do you need?</h3>
-          </div>
-        </div>
-
-        <div class="quick-actions">
-
-          <button class="quick-action" data-open-screen="log">
-            <span>📝</span>
-            <strong>Daily Log</strong>
-          </button>
-
-          <button class="quick-action" id="startPeriodButton">
-            <span>🩸</span>
-            <strong>Period Started</strong>
-          </button>
-
-          <button class="quick-action" data-open-screen="bad-day">
-            <span>☁️</span>
-            <strong>Bad Day</strong>
-          </button>
-
-          <button class="quick-action" data-open-screen="journal">
-            <span>📖</span>
-            <strong>Journal</strong>
-          </button>
-
         </div>
 
       </section>
@@ -202,63 +239,7 @@
 
       </section>
 
-      <section class="section-block">
-
-        <p class="eyebrow">YOUR TSUKI</p>
-
-        <div class="feature-grid">
-
-          <button class="feature-card" data-open-screen="cycle-history">
-            <span>🌙</span>
-            <strong>Cycle History</strong>
-            <small>Add, edit & review periods</small>
-          </button>
-
-          <button class="feature-card" data-open-screen="relief">
-            <span>🫖</span>
-            <strong>Relief Tracker</strong>
-            <small>Remember what helped</small>
-          </button>
-
-          <button class="feature-card" data-open-screen="kit">
-            <span>👜</span>
-            <strong>Period Kit</strong>
-            <small>Your essentials</small>
-          </button>
-
-          <button class="feature-card" data-open-screen="going-out">
-            <span>🎀</span>
-            <strong>Going Out</strong>
-            <small>Prep before leaving</small>
-          </button>
-
-          <button class="feature-card" data-open-screen="reports">
-            <span>📊</span>
-            <strong>Reports</strong>
-            <small>Your recent cycles</small>
-          </button>
-
-          <button class="feature-card" data-open-screen="past-moons">
-            <span>🌙</span>
-            <strong>Past Moons</strong>
-            <small>Your cycle stories</small>
-          </button>
-
-          <button class="feature-card" data-open-screen="care-profile">
-            <span>💗</span>
-            <strong>How to Care for Me</strong>
-            <small>Your private support preferences</small>
-          </button>
-
-          <button class="feature-card" data-open-screen="calendar">
-            <span>📅</span>
-            <strong>Calendar</strong>
-            <small>See the whole month</small>
-          </button>
-
-        </div>
-
-      </section>
+      <p class="today-menu-hint">More tools live in the ☰ menu.</p>
 
     </section>
 
@@ -1642,7 +1623,10 @@
 
     <button
       class="nav-button add-button"
-      data-screen-target="log"
+      id="quickAddButton"
+      aria-label="Quick add"
+      aria-controls="quickAddSheet"
+      aria-expanded="false"
     >
       <span>＋</span>
     </button>
@@ -1664,6 +1648,27 @@
     </button>
 
   </nav>
+
+  <div id="quickAddBackdrop" class="quick-sheet-backdrop hidden" aria-hidden="true"></div>
+
+  <section id="quickAddSheet" class="quick-sheet" aria-hidden="true" aria-label="Quick add">
+    <div class="quick-sheet-grabber"></div>
+    <div class="quick-sheet-header">
+      <div>
+        <p class="eyebrow">QUICK ADD</p>
+        <h2>What would you like to log?</h2>
+      </div>
+      <button type="button" id="closeQuickAdd" class="quick-sheet-close" aria-label="Close quick add">×</button>
+    </div>
+
+    <div class="quick-sheet-grid">
+      <button type="button" data-quick-add="log"><span>📝</span><strong>Daily Check-in</strong><small>Mood, energy & today</small></button>
+      <button type="button" data-quick-add="period"><span>🩸</span><strong>Log Period</strong><small>Choose dates on calendar</small></button>
+      <button type="button" data-quick-add="bad-day"><span>☁️</span><strong>Quiet Day</strong><small>Keep it very simple</small></button>
+      <button type="button" data-quick-add="relief"><span>🫖</span><strong>Relief</strong><small>What helped today?</small></button>
+      <button type="button" data-quick-add="journal"><span>📖</span><strong>Journal</strong><small>Write something down</small></button>
+    </div>
+  </section>
 
   <div id="toast" class="toast"></div>
 

@@ -1,9 +1,9 @@
 /* ============================================================
-   TSUKI SERVICE WORKER — BUILD 4.2
-   Period UX + phase-aware logging + appearance
+   TSUKI SERVICE WORKER — BUILD 4.3
+   UI cleanup + drawer navigation
    ============================================================ */
 
-const CACHE_NAME = "tsuki-cache-v4-2";
+const CACHE_NAME = "tsuki-cache-v4-3";
 
 const APP_SHELL = [
   "./",
