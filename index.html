@@ -85,6 +85,10 @@
               Not enough data yet
             </strong>
 
+            <span id="periodCountdownText" class="period-countdown">
+              Tsuki is still learning your timing
+            </span>
+
             <span
               id="predictionConfidence"
               class="confidence-badge confidence-low"
@@ -360,25 +364,26 @@
           id="editingPeriodId"
         >
 
-        <label class="field-label">
-          Period started
-        </label>
+        <input id="periodStartDate" type="hidden">
+        <input id="periodEndDate" type="hidden">
 
-        <input
-          id="periodStartDate"
-          type="date"
-          class="input"
+        <label class="field-label">Period dates</label>
+
+        <button
+          type="button"
+          id="openPeriodCalendar"
+          class="period-calendar-launcher"
         >
+          <span>
+            <small>Tap to choose or edit dates</small>
+            <strong id="periodRangeSummary">Choose period days</strong>
+          </span>
+          <span class="period-calendar-launcher-icon">📅</span>
+        </button>
 
-        <label class="field-label">
-          Period ended
-        </label>
-
-        <input
-          id="periodEndDate"
-          type="date"
-          class="input"
-        >
+        <p id="periodLengthHint" class="period-length-hint">
+          New periods default to your typical period length.
+        </p>
 
         <label class="field-label">Cycle context</label>
 
@@ -400,8 +405,7 @@
         >
 
         <p class="muted small-text">
-          Tsuki automatically fills the expected end using your usual period length.
-          You can correct it later when your actual period ends.
+          Tap the calendar to scroll through months. New periods automatically use your typical period length, and you can adjust the start or end anytime.
         </p>
 
         <button
@@ -441,8 +445,8 @@
 
       <div class="page-title">
         <div>
-          <p class="eyebrow">CHECK IN</p>
-          <h2>Daily Log</h2>
+          <p class="eyebrow" id="logScreenEyebrow">DAILY LOG</p>
+          <h2 id="logScreenTitle">Daily Log</h2>
         </div>
 
         <span>📝</span>
@@ -465,7 +469,16 @@
 
         </article>
 
-        <article class="card">
+        <article id="logPhaseBanner" class="phase-log-banner">
+          <div class="phase-log-icon" id="logPhaseIcon">🌙</div>
+          <div>
+            <p class="eyebrow" id="logPhaseEyebrow">TODAY'S PHASE</p>
+            <h3 id="logPhaseTitle">Tsuki is finding your place in this cycle</h3>
+            <p id="logPhaseDescription" class="muted small-text">Log a period to anchor your cycle.</p>
+          </div>
+        </article>
+
+        <article class="card" id="periodFlowCard">
 
           <p class="card-label">Flow</p>
 
@@ -505,7 +518,7 @@
 
         </article>
 
-        <article class="card">
+        <article class="card" id="periodPainCard">
 
           <div class="card-row">
             <div>
@@ -539,6 +552,10 @@
             <span>Severe</span>
           </div>
 
+        </article>
+
+        <article class="card hidden" id="phaseSpecificLogCard">
+          <div id="phaseSpecificLogContent"></div>
         </article>
 
         <article class="card">
@@ -1326,8 +1343,7 @@
         >
 
         <p class="muted small-text">
-          These are fallback values only. Once you log enough history,
-          Tsuki uses your own averages.
+          Typical cycle length is used until Tsuki has enough history to calculate your own average. Typical period length controls how many days are preselected when you add a new period.
         </p>
 
         <button
@@ -1335,6 +1351,17 @@
           class="primary-button small"
         >
           Save settings
+        </button>
+
+      </article>
+
+      <article class="card">
+
+        <h3>Personalize</h3>
+
+        <button class="settings-row" id="openAppearance">
+          <span>🎨 Appearance</span>
+          <span class="settings-row-value"><span id="appearanceSummary">Sakura Pink</span> ›</span>
         </button>
 
       </article>
@@ -1476,6 +1503,124 @@
 
   </main>
 
+
+  <!-- PERIOD CALENDAR MODAL -->
+  <div id="periodCalendarModal" class="app-modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="periodCalendarTitle">
+    <section class="app-modal period-calendar-modal">
+      <div class="modal-grabber"></div>
+      <div class="app-modal-header">
+        <div>
+          <p class="eyebrow">PERIOD CALENDAR</p>
+          <h2 id="periodCalendarTitle">Choose your period days</h2>
+        </div>
+        <button type="button" id="closePeriodCalendar" class="modal-close" aria-label="Close period calendar">×</button>
+      </div>
+
+      <div class="period-calendar-help">
+        <span id="periodCalendarDefaultBadge">5-day default</span>
+        <p>Tap a pink saved period to edit it. For a new period, choose the start and Tsuki selects your usual number of days automatically.</p>
+      </div>
+
+      <div class="period-calendar-toolbar">
+        <button type="button" id="periodCalendarEarlier" class="secondary-button compact">← Earlier</button>
+        <div class="period-edit-mode" role="group" aria-label="Choose which date to edit">
+          <button type="button" class="period-mode-button active" data-period-mode="start">Start</button>
+          <button type="button" class="period-mode-button" data-period-mode="end">End</button>
+        </div>
+        <button type="button" id="periodCalendarLater" class="secondary-button compact">Later →</button>
+      </div>
+
+      <div id="periodCalendarMonths" class="period-calendar-months"></div>
+
+      <div class="period-calendar-draft">
+        <div>
+          <small>Selected period</small>
+          <strong id="periodCalendarDraftText">Choose a start date</strong>
+        </div>
+        <button type="button" id="periodCalendarUseDefault" class="text-button">Use default length</button>
+      </div>
+
+      <div class="modal-action-row">
+        <button type="button" id="periodCalendarClear" class="secondary-button">Clear</button>
+        <button type="button" id="periodCalendarDone" class="primary-button">Done</button>
+      </div>
+    </section>
+  </div>
+
+  <!-- APPEARANCE MODAL -->
+  <div id="appearanceModal" class="app-modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="appearanceTitle">
+    <section class="app-modal appearance-modal">
+      <div class="modal-grabber"></div>
+      <div class="app-modal-header">
+        <div>
+          <p class="eyebrow">PERSONALIZE</p>
+          <h2 id="appearanceTitle">Appearance</h2>
+        </div>
+        <button type="button" id="closeAppearance" class="modal-close" aria-label="Close appearance">×</button>
+      </div>
+
+      <article class="appearance-section">
+        <div class="appearance-section-title">
+          <h3>Color Theme</h3>
+          <strong id="appearanceThemeName">Sakura Pink</strong>
+        </div>
+
+        <div class="theme-option-list">
+          <button type="button" class="theme-option" data-theme-option="sakura">
+            <span class="theme-swatch swatch-sakura"></span><strong>Sakura Pink</strong><span class="theme-check">✓</span>
+          </button>
+          <button type="button" class="theme-option" data-theme-option="lavender">
+            <span class="theme-swatch swatch-lavender"></span><strong>Lavender Purple</strong><span class="theme-check">✓</span>
+          </button>
+          <button type="button" class="theme-option" data-theme-option="sky">
+            <span class="theme-swatch swatch-sky"></span><strong>Sky Blue</strong><span class="theme-check">✓</span>
+          </button>
+          <button type="button" class="theme-option" data-theme-option="mint">
+            <span class="theme-swatch swatch-mint"></span><strong>Mint Green</strong><span class="theme-check">✓</span>
+          </button>
+          <button type="button" class="theme-option" data-theme-option="yellow">
+            <span class="theme-swatch swatch-yellow"></span><strong>Soft Yellow</strong><span class="theme-check">✓</span>
+          </button>
+        </div>
+      </article>
+
+      <article class="appearance-section">
+        <div class="appearance-section-title">
+          <h3>Custom Wallpaper</h3>
+          <strong id="wallpaperStatus">Off</strong>
+        </div>
+
+        <div id="wallpaperPreview" class="wallpaper-preview">
+          <div>
+            <span>🌙</span>
+            <p>Choose a photo from this device.<br>It stays private and local to Tsuki.</p>
+          </div>
+        </div>
+
+        <input id="wallpaperFileInput" class="hidden" type="file" accept="image/*">
+        <button type="button" id="chooseWallpaper" class="secondary-button wallpaper-choose">Choose Photo</button>
+
+        <label class="wallpaper-toggle-row">
+          <span><strong>Wallpaper</strong><small>Turn the saved photo background on or off.</small></span>
+          <input id="wallpaperToggle" type="checkbox">
+        </label>
+
+        <div class="wallpaper-overlay-control">
+          <p class="field-label">Overlay strength</p>
+          <div class="overlay-option-row">
+            <button type="button" class="overlay-option" data-overlay="light">Light</button>
+            <button type="button" class="overlay-option" data-overlay="medium">Medium</button>
+            <button type="button" class="overlay-option" data-overlay="strong">Strong</button>
+          </div>
+        </div>
+
+        <p class="appearance-note">Wallpaper photos stay on this device and are not included in Tsuki's JSON backup.</p>
+      </article>
+
+      <button type="button" id="resetAppearance" class="secondary-button full-width">Reset Appearance</button>
+      <button type="button" id="appearanceDone" class="primary-button full-width">Done</button>
+    </section>
+  </div>
 
   <nav class="bottom-nav">
 

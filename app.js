@@ -1,6 +1,6 @@
 /* ============================================================
-   TSUKI 🌙 — BUILD 4.1
-   TSUKI KNOWS ME — SIGNATURE PERSONAL INTELLIGENCE
+   TSUKI 🌙 — BUILD 4.2
+   PERIOD UX + PHASE-AWARE LOGGING + APPEARANCE
    ============================================================ */
 
 const STORAGE_KEY = "tsuki-data-v4";
@@ -149,7 +149,10 @@ const defaultData = {
     reduceMotion: false,
     hideDetails: false,
     discreet: true,
-    quietInterface: false
+    quietInterface: false,
+    theme: "sakura",
+    wallpaperEnabled: false,
+    wallpaperOverlay: "medium"
   },
 
   periods: [],
@@ -679,6 +682,74 @@ function currentCycleDay() {
 }
 
 
+
+function cycleDayForDate(dateValue) {
+  const target = typeof dateValue === "string"
+    ? parseDate(dateValue)
+    : dateValue;
+
+  if (!target) return null;
+
+  const periods = validPeriods()
+    .filter(period => parseDate(period.start) <= target);
+
+  if (!periods.length) return null;
+
+  const anchor = periods[periods.length - 1];
+  const start = parseDate(anchor.start);
+  const difference = daysBetween(start, target);
+
+  return difference >= 0 ? difference + 1 : null;
+}
+
+
+function phaseForDate(dateValue) {
+  const key = typeof dateValue === "string"
+    ? dateValue
+    : dateKey(dateValue);
+
+  if (periodForDate(key)) {
+    return "Period";
+  }
+
+  const day = cycleDayForDate(key);
+  if (!day) return "No cycle yet";
+
+  const cycleLength = averageCycleLength();
+  const periodLength = averagePeriodLength();
+  const estimatedOvulation = Math.max(
+    periodLength + 3,
+    cycleLength - 14
+  );
+
+  if (day < estimatedOvulation - 1) {
+    return "Follicular phase";
+  }
+
+  if (Math.abs(day - estimatedOvulation) <= 1) {
+    return "Around mid-cycle";
+  }
+
+  return "Luteal phase";
+}
+
+
+function periodCountdownText() {
+  const estimate = nextEstimatedPeriodDate();
+  if (!estimate) return "Tsuki is still learning your timing";
+
+  const today = parseDate(todayKey());
+  const difference = daysBetween(today, estimate);
+
+  if (difference > 1) return `Period in ${difference} days`;
+  if (difference === 1) return "Period in 1 day";
+  if (difference === 0) return "Period expected today";
+
+  const lateBy = Math.abs(difference);
+  return `Average date passed ${lateBy} day${lateBy === 1 ? "" : "s"} ago`;
+}
+
+
 function nextEstimatedPeriodDate() {
   const period =
     latestPeriod();
@@ -898,7 +969,7 @@ function renderToday() {
       `Cycle Day ${day}`;
 
     cyclePhaseText.textContent =
-      cyclePhase(day);
+      phaseForDate(today);
   }
   else {
     cycleDayTitle.textContent =
@@ -923,6 +994,11 @@ function renderToday() {
   else {
     nextPeriodText.textContent =
       "Not enough data yet";
+  }
+
+  const countdown = document.getElementById("periodCountdownText");
+  if (countdown) {
+    countdown.textContent = periodCountdownText();
   }
 
   const confidence =
@@ -1046,6 +1122,48 @@ document
    CYCLE HISTORY
    ============================================================ */
 
+
+let periodCalendarMode = "start";
+let periodCalendarAnchor = new Date();
+let periodCalendarDraftStart = "";
+let periodCalendarDraftEnd = "";
+
+
+function configuredPeriodLength() {
+  return Math.max(1, Number(data.settings.periodLength) || 5);
+}
+
+
+function formatPeriodRange(startValue, endValue) {
+  const start = parseDate(startValue);
+  const end = parseDate(endValue);
+
+  if (!start) return "Choose period days";
+  if (!end) return formatDateLong(start);
+
+  const length = daysBetween(start, end) + 1;
+  return `${formatDateLong(start)} – ${formatDateLong(end)} · ${length} day${length === 1 ? "" : "s"}`;
+}
+
+
+function updatePeriodRangeSummary() {
+  const summary = document.getElementById("periodRangeSummary");
+  const hint = document.getElementById("periodLengthHint");
+
+  if (summary) {
+    summary.textContent = formatPeriodRange(
+      periodStartDate?.value || "",
+      periodEndDate?.value || ""
+    );
+  }
+
+  if (hint) {
+    const length = configuredPeriodLength();
+    hint.textContent = `New periods default to ${length} day${length === 1 ? "" : "s"}, based on Me → Typical period length.`;
+  }
+}
+
+
 const periodStartDate =
   document.getElementById(
     "periodStartDate"
@@ -1098,6 +1216,7 @@ function resetPeriodForm() {
   periodContext.value = "";
   periodContextCustom.value = "";
   periodContextCustom.classList.add("hidden");
+  updatePeriodRangeSummary();
 
   document
     .getElementById(
@@ -1207,6 +1326,20 @@ document
         return;
       }
 
+      const newStartDate = parseDate(start);
+      const newEndDate = parseDate(end);
+      const overlap = data.periods.find(period => {
+        if (period.id === id) return false;
+        const existingStart = parseDate(period.start);
+        const existingEnd = parseDate(period.end || ensurePeriodEnd(period.start));
+        return existingStart && existingEnd && newStartDate <= existingEnd && newEndDate >= existingStart;
+      });
+
+      if (overlap) {
+        showToast("Those dates overlap another saved period.");
+        return;
+      }
+
       if (id) {
         const period =
           data.periods.find(
@@ -1272,6 +1405,8 @@ function editPeriod(id) {
 
   periodEndDate.value =
     period.end || ensurePeriodEnd(period.start);
+
+  updatePeriodRangeSummary();
 
   const knownContexts = [
     "", "Travel", "High Stress", "Illness",
@@ -1540,6 +1675,246 @@ function renderCycleHistory() {
 }
 
 
+
+/* ============================================================
+   SCROLLABLE PERIOD CALENDAR
+   ============================================================ */
+
+function setPeriodCalendarMode(mode) {
+  periodCalendarMode = mode === "end" ? "end" : "start";
+
+  document
+    .querySelectorAll("[data-period-mode]")
+    .forEach(button => {
+      button.classList.toggle(
+        "active",
+        button.dataset.periodMode === periodCalendarMode
+      );
+    });
+}
+
+
+function loadPeriodIntoCalendar(period) {
+  if (!period) return;
+
+  editingPeriodId.value = period.id;
+  periodCalendarDraftStart = period.start;
+  periodCalendarDraftEnd = period.end || ensurePeriodEnd(period.start);
+  periodStartDate.value = periodCalendarDraftStart;
+  periodEndDate.value = periodCalendarDraftEnd;
+  updatePeriodRangeSummary();
+
+  const knownContexts = [
+    "", "Travel", "High Stress", "Illness",
+    "Busy Month", "Poor Sleep", "Vacation"
+  ];
+
+  if (knownContexts.includes(period.context || "")) {
+    periodContext.value = period.context || "";
+    periodContextCustom.value = "";
+    periodContextCustom.classList.add("hidden");
+  }
+  else {
+    periodContext.value = "Custom";
+    periodContextCustom.value = period.context || "";
+    periodContextCustom.classList.remove("hidden");
+  }
+
+  document.getElementById("periodFormTitle").textContent = "Edit period";
+  document.getElementById("savePeriodButton").textContent = "Update period";
+  document.getElementById("cancelPeriodEdit").classList.remove("hidden");
+}
+
+
+function updatePeriodCalendarDraft() {
+  const text = document.getElementById("periodCalendarDraftText");
+  if (!text) return;
+
+  text.textContent = formatPeriodRange(
+    periodCalendarDraftStart,
+    periodCalendarDraftEnd
+  );
+}
+
+
+function selectPeriodPickerDay(key) {
+  const matchingPeriod = periodForDate(key);
+
+  if (periodCalendarMode === "start") {
+    if (matchingPeriod && matchingPeriod.id !== editingPeriodId.value) {
+      loadPeriodIntoCalendar(matchingPeriod);
+      periodCalendarAnchor = parseDate(matchingPeriod.start) || periodCalendarAnchor;
+      setPeriodCalendarMode("end");
+      renderPeriodCalendarMonths();
+      updatePeriodCalendarDraft();
+      return;
+    }
+
+    periodCalendarDraftStart = key;
+    periodCalendarDraftEnd = ensurePeriodEnd(key);
+    setPeriodCalendarMode("end");
+  }
+  else {
+    if (!periodCalendarDraftStart || parseDate(key) < parseDate(periodCalendarDraftStart)) {
+      periodCalendarDraftStart = key;
+      periodCalendarDraftEnd = ensurePeriodEnd(key);
+      setPeriodCalendarMode("end");
+    }
+    else {
+      periodCalendarDraftEnd = key;
+    }
+  }
+
+  updatePeriodCalendarDraft();
+  renderPeriodCalendarMonths();
+}
+
+
+function periodPickerMonthHTML(year, month) {
+  const monthDate = new Date(year, month, 1);
+  const firstDay = monthDate.getDay();
+  const days = new Date(year, month + 1, 0).getDate();
+  const monthKey = `${year}-${String(month + 1).padStart(2, "0")}`;
+  const blanks = Array.from({ length: firstDay }, () => "<span></span>").join("");
+
+  const dayButtons = Array.from({ length: days }, (_, index) => {
+    const date = new Date(year, month, index + 1);
+    const key = dateKey(date);
+    const classes = ["period-picker-day"];
+    const existing = periodForDate(key);
+
+    if (key === todayKey()) classes.push("today");
+    if (existing) classes.push("saved-period");
+
+    if (
+      periodCalendarDraftStart &&
+      periodCalendarDraftEnd &&
+      dateWithin(date, parseDate(periodCalendarDraftStart), parseDate(periodCalendarDraftEnd))
+    ) {
+      classes.push("draft-period");
+    }
+
+    if (key === periodCalendarDraftStart) classes.push("draft-start");
+    if (key === periodCalendarDraftEnd) classes.push("draft-end");
+
+    return `<button type="button" class="${classes.join(" ")}" data-period-picker-date="${key}">${index + 1}</button>`;
+  }).join("");
+
+  return `
+    <section class="period-picker-month" data-period-picker-month="${monthKey}">
+      <h4>${monthDate.toLocaleDateString(undefined, { month: "long", year: "numeric" })}</h4>
+      <div class="period-picker-weekdays">
+        <span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span>
+      </div>
+      <div class="period-picker-grid">${blanks}${dayButtons}</div>
+    </section>
+  `;
+}
+
+
+function renderPeriodCalendarMonths() {
+  const container = document.getElementById("periodCalendarMonths");
+  if (!container) return;
+
+  const anchor = new Date(
+    periodCalendarAnchor.getFullYear(),
+    periodCalendarAnchor.getMonth(),
+    1
+  );
+
+  container.innerHTML = Array.from({ length: 13 }, (_, index) => {
+    const date = new Date(anchor.getFullYear(), anchor.getMonth() + index - 6, 1);
+    return periodPickerMonthHTML(date.getFullYear(), date.getMonth());
+  }).join("");
+
+  container.querySelectorAll("[data-period-picker-date]").forEach(button => {
+    button.addEventListener("click", () => selectPeriodPickerDay(button.dataset.periodPickerDate));
+  });
+}
+
+
+function openPeriodCalendar() {
+  periodCalendarDraftStart = periodStartDate.value;
+  periodCalendarDraftEnd = periodEndDate.value;
+  periodCalendarAnchor = parseDate(periodCalendarDraftStart) || new Date();
+  setPeriodCalendarMode("start");
+
+  const length = configuredPeriodLength();
+  document.getElementById("periodCalendarDefaultBadge").textContent =
+    `${length}-day default`;
+
+  renderPeriodCalendarMonths();
+  updatePeriodCalendarDraft();
+
+  document.getElementById("periodCalendarModal").classList.remove("hidden");
+  document.body.classList.add("modal-open");
+
+  requestAnimationFrame(() => {
+    const monthKey = `${periodCalendarAnchor.getFullYear()}-${String(periodCalendarAnchor.getMonth() + 1).padStart(2, "0")}`;
+    document.querySelector(`[data-period-picker-month="${monthKey}"]`)?.scrollIntoView({ block: "start" });
+  });
+}
+
+
+function closePeriodCalendar() {
+  document.getElementById("periodCalendarModal").classList.add("hidden");
+  document.body.classList.remove("modal-open");
+}
+
+
+document.getElementById("openPeriodCalendar")?.addEventListener("click", openPeriodCalendar);
+document.getElementById("closePeriodCalendar")?.addEventListener("click", closePeriodCalendar);
+
+document.getElementById("periodCalendarEarlier")?.addEventListener("click", () => {
+  periodCalendarAnchor.setMonth(periodCalendarAnchor.getMonth() - 12);
+  renderPeriodCalendarMonths();
+});
+
+document.getElementById("periodCalendarLater")?.addEventListener("click", () => {
+  periodCalendarAnchor.setMonth(periodCalendarAnchor.getMonth() + 12);
+  renderPeriodCalendarMonths();
+});
+
+document.querySelectorAll("[data-period-mode]").forEach(button => {
+  button.addEventListener("click", () => setPeriodCalendarMode(button.dataset.periodMode));
+});
+
+document.getElementById("periodCalendarUseDefault")?.addEventListener("click", () => {
+  if (!periodCalendarDraftStart) {
+    showToast("Choose the first day first.");
+    return;
+  }
+  periodCalendarDraftEnd = ensurePeriodEnd(periodCalendarDraftStart);
+  updatePeriodCalendarDraft();
+  renderPeriodCalendarMonths();
+});
+
+document.getElementById("periodCalendarClear")?.addEventListener("click", () => {
+  resetPeriodForm();
+  periodCalendarDraftStart = "";
+  periodCalendarDraftEnd = "";
+  setPeriodCalendarMode("start");
+  updatePeriodCalendarDraft();
+  renderPeriodCalendarMonths();
+});
+
+document.getElementById("periodCalendarDone")?.addEventListener("click", () => {
+  if (!periodCalendarDraftStart) {
+    showToast("Choose the first day of your period.");
+    return;
+  }
+
+  periodStartDate.value = periodCalendarDraftStart;
+  periodEndDate.value = periodCalendarDraftEnd || ensurePeriodEnd(periodCalendarDraftStart);
+  updatePeriodRangeSummary();
+  closePeriodCalendar();
+});
+
+document.getElementById("periodCalendarModal")?.addEventListener("click", event => {
+  if (event.target.id === "periodCalendarModal") closePeriodCalendar();
+});
+
+
 /* ============================================================
    DAILY LOG
    ============================================================ */
@@ -1549,211 +1924,233 @@ const logDate =
     "logDate"
   );
 
-logDate.value =
-  todayKey();
+logDate.value = todayKey();
 
+const painLevel = document.getElementById("painLevel");
 
-const painLevel =
-  document.getElementById(
-    "painLevel"
-  );
+painLevel.addEventListener("input", () => {
+  document.getElementById("painOutput").textContent = painLevel.value;
+});
 
-
-painLevel.addEventListener(
-  "input",
-  () => {
-    document
-      .getElementById(
-        "painOutput"
-      )
-      .textContent =
-        painLevel.value;
-  }
-);
-
-
-logDate.addEventListener(
-  "change",
-  loadLogForm
-);
+logDate.addEventListener("change", loadLogForm);
 
 
 function getCheckedValue(name) {
-  return document.querySelector(
-    `input[name="${name}"]:checked`
-  )?.value || "";
+  return document.querySelector(`input[name="${name}"]:checked`)?.value || "";
+}
+
+
+function setCheckedValue(name, value) {
+  if (!value) return;
+  const input = document.querySelector(`input[name="${name}"][value="${CSS.escape(String(value))}"]`);
+  if (input) input.checked = true;
 }
 
 
 function getSymptoms() {
-  return Array.from(
-    document.querySelectorAll(
-      'input[name="symptom"]:checked'
-    )
-  ).map(
-    input =>
-      input.value
-  );
+  return Array.from(document.querySelectorAll('input[name="symptom"]:checked'))
+    .map(input => input.value);
 }
 
 
 function clearRadioGroup(name) {
-  document
-    .querySelectorAll(
-      `input[name="${name}"]`
-    )
-    .forEach(
-      input => {
-        input.checked = false;
-      }
-    );
+  document.querySelectorAll(`input[name="${name}"]`).forEach(input => {
+    input.checked = false;
+  });
+}
+
+
+function phaseLogCopy(phase, day) {
+  if (phase === "Period") {
+    return {
+      icon: "🩸",
+      title: "Period check-in",
+      eyebrow: day ? `CYCLE DAY ${day} · PERIOD` : "PERIOD",
+      description: "Flow and cramps are available because this date is inside a saved period."
+    };
+  }
+
+  if (phase === "Follicular phase") {
+    return {
+      icon: "🌱",
+      title: "Follicular check-in",
+      eyebrow: day ? `CYCLE DAY ${day} · FOLLICULAR` : "FOLLICULAR",
+      description: "Track focus and motivation alongside your usual mood, energy, sleep and symptoms."
+    };
+  }
+
+  if (phase === "Around mid-cycle") {
+    return {
+      icon: "✨",
+      title: "Mid-cycle check-in",
+      eyebrow: day ? `CYCLE DAY ${day} · MID-CYCLE` : "MID-CYCLE",
+      description: "This is an estimated cycle window. Track discharge and libido only if they are useful to you."
+    };
+  }
+
+  if (phase === "Luteal phase") {
+    return {
+      icon: "🌙",
+      title: "Luteal check-in",
+      eyebrow: day ? `CYCLE DAY ${day} · LUTEAL` : "LUTEAL",
+      description: "Track stress, appetite and cravings alongside your normal daily check-in."
+    };
+  }
+
+  return {
+    icon: "🌙",
+    title: "Daily check-in",
+    eyebrow: "DAILY LOG",
+    description: "Log a period first if you want Tsuki to place this day within your cycle."
+  };
+}
+
+
+function segmentedHTML(name, label, options) {
+  return `
+    <div class="phase-field-block">
+      <p class="card-label">${escapeHTML(label)}</p>
+      <div class="segmented">
+        ${options.map(option => `
+          <label>
+            <input type="radio" name="${escapeHTML(name)}" value="${escapeHTML(option)}">
+            <span>${escapeHTML(option)}</span>
+          </label>
+        `).join("")}
+      </div>
+    </div>
+  `;
+}
+
+
+function renderPhaseSpecificLogFields(phase) {
+  const card = document.getElementById("phaseSpecificLogCard");
+  const content = document.getElementById("phaseSpecificLogContent");
+  if (!card || !content) return;
+
+  if (phase === "Follicular phase") {
+    content.innerHTML =
+      segmentedHTML("focus", "Focus", ["Low", "Medium", "High"]) +
+      segmentedHTML("motivation", "Motivation", ["Low", "Medium", "High"]);
+    card.classList.remove("hidden");
+    return;
+  }
+
+  if (phase === "Around mid-cycle") {
+    content.innerHTML =
+      segmentedHTML("discharge", "Discharge", ["Dry", "Sticky", "Creamy", "Watery"]) +
+      segmentedHTML("libido", "Libido", ["Low", "Medium", "High"]);
+    card.classList.remove("hidden");
+    return;
+  }
+
+  if (phase === "Luteal phase") {
+    content.innerHTML =
+      segmentedHTML("stress", "Stress", ["Low", "Medium", "High"]) +
+      segmentedHTML("appetite", "Appetite", ["Low", "Usual", "High"]) +
+      segmentedHTML("cravingIntensity", "Cravings", ["None", "Mild", "Strong"]);
+    card.classList.remove("hidden");
+    return;
+  }
+
+  content.innerHTML = "";
+  card.classList.add("hidden");
+}
+
+
+function renderLogPhaseUI() {
+  const key = logDate.value || todayKey();
+  const phase = phaseForDate(key);
+  const day = cycleDayForDate(key);
+  const copy = phaseLogCopy(phase, day);
+  const isPeriod = phase === "Period";
+
+  document.getElementById("logScreenEyebrow").textContent = copy.eyebrow;
+  document.getElementById("logScreenTitle").textContent = copy.title;
+  document.getElementById("logPhaseIcon").textContent = copy.icon;
+  document.getElementById("logPhaseEyebrow").textContent = copy.eyebrow;
+  document.getElementById("logPhaseTitle").textContent = phase === "No cycle yet" ? "Daily check-in" : phase;
+  document.getElementById("logPhaseDescription").textContent = copy.description;
+
+  document.getElementById("periodFlowCard").classList.toggle("hidden", !isPeriod);
+  document.getElementById("periodPainCard").classList.toggle("hidden", !isPeriod);
+  renderPhaseSpecificLogFields(phase);
+
+  return phase;
 }
 
 
 function loadLogForm() {
-  const saved =
-    data.logs[
-      logDate.value
-    ] || {};
+  const key = logDate.value || todayKey();
+  const saved = data.logs[key] || {};
+  const phase = renderLogPhaseUI();
 
   [
-    "flow",
-    "mood",
-    "energy",
-    "sleep"
-  ].forEach(
-    clearRadioGroup
-  );
+    "flow", "mood", "energy", "sleep",
+    "focus", "motivation", "discharge", "libido",
+    "stress", "appetite", "cravingIntensity"
+  ].forEach(clearRadioGroup);
 
-  if (saved.flow) {
-    const input =
-      document.querySelector(
-        `input[name="flow"][value="${saved.flow}"]`
-      );
+  setCheckedValue("flow", saved.flow);
+  setCheckedValue("mood", saved.mood);
+  setCheckedValue("energy", saved.energy);
+  setCheckedValue("sleep", saved.sleep);
+  setCheckedValue("focus", saved.focus);
+  setCheckedValue("motivation", saved.motivation);
+  setCheckedValue("discharge", saved.discharge);
+  setCheckedValue("libido", saved.libido);
+  setCheckedValue("stress", saved.stress);
+  setCheckedValue("appetite", saved.appetite);
+  setCheckedValue("cravingIntensity", saved.cravingIntensity);
 
-    if (input) input.checked = true;
-  }
+  document.querySelectorAll('input[name="symptom"]').forEach(input => {
+    input.checked = saved.symptoms?.includes(input.value) || false;
+  });
 
-  if (saved.mood) {
-    const input =
-      document.querySelector(
-        `input[name="mood"][value="${saved.mood}"]`
-      );
+  painLevel.value = saved.pain || 0;
+  document.getElementById("painOutput").textContent = painLevel.value;
+  document.getElementById("tinyJoy").value = saved.tinyJoy || "";
+  document.getElementById("dailyNotes").value = saved.notes || "";
 
-    if (input) input.checked = true;
-  }
-
-  if (saved.energy) {
-    const input =
-      document.querySelector(
-        `input[name="energy"][value="${saved.energy}"]`
-      );
-
-    if (input) input.checked = true;
-  }
-
-  if (saved.sleep) {
-    const input =
-      document.querySelector(
-        `input[name="sleep"][value="${saved.sleep}"]`
-      );
-
-    if (input) input.checked = true;
-  }
-
-  document
-    .querySelectorAll(
-      'input[name="symptom"]'
-    )
-    .forEach(
-      input => {
-        input.checked =
-          saved.symptoms?.includes(
-            input.value
-          ) || false;
-      }
-    );
-
-  painLevel.value =
-    saved.pain || 0;
-
-  document
-    .getElementById(
-      "painOutput"
-    )
-    .textContent =
-      painLevel.value;
-
-  document
-    .getElementById(
-      "tinyJoy"
-    )
-    .value =
-      saved.tinyJoy || "";
-
-  document
-    .getElementById(
-      "dailyNotes"
-    )
-    .value =
-      saved.notes || "";
+  return phase;
 }
 
 
-document
-  .getElementById(
-    "dailyLogForm"
-  )
-  .addEventListener(
-    "submit",
-    event => {
-      event.preventDefault();
+document.getElementById("dailyLogForm").addEventListener("submit", event => {
+  event.preventDefault();
 
-      const key =
-        logDate.value;
+  const key = logDate.value;
+  if (!key) return;
 
-      if (!key) return;
+  const phase = phaseForDate(key);
+  const existing = data.logs[key] || {};
+  const isPeriod = phase === "Period";
 
-      data.logs[key] = {
-        ...(data.logs[key] || {}),
-        flow:
-          getCheckedValue("flow") || "None",
-        pain:
-          Number(
-            painLevel.value
-          ),
-        mood:
-          getCheckedValue("mood"),
-        energy:
-          getCheckedValue("energy"),
-        sleep:
-          getCheckedValue("sleep"),
-        symptoms:
-          getSymptoms(),
-        tinyJoy:
-          document
-            .getElementById(
-              "tinyJoy"
-            )
-            .value
-            .trim(),
-        notes:
-          document
-            .getElementById(
-              "dailyNotes"
-            )
-            .value
-            .trim()
-      };
+  data.logs[key] = {
+    ...existing,
+    phaseAtLog: phase,
+    flow: isPeriod ? (getCheckedValue("flow") || "None") : "",
+    pain: isPeriod ? Number(painLevel.value) : 0,
+    mood: getCheckedValue("mood"),
+    energy: getCheckedValue("energy"),
+    sleep: getCheckedValue("sleep"),
+    focus: getCheckedValue("focus"),
+    motivation: getCheckedValue("motivation"),
+    discharge: getCheckedValue("discharge"),
+    libido: getCheckedValue("libido"),
+    stress: getCheckedValue("stress"),
+    appetite: getCheckedValue("appetite"),
+    cravingIntensity: getCheckedValue("cravingIntensity"),
+    symptoms: getSymptoms(),
+    tinyJoy: document.getElementById("tinyJoy").value.trim(),
+    notes: document.getElementById("dailyNotes").value.trim()
+  };
 
-      saveData();
-      renderEverything();
-
-      showToast(
-        "Your check-in is saved 🌸"
-      );
-    }
-  );
+  saveData();
+  renderEverything();
+  loadLogForm();
+  showToast(`${phase === "No cycle yet" ? "Daily" : phase.replace(" phase", "")} check-in saved 🌸`);
+});
 
 
 /* ============================================================
@@ -4916,6 +5313,265 @@ function renderReports() {
 }
 
 
+
+/* ============================================================
+   APPEARANCE + LOCAL WALLPAPER
+   ============================================================ */
+
+const THEME_NAMES = {
+  sakura: "Sakura Pink",
+  lavender: "Lavender Purple",
+  sky: "Sky Blue",
+  mint: "Mint Green",
+  yellow: "Soft Yellow"
+};
+
+const THEME_COLORS = {
+  sakura: "#f8c9d9",
+  lavender: "#ad8bd8",
+  sky: "#8ec0e2",
+  mint: "#91cab6",
+  yellow: "#e4c36a"
+};
+
+const APPEARANCE_DB = "tsuki-appearance-v1";
+const APPEARANCE_STORE = "assets";
+let wallpaperObjectUrl = "";
+let wallpaperAvailable = false;
+
+
+function openAppearanceDatabase() {
+  return new Promise((resolve, reject) => {
+    if (!("indexedDB" in window)) {
+      reject(new Error("IndexedDB is unavailable"));
+      return;
+    }
+
+    const request = indexedDB.open(APPEARANCE_DB, 1);
+
+    request.onupgradeneeded = () => {
+      const db = request.result;
+      if (!db.objectStoreNames.contains(APPEARANCE_STORE)) {
+        db.createObjectStore(APPEARANCE_STORE);
+      }
+    };
+
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+
+async function appearanceAssetGet(key) {
+  const db = await openAppearanceDatabase();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(APPEARANCE_STORE, "readonly");
+    const request = tx.objectStore(APPEARANCE_STORE).get(key);
+    request.onsuccess = () => resolve(request.result || null);
+    request.onerror = () => reject(request.error);
+    tx.oncomplete = () => db.close();
+  });
+}
+
+
+async function appearanceAssetPut(key, value) {
+  const db = await openAppearanceDatabase();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(APPEARANCE_STORE, "readwrite");
+    tx.objectStore(APPEARANCE_STORE).put(value, key);
+    tx.oncomplete = () => { db.close(); resolve(); };
+    tx.onerror = () => { db.close(); reject(tx.error); };
+  });
+}
+
+
+async function appearanceAssetDelete(key) {
+  const db = await openAppearanceDatabase();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(APPEARANCE_STORE, "readwrite");
+    tx.objectStore(APPEARANCE_STORE).delete(key);
+    tx.oncomplete = () => { db.close(); resolve(); };
+    tx.onerror = () => { db.close(); reject(tx.error); };
+  });
+}
+
+
+function applyWallpaperClasses() {
+  const overlay = ["light", "medium", "strong"].includes(data.settings.wallpaperOverlay)
+    ? data.settings.wallpaperOverlay
+    : "medium";
+
+  document.body.classList.remove("wallpaper-light", "wallpaper-medium", "wallpaper-strong");
+  document.body.classList.add(`wallpaper-${overlay}`);
+  document.body.classList.toggle(
+    "wallpaper-enabled",
+    Boolean(data.settings.wallpaperEnabled && wallpaperAvailable && wallpaperObjectUrl)
+  );
+}
+
+
+async function refreshWallpaperAsset() {
+  try {
+    const blob = await appearanceAssetGet("wallpaper");
+    wallpaperAvailable = Boolean(blob);
+
+    if (wallpaperObjectUrl) {
+      URL.revokeObjectURL(wallpaperObjectUrl);
+      wallpaperObjectUrl = "";
+    }
+
+    if (blob) {
+      wallpaperObjectUrl = URL.createObjectURL(blob);
+      document.documentElement.style.setProperty(
+        "--tsuki-wallpaper",
+        `url("${wallpaperObjectUrl}")`
+      );
+    }
+    else {
+      document.documentElement.style.removeProperty("--tsuki-wallpaper");
+    }
+  }
+  catch (error) {
+    console.warn("Tsuki could not load the wallpaper:", error);
+    wallpaperAvailable = false;
+  }
+
+  applyWallpaperClasses();
+  renderAppearanceUI();
+}
+
+
+function renderAppearanceUI() {
+  const theme = THEME_NAMES[data.settings.theme] ? data.settings.theme : "sakura";
+  const themeName = THEME_NAMES[theme];
+
+  document.getElementById("appearanceSummary")?.replaceChildren(themeName);
+  document.getElementById("appearanceThemeName")?.replaceChildren(themeName);
+
+  document.querySelectorAll("[data-theme-option]").forEach(button => {
+    button.classList.toggle("active", button.dataset.themeOption === theme);
+  });
+
+  const preview = document.getElementById("wallpaperPreview");
+  if (preview) {
+    preview.classList.toggle("has-image", wallpaperAvailable);
+    preview.style.backgroundImage = wallpaperAvailable && wallpaperObjectUrl
+      ? `url("${wallpaperObjectUrl}")`
+      : "";
+  }
+
+  const toggle = document.getElementById("wallpaperToggle");
+  if (toggle) toggle.checked = Boolean(data.settings.wallpaperEnabled && wallpaperAvailable);
+
+  const status = document.getElementById("wallpaperStatus");
+  if (status) status.textContent = data.settings.wallpaperEnabled && wallpaperAvailable ? "On" : "Off";
+
+  document.querySelectorAll("[data-overlay]").forEach(button => {
+    button.classList.toggle("active", button.dataset.overlay === data.settings.wallpaperOverlay);
+  });
+}
+
+
+function openAppearanceModal() {
+  renderAppearanceUI();
+  document.getElementById("appearanceModal").classList.remove("hidden");
+  document.body.classList.add("modal-open");
+}
+
+
+function closeAppearanceModal() {
+  document.getElementById("appearanceModal").classList.add("hidden");
+  document.body.classList.remove("modal-open");
+}
+
+
+document.getElementById("openAppearance")?.addEventListener("click", openAppearanceModal);
+document.getElementById("closeAppearance")?.addEventListener("click", closeAppearanceModal);
+document.getElementById("appearanceDone")?.addEventListener("click", closeAppearanceModal);
+
+document.getElementById("appearanceModal")?.addEventListener("click", event => {
+  if (event.target.id === "appearanceModal") closeAppearanceModal();
+});
+
+document.querySelectorAll("[data-theme-option]").forEach(button => {
+  button.addEventListener("click", () => {
+    data.settings.theme = button.dataset.themeOption;
+    saveData();
+    applySettings();
+    renderAppearanceUI();
+  });
+});
+
+document.getElementById("chooseWallpaper")?.addEventListener("click", () => {
+  document.getElementById("wallpaperFileInput")?.click();
+});
+
+document.getElementById("wallpaperFileInput")?.addEventListener("change", async event => {
+  const file = event.target.files?.[0];
+  if (!file) return;
+
+  if (!file.type.startsWith("image/")) {
+    showToast("Choose an image file.");
+    return;
+  }
+
+  try {
+    await appearanceAssetPut("wallpaper", file);
+    data.settings.wallpaperEnabled = true;
+    saveData();
+    await refreshWallpaperAsset();
+    showToast("Wallpaper saved locally 🌙");
+  }
+  catch (error) {
+    console.error("Could not save wallpaper:", error);
+    showToast("Tsuki couldn't save that wallpaper on this device.");
+  }
+
+  event.target.value = "";
+});
+
+document.getElementById("wallpaperToggle")?.addEventListener("change", event => {
+  if (event.target.checked && !wallpaperAvailable) {
+    event.target.checked = false;
+    showToast("Choose a wallpaper photo first.");
+    return;
+  }
+
+  data.settings.wallpaperEnabled = event.target.checked;
+  saveData();
+  applyWallpaperClasses();
+  renderAppearanceUI();
+});
+
+document.querySelectorAll("[data-overlay]").forEach(button => {
+  button.addEventListener("click", () => {
+    data.settings.wallpaperOverlay = button.dataset.overlay;
+    saveData();
+    applyWallpaperClasses();
+    renderAppearanceUI();
+  });
+});
+
+document.getElementById("resetAppearance")?.addEventListener("click", async () => {
+  data.settings.theme = "sakura";
+  data.settings.wallpaperEnabled = false;
+  data.settings.wallpaperOverlay = "medium";
+  saveData();
+
+  try {
+    await appearanceAssetDelete("wallpaper");
+  }
+  catch (error) {
+    console.warn("Wallpaper could not be removed:", error);
+  }
+
+  await refreshWallpaperAsset();
+  applySettings();
+  renderAppearanceUI();
+  showToast("Appearance reset 🌸");
+});
+
+
 /* ============================================================
    SETTINGS
    ============================================================ */
@@ -5066,6 +5722,11 @@ document
 
 
 function applySettings() {
+  const theme = THEME_NAMES[data.settings.theme] ? data.settings.theme : "sakura";
+  document.body.dataset.theme = theme;
+  document.querySelector('meta[name="theme-color"]')?.setAttribute("content", THEME_COLORS[theme]);
+  applyWallpaperClasses();
+
   document.body.classList.toggle(
     "reduce-motion",
     data.settings.reduceMotion
@@ -5239,6 +5900,10 @@ document
         clone(
           defaultData
         );
+
+      appearanceAssetDelete("wallpaper")
+        .then(refreshWallpaperAsset)
+        .catch(error => console.warn("Wallpaper cleanup failed:", error));
 
       saveData();
       resetPeriodForm();
@@ -5459,6 +6124,8 @@ if (
    ============================================================ */
 
 function renderEverything() {
+  updatePeriodRangeSummary();
+  renderAppearanceUI();
   renderGreeting();
   renderToday();
   renderCalendar();
@@ -5484,6 +6151,7 @@ function init() {
   applySettings();
   loadLogForm();
   renderEverything();
+  refreshWallpaperAsset();
   updateOnlineStatus();
 }
 

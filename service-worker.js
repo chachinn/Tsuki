@@ -1,9 +1,9 @@
 /* ============================================================
-   TSUKI SERVICE WORKER — BUILD 4.1
-   Native-feel stability update
+   TSUKI SERVICE WORKER — BUILD 4.2
+   Period UX + phase-aware logging + appearance
    ============================================================ */
 
-const CACHE_NAME = "tsuki-cache-v4-1";
+const CACHE_NAME = "tsuki-cache-v4-2";
 
 const APP_SHELL = [
   "./",

@@ -2447,3 +2447,650 @@ body.quiet-interface [data-screen="bad-day"] .section-block {
   color: var(--text);
   font-size: 10px;
 }
+
+
+/* ============================================================
+   BUILD 4.2 — PERIOD UX + PHASE LOGGING + APPEARANCE
+   ============================================================ */
+
+.period-countdown {
+  display: block;
+  width: fit-content;
+  margin: 7px 0 2px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.78);
+  color: var(--pink-600);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.01em;
+}
+
+.period-calendar-launcher {
+  width: 100%;
+  border: 1px solid rgba(229, 111, 156, 0.18);
+  border-radius: 20px;
+  background: rgba(255, 249, 251, 0.82);
+  padding: 16px 17px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  text-align: left;
+  color: var(--text);
+  box-shadow: var(--shadow-soft);
+}
+
+.period-calendar-launcher small {
+  display: block;
+  color: var(--muted);
+  font-size: 10px;
+  margin-bottom: 4px;
+}
+
+.period-calendar-launcher strong {
+  display: block;
+  font-size: 15px;
+  line-height: 1.35;
+}
+
+.period-calendar-launcher-icon {
+  width: 45px;
+  height: 45px;
+  flex: 0 0 45px;
+  display: grid;
+  place-items: center;
+  border-radius: 15px;
+  background: var(--pink-100);
+  font-size: 21px;
+}
+
+.period-length-hint {
+  margin: 8px 2px 16px;
+  color: var(--pink-600);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.phase-log-banner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 17px;
+  margin-bottom: 12px;
+  border: 1px solid rgba(229, 111, 156, 0.12);
+  border-radius: 22px;
+  background: linear-gradient(135deg, rgba(255,255,255,.88), rgba(244,239,251,.76));
+  box-shadow: var(--shadow-soft);
+}
+
+.phase-log-banner h3 {
+  margin: 2px 0 4px;
+  font-size: 16px;
+}
+
+.phase-log-banner p {
+  margin: 0;
+}
+
+.phase-log-icon {
+  width: 52px;
+  height: 52px;
+  flex: 0 0 52px;
+  display: grid;
+  place-items: center;
+  border-radius: 18px;
+  background: var(--moon);
+  font-size: 25px;
+}
+
+.phase-field-block + .phase-field-block {
+  margin-top: 17px;
+}
+
+.phase-field-block .card-label {
+  margin-bottom: 8px;
+}
+
+/* App-style modal sheets */
+.app-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 5000;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: max(14px, env(safe-area-inset-top)) 14px max(14px, env(safe-area-inset-bottom));
+  background: rgba(65, 48, 58, 0.28);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.app-modal {
+  width: min(100%, 700px);
+  max-height: min(90dvh, 900px);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid rgba(229, 111, 156, 0.15);
+  border-radius: 30px;
+  background: rgba(255, 252, 253, 0.98);
+  box-shadow: 0 28px 80px rgba(70, 45, 58, 0.22);
+}
+
+.modal-grabber {
+  width: 42px;
+  height: 5px;
+  margin: 9px auto 1px;
+  border-radius: 999px;
+  background: rgba(104, 82, 94, 0.16);
+}
+
+.app-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 13px 20px 12px;
+}
+
+.app-modal-header h2 {
+  margin: 2px 0 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 30px;
+  line-height: 1;
+}
+
+.modal-close {
+  width: 48px;
+  height: 48px;
+  flex: 0 0 48px;
+  border: 1px solid rgba(229, 111, 156, 0.18);
+  border-radius: 17px;
+  background: rgba(255,255,255,.85);
+  color: var(--text);
+  font-size: 26px;
+  line-height: 1;
+  box-shadow: var(--shadow-soft);
+}
+
+body.modal-open {
+  overflow: hidden;
+}
+
+/* Period calendar modal */
+.period-calendar-help {
+  margin: 0 20px 10px;
+  padding: 12px 14px;
+  border-radius: 17px;
+  background: var(--pink-50);
+}
+
+.period-calendar-help span {
+  display: inline-block;
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: var(--pink-200);
+  color: var(--pink-600);
+  font-size: 9px;
+  font-weight: 900;
+}
+
+.period-calendar-help p {
+  margin: 7px 0 0;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.period-calendar-toolbar {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 8px;
+  align-items: center;
+  padding: 0 20px 10px;
+}
+
+.secondary-button.compact {
+  min-height: 40px;
+  padding: 9px 11px;
+  font-size: 9px;
+}
+
+.period-edit-mode {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  padding: 3px;
+  border-radius: 14px;
+  background: var(--pink-100);
+}
+
+.period-mode-button {
+  min-height: 34px;
+  border: 0;
+  border-radius: 11px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 900;
+}
+
+.period-mode-button.active {
+  background: white;
+  color: var(--pink-600);
+  box-shadow: var(--shadow-soft);
+}
+
+.period-calendar-months {
+  flex: 1;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0 20px 10px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.period-picker-month {
+  padding: 14px 0 19px;
+  border-top: 1px solid rgba(229, 111, 156, 0.10);
+}
+
+.period-picker-month:first-child {
+  border-top: 0;
+}
+
+.period-picker-month h4 {
+  margin: 0 0 11px;
+  text-align: center;
+  font-size: 13px;
+}
+
+.period-picker-weekdays,
+.period-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+
+.period-picker-weekdays span {
+  text-align: center;
+  color: var(--muted);
+  font-size: 8px;
+  font-weight: 800;
+}
+
+.period-picker-day {
+  aspect-ratio: 1;
+  min-height: 38px;
+  border: 0;
+  border-radius: 13px;
+  background: transparent;
+  color: var(--text);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.period-picker-day.today {
+  box-shadow: inset 0 0 0 1.5px var(--pink-400);
+}
+
+.period-picker-day.saved-period {
+  background: var(--pink-100);
+  color: var(--pink-600);
+}
+
+.period-picker-day.draft-period {
+  background: var(--pink-500);
+  color: white;
+}
+
+.period-picker-day.draft-start,
+.period-picker-day.draft-end {
+  box-shadow: inset 0 0 0 2px white, 0 3px 10px rgba(217, 87, 136, .20);
+}
+
+.period-calendar-draft {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin: 0 20px 10px;
+  padding: 12px 14px;
+  border-radius: 17px;
+  background: var(--lavender-100);
+}
+
+.period-calendar-draft small {
+  display: block;
+  color: var(--muted);
+  font-size: 8px;
+}
+
+.period-calendar-draft strong {
+  display: block;
+  margin-top: 2px;
+  font-size: 11px;
+}
+
+.text-button {
+  border: 0;
+  background: transparent;
+  color: var(--pink-600);
+  font-size: 9px;
+  font-weight: 900;
+}
+
+.modal-action-row {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 9px;
+  padding: 0 20px 20px;
+}
+
+.modal-action-row .primary-button,
+.modal-action-row .secondary-button {
+  margin: 0;
+}
+
+/* Appearance */
+.appearance-modal {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.appearance-section {
+  margin: 0 20px 14px;
+  padding: 18px;
+  border: 1px solid rgba(229, 111, 156, 0.16);
+  border-radius: 24px;
+  background: rgba(255,255,255,.68);
+}
+
+.appearance-section-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 13px;
+}
+
+.appearance-section-title h3 {
+  margin: 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 22px;
+}
+
+.appearance-section-title > strong {
+  color: var(--pink-600);
+  font-size: 11px;
+}
+
+.theme-option-list {
+  display: grid;
+  gap: 7px;
+}
+
+.theme-option {
+  width: 100%;
+  min-height: 58px;
+  display: grid;
+  grid-template-columns: 44px 1fr 24px;
+  align-items: center;
+  gap: 11px;
+  padding: 8px 12px;
+  border: 1px solid rgba(229, 111, 156, 0.14);
+  border-radius: 18px;
+  background: rgba(255, 249, 251, .75);
+  color: var(--text);
+  text-align: left;
+}
+
+.theme-option.active {
+  border: 2px solid var(--pink-400);
+  box-shadow: 0 0 0 3px rgba(233,111,156,.07);
+}
+
+.theme-swatch {
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  box-shadow: inset 0 0 0 1px rgba(80,60,70,.10);
+}
+
+.swatch-sakura { background: #ecb7cc; }
+.swatch-lavender { background: #a48bd3; }
+.swatch-sky { background: #7fb4dc; }
+.swatch-mint { background: #8bc9b4; }
+.swatch-yellow { background: #e5bf62; }
+
+.theme-check {
+  color: var(--pink-600);
+  opacity: 0;
+  font-size: 18px;
+  font-weight: 900;
+}
+
+.theme-option.active .theme-check { opacity: 1; }
+
+.wallpaper-preview {
+  min-height: 150px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border: 1.5px dashed rgba(229, 111, 156, .24);
+  border-radius: 21px;
+  background-position: center;
+  background-size: cover;
+  text-align: center;
+}
+
+.wallpaper-preview > div {
+  padding: 18px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.wallpaper-preview.has-image > div {
+  display: none;
+}
+
+.wallpaper-choose {
+  width: 48%;
+  min-width: 145px;
+  margin-top: 10px;
+}
+
+.wallpaper-toggle-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 15px;
+  margin-top: 12px;
+  padding: 13px 14px;
+  border: 1px solid rgba(229,111,156,.14);
+  border-radius: 18px;
+  background: var(--pink-50);
+}
+
+.wallpaper-toggle-row strong,
+.wallpaper-toggle-row small {
+  display: block;
+}
+
+.wallpaper-toggle-row small {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 9px;
+}
+
+.wallpaper-overlay-control {
+  margin-top: 14px;
+}
+
+.overlay-option-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 7px;
+}
+
+.overlay-option {
+  min-height: 43px;
+  border: 1px solid rgba(229,111,156,.18);
+  border-radius: 999px;
+  background: white;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.overlay-option.active {
+  background: var(--pink-100);
+  color: var(--pink-600);
+  font-weight: 900;
+  border-color: var(--pink-300);
+}
+
+.appearance-note {
+  margin: 12px 2px 0;
+  color: var(--muted);
+  font-size: 9px;
+  line-height: 1.5;
+}
+
+.full-width {
+  width: calc(100% - 40px);
+  margin: 0 20px 10px;
+}
+
+.settings-row-value {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 10px;
+}
+
+/* Theme tokens. Peach Pink intentionally not included. */
+body[data-theme="sakura"] { }
+
+body[data-theme="lavender"] {
+  --pink-50: #faf8ff;
+  --pink-100: #f1ebfb;
+  --pink-150: #e9dff8;
+  --pink-200: #dfd1f3;
+  --pink-300: #cbb5e9;
+  --pink-400: #ad8bd8;
+  --pink-500: #9473c7;
+  --pink-600: #7f5ab7;
+  --lavender-100: #f6f0fb;
+  --lavender-200: #e9dcf6;
+  --lavender-300: #d6c3ed;
+  --moon: #fff0c7;
+}
+
+body[data-theme="sky"] {
+  --pink-50: #f7fbff;
+  --pink-100: #eaf5fc;
+  --pink-150: #deedf8;
+  --pink-200: #cfe5f4;
+  --pink-300: #b4d5ec;
+  --pink-400: #8ec0e2;
+  --pink-500: #72add7;
+  --pink-600: #5594c1;
+  --lavender-100: #eef6fb;
+  --lavender-200: #dcebf6;
+  --lavender-300: #c7dfef;
+  --moon: #fff0c7;
+}
+
+body[data-theme="mint"] {
+  --pink-50: #f7fcfa;
+  --pink-100: #e9f6f1;
+  --pink-150: #dcefe8;
+  --pink-200: #cae7dd;
+  --pink-300: #afd9ca;
+  --pink-400: #91cab6;
+  --pink-500: #73b79f;
+  --pink-600: #589d86;
+  --lavender-100: #f0f8f4;
+  --lavender-200: #e0f0e9;
+  --lavender-300: #cde4da;
+  --moon: #fff0c7;
+}
+
+body[data-theme="yellow"] {
+  --pink-50: #fffdf6;
+  --pink-100: #fff7dc;
+  --pink-150: #fbeec6;
+  --pink-200: #f6e4ad;
+  --pink-300: #edd58f;
+  --pink-400: #e4c36a;
+  --pink-500: #d8ad46;
+  --pink-600: #b88d2e;
+  --lavender-100: #fff9e9;
+  --lavender-200: #f7edcf;
+  --lavender-300: #eadcb6;
+  --moon: #fff1b5;
+}
+
+body.wallpaper-enabled {
+  background-image: var(--tsuki-wallpaper);
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+}
+
+body.wallpaper-enabled::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: rgba(255, 250, 252, var(--wallpaper-overlay, .72));
+}
+
+body.wallpaper-enabled #app {
+  position: relative;
+  z-index: 1;
+  background: transparent;
+}
+
+body.wallpaper-light { --wallpaper-overlay: .52; }
+body.wallpaper-medium { --wallpaper-overlay: .72; }
+body.wallpaper-strong { --wallpaper-overlay: .86; }
+
+@media (max-width: 410px) {
+  .period-calendar-toolbar {
+    grid-template-columns: 1fr 1.6fr 1fr;
+  }
+
+  .period-calendar-toolbar .secondary-button.compact {
+    padding-left: 6px;
+    padding-right: 6px;
+  }
+
+  .app-modal-header h2 {
+    font-size: 27px;
+  }
+}
+
+
+.phase-field-block .segmented {
+  grid-template-columns: repeat(auto-fit, minmax(68px, 1fr));
+}
+
+body[data-theme="lavender"]:not(.wallpaper-enabled) {
+  background: linear-gradient(180deg, #fbf8ff 0%, #f5effb 52%, #fcf9ff 100%);
+}
+
+body[data-theme="sky"]:not(.wallpaper-enabled) {
+  background: linear-gradient(180deg, #f8fcff 0%, #edf7fd 52%, #fbfdff 100%);
+}
+
+body[data-theme="mint"]:not(.wallpaper-enabled) {
+  background: linear-gradient(180deg, #f8fcfa 0%, #edf8f4 52%, #fbfdfc 100%);
+}
+
+body[data-theme="yellow"]:not(.wallpaper-enabled) {
+  background: linear-gradient(180deg, #fffdf8 0%, #fff8e5 52%, #fffdf7 100%);
+}
