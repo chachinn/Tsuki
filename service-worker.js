@@ -1,10 +1,9 @@
 /* ============================================================
-   TSUKI SERVICE WORKER — BUILD 4
+   TSUKI SERVICE WORKER — BUILD 4.1
+   Native-feel stability update
    ============================================================ */
 
-const CACHE_NAME =
-  "tsuki-cache-v4";
-
+const CACHE_NAME = "tsuki-cache-v4-1";
 
 const APP_SHELL = [
   "./",
@@ -16,156 +15,129 @@ const APP_SHELL = [
   "./icons/icon-512.png"
 ];
 
+const UPDATE_FIRST = new Set([
+  "./",
+  "./index.html",
+  "./style.css",
+  "./app.js",
+  "./manifest.json"
+]);
+
 
 /* ============================================================
    INSTALL
    ============================================================ */
 
-self.addEventListener(
-  "install",
-  event => {
+self.addEventListener("install", event => {
+  event.waitUntil(
+    caches
+      .open(CACHE_NAME)
+      .then(cache => cache.addAll(APP_SHELL))
+  );
 
-    event.waitUntil(
-
-      caches
-        .open(
-          CACHE_NAME
-        )
-        .then(
-          cache =>
-            cache.addAll(
-              APP_SHELL
-            )
-        )
-
-    );
-
-    self.skipWaiting();
-
-  }
-);
+  self.skipWaiting();
+});
 
 
 /* ============================================================
    ACTIVATE
    ============================================================ */
 
-self.addEventListener(
-  "activate",
-  event => {
-
-    event.waitUntil(
-
-      caches
-        .keys()
-        .then(
-          keys =>
-            Promise.all(
-
-              keys
-                .filter(
-                  key =>
-                    key !==
-                    CACHE_NAME
-                )
-                .map(
-                  key =>
-                    caches.delete(
-                      key
-                    )
-                )
-
-            )
+self.addEventListener("activate", event => {
+  event.waitUntil(
+    caches
+      .keys()
+      .then(keys =>
+        Promise.all(
+          keys
+            .filter(key => key !== CACHE_NAME)
+            .map(key => caches.delete(key))
         )
+      )
+  );
 
-    );
+  self.clients.claim();
+});
 
-    self.clients.claim();
 
+/* ============================================================
+   HELPERS
+   ============================================================ */
+
+function relativePath(url) {
+  const parsed = new URL(url);
+  const scope = new URL(self.registration.scope);
+  const relative = parsed.pathname.slice(scope.pathname.length);
+
+  return relative ? `./${relative}` : "./";
+}
+
+async function networkFirst(request) {
+  const cache = await caches.open(CACHE_NAME);
+
+  try {
+    const response = await fetch(request, { cache: "no-store" });
+
+    if (response && response.status === 200) {
+      cache.put(request, response.clone());
+    }
+
+    return response;
   }
-);
+  catch (error) {
+    const cached = await cache.match(request);
+
+    if (cached) return cached;
+
+    if (request.mode === "navigate") {
+      return cache.match("./index.html");
+    }
+
+    throw error;
+  }
+}
+
+async function cacheFirst(request) {
+  const cached = await caches.match(request);
+
+  if (cached) return cached;
+
+  const response = await fetch(request);
+
+  if (
+    response &&
+    response.status === 200 &&
+    response.type !== "opaque"
+  ) {
+    const cache = await caches.open(CACHE_NAME);
+    cache.put(request, response.clone());
+  }
+
+  return response;
+}
 
 
 /* ============================================================
    FETCH
    ============================================================ */
 
-self.addEventListener(
-  "fetch",
-  event => {
+self.addEventListener("fetch", event => {
+  if (event.request.method !== "GET") return;
 
-    if (
-      event.request.method !==
-      "GET"
-    ) {
-      return;
-    }
+  const requestUrl = new URL(event.request.url);
+  const scopeUrl = new URL(self.registration.scope);
 
-    event.respondWith(
+  if (requestUrl.origin !== scopeUrl.origin) return;
 
-      caches
-        .match(
-          event.request
-        )
-        .then(
-          cached => {
+  const path = relativePath(event.request.url);
 
-            if (cached) {
-              return cached;
-            }
-
-            return fetch(
-              event.request
-            )
-            .then(
-              response => {
-
-                if (
-                  !response ||
-                  response.status !== 200 ||
-                  response.type === "opaque"
-                ) {
-                  return response;
-                }
-
-                const cloned =
-                  response.clone();
-
-                caches
-                  .open(
-                    CACHE_NAME
-                  )
-                  .then(
-                    cache =>
-                      cache.put(
-                        event.request,
-                        cloned
-                      )
-                  );
-
-                return response;
-
-              }
-            )
-            .catch(
-              () => {
-
-                if (
-                  event.request.mode ===
-                  "navigate"
-                ) {
-                  return caches.match(
-                    "./index.html"
-                  );
-                }
-
-              }
-            );
-
-          }
-        )
-
-    );
-
+  if (
+    event.request.mode === "navigate" ||
+    UPDATE_FIRST.has(path)
+  ) {
+    event.respondWith(networkFirst(event.request));
+    return;
   }
-);
+
+  event.respondWith(cacheFirst(event.request));
+});

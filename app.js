@@ -1,5 +1,5 @@
 /* ============================================================
-   TSUKI 🌙 — BUILD 4
+   TSUKI 🌙 — BUILD 4.1
    TSUKI KNOWS ME — SIGNATURE PERSONAL INTELLIGENCE
    ============================================================ */
 
@@ -5319,6 +5319,86 @@ function renderGreeting() {
 
 
 /* ============================================================
+   NATIVE TOUCH GUARDS
+   Prevent pinch zoom + double-tap zoom while preserving normal
+   one-finger scrolling and form interaction in the installed PWA.
+   ============================================================ */
+
+function installNativeTouchGuards() {
+  const preventGesture = event => {
+    event.preventDefault();
+  };
+
+  [
+    "gesturestart",
+    "gesturechange",
+    "gestureend"
+  ].forEach(type => {
+    document.addEventListener(
+      type,
+      preventGesture,
+      { passive: false }
+    );
+  });
+
+  document.addEventListener(
+    "touchmove",
+    event => {
+      if (event.touches && event.touches.length > 1) {
+        event.preventDefault();
+      }
+    },
+    { passive: false }
+  );
+
+  let lastTouch = {
+    time: 0,
+    target: null,
+    x: 0,
+    y: 0
+  };
+
+  document.addEventListener(
+    "touchend",
+    event => {
+      const touch = event.changedTouches?.[0];
+      if (!touch) return;
+
+      const now = Date.now();
+      const sameTarget = lastTouch.target === event.target;
+      const closeEnough =
+        Math.abs(touch.clientX - lastTouch.x) < 28 &&
+        Math.abs(touch.clientY - lastTouch.y) < 28;
+
+      if (
+        sameTarget &&
+        closeEnough &&
+        now - lastTouch.time < 320
+      ) {
+        event.preventDefault();
+      }
+
+      lastTouch = {
+        time: now,
+        target: event.target,
+        x: touch.clientX,
+        y: touch.clientY
+      };
+    },
+    { passive: false }
+  );
+
+  document.addEventListener(
+    "dblclick",
+    event => {
+      event.preventDefault();
+    },
+    { passive: false }
+  );
+}
+
+
+/* ============================================================
    NETWORK
    ============================================================ */
 
@@ -5399,6 +5479,7 @@ function renderEverything() {
    ============================================================ */
 
 function init() {
+  installNativeTouchGuards();
   loadSettingsUI();
   applySettings();
   loadLogForm();
