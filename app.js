@@ -1,12 +1,17 @@
 /* ============================================================
-   TSUKI 🌙 — BUILD 4.3
-   UI CLEANUP + DRAWER NAVIGATION
+   TSUKI 🌙 — BUILD 5.0
+   SAFE STORAGE + DAILY CHECK-IN 2.0 + PERSONAL INTELLIGENCE
    ============================================================ */
 
-const STORAGE_KEY = "tsuki-data-v4";
+const STORAGE_KEY = "tsuki-data-v5-fallback";
+const BUILD4_STORAGE_KEY = "tsuki-data-v4";
 const BUILD3_STORAGE_KEY = "tsuki-data-v3";
 const BUILD2_STORAGE_KEY = "tsuki-data-v2";
 const LEGACY_STORAGE_KEY = "tsuki-data-v1";
+const DATA_DB_NAME = "tsuki-local-v5";
+const DATA_DB_VERSION = 1;
+const DATA_STORE = "app-data";
+const DATA_RECORD_KEY = "main";
 
 
 /* ============================================================
@@ -140,7 +145,7 @@ function standardDeviation(numbers) {
 
 const defaultData = {
 
-  schemaVersion: 4,
+  schemaVersion: 5,
 
   settings: {
     cycleLength: 28,
@@ -152,7 +157,12 @@ const defaultData = {
     quietInterface: false,
     theme: "sakura",
     wallpaperEnabled: false,
-    wallpaperOverlay: "medium"
+    wallpaperOverlay: "medium",
+    customSymptoms: [],
+    appLockEnabled: false,
+    appLockPinHash: "",
+    autoLockMinutes: 5,
+    lastBackupAt: ""
   },
 
   periods: [],
@@ -217,62 +227,65 @@ const defaultData = {
 
 
 /* ============================================================
-   MIGRATION + STORAGE
+   MIGRATION + STORAGE — BUILD 5
+   IndexedDB is the primary local store. localStorage is retained
+   as a small recovery fallback and migration source.
    ============================================================ */
 
+let storageRecoveryIssue = "";
+let dataWriteQueue = Promise.resolve();
+
 function normalizeData(parsed) {
+  const source = parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+  const sourceSettings = source.settings || {};
+
   return {
     ...clone(defaultData),
-    ...(parsed || {}),
-    schemaVersion: 4,
+    ...source,
+    schemaVersion: 5,
     settings: {
       ...defaultData.settings,
-      ...(parsed?.settings || {})
+      ...sourceSettings,
+      customSymptoms:
+        Array.isArray(sourceSettings.customSymptoms)
+          ? sourceSettings.customSymptoms.filter(Boolean)
+          : []
     },
-    periods:
-      Array.isArray(parsed?.periods)
-        ? parsed.periods
-        : [],
-    logs:
-      parsed?.logs || {},
-    relief:
-      parsed?.relief || [],
-    journal:
-      parsed?.journal || [],
-    trips:
-      Array.isArray(parsed?.trips)
-        ? parsed.trips
-        : [],
+    periods: Array.isArray(source.periods) ? source.periods : [],
+    logs: source.logs && typeof source.logs === "object" ? source.logs : {},
+    relief: Array.isArray(source.relief) ? source.relief : [],
+    journal: Array.isArray(source.journal) ? source.journal : [],
+    trips: Array.isArray(source.trips) ? source.trips : [],
     careProfile: {
       ...defaultData.careProfile,
-      ...(parsed?.careProfile || {}),
+      ...(source.careProfile || {}),
       options:
-        Array.isArray(parsed?.careProfile?.options)
-          ? parsed.careProfile.options
+        Array.isArray(source.careProfile?.options)
+          ? source.careProfile.options
           : []
     },
     insightState: {
       saved:
-        Array.isArray(parsed?.insightState?.saved)
-          ? parsed.insightState.saved
+        Array.isArray(source.insightState?.saved)
+          ? source.insightState.saved
           : [],
       dismissed:
-        Array.isArray(parsed?.insightState?.dismissed)
-          ? parsed.insightState.dismissed
+        Array.isArray(source.insightState?.dismissed)
+          ? source.insightState.dismissed
           : []
     },
     periodKit:
-      parsed?.periodKit ||
-      clone(defaultData.periodKit)
+      Array.isArray(source.periodKit)
+        ? source.periodKit
+        : clone(defaultData.periodKit)
   };
 }
-
 
 function migrateBuild1(oldData) {
   const migrated = {
     ...clone(defaultData),
     ...oldData,
-    schemaVersion: 4,
+    schemaVersion: 5,
     settings: {
       ...defaultData.settings,
       ...(oldData.settings || {})
@@ -284,142 +297,164 @@ function migrateBuild1(oldData) {
     }
   };
 
-  const periodStarts =
-    Array.isArray(oldData.periodStarts)
-      ? oldData.periodStarts
-      : [];
+  const periodStarts = Array.isArray(oldData.periodStarts) ? oldData.periodStarts : [];
 
-  migrated.periods =
-    periodStarts.map(start => {
-      const startDate =
-        parseDate(start);
+  migrated.periods = periodStarts.map(start => {
+    const startDate = parseDate(start);
+    const endDate = startDate
+      ? addDays(
+          startDate,
+          Math.max(1, Number(oldData.settings?.periodLength || 5)) - 1
+        )
+      : null;
 
-      const endDate =
-        startDate
-          ? addDays(
-              startDate,
-              Math.max(
-                1,
-                Number(
-                  oldData.settings?.periodLength || 5
-                )
-              ) - 1
-            )
-          : null;
-
-      return {
-        id: uid(),
-        start,
-        end:
-          endDate
-            ? dateKey(endDate)
-            : ""
-      };
-    });
+    return {
+      id: uid(),
+      start,
+      end: endDate ? dateKey(endDate) : ""
+    };
+  });
 
   delete migrated.periodStarts;
-
   return normalizeData(migrated);
 }
 
+function openDataDB() {
+  return new Promise((resolve, reject) => {
+    if (!("indexedDB" in window)) {
+      reject(new Error("IndexedDB is not available."));
+      return;
+    }
 
-function loadData() {
+    const request = indexedDB.open(DATA_DB_NAME, DATA_DB_VERSION);
+
+    request.onupgradeneeded = () => {
+      const db = request.result;
+      if (!db.objectStoreNames.contains(DATA_STORE)) {
+        db.createObjectStore(DATA_STORE);
+      }
+    };
+
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error || new Error("Could not open Tsuki storage."));
+  });
+}
+
+async function dataDBGet() {
+  const db = await openDataDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(DATA_STORE, "readonly");
+    const request = tx.objectStore(DATA_STORE).get(DATA_RECORD_KEY);
+    request.onsuccess = () => resolve(request.result || null);
+    request.onerror = () => reject(request.error);
+    tx.oncomplete = () => db.close();
+    tx.onerror = () => db.close();
+  });
+}
+
+async function dataDBPut(value) {
+  const db = await openDataDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(DATA_STORE, "readwrite");
+    tx.objectStore(DATA_STORE).put(clone(value), DATA_RECORD_KEY);
+    tx.oncomplete = () => {
+      db.close();
+      resolve();
+    };
+    tx.onerror = () => {
+      db.close();
+      reject(tx.error);
+    };
+  });
+}
+
+async function dataDBDelete() {
+  const db = await openDataDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(DATA_STORE, "readwrite");
+    tx.objectStore(DATA_STORE).delete(DATA_RECORD_KEY);
+    tx.oncomplete = () => {
+      db.close();
+      resolve();
+    };
+    tx.onerror = () => {
+      db.close();
+      reject(tx.error);
+    };
+  });
+}
+
+function parseLocalData(key, transform = normalizeData) {
+  const raw = localStorage.getItem(key);
+  if (!raw) return null;
+
   try {
-    const build4Saved =
-      localStorage.getItem(
-        STORAGE_KEY
-      );
-
-    if (build4Saved) {
-      return normalizeData(
-        JSON.parse(build4Saved)
-      );
-    }
-
-    const build3Saved =
-      localStorage.getItem(
-        BUILD3_STORAGE_KEY
-      );
-
-    if (build3Saved) {
-      const migrated =
-        normalizeData(
-          JSON.parse(build3Saved)
-        );
-
-      localStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify(migrated)
-      );
-
-      return migrated;
-    }
-
-    const build2Saved =
-      localStorage.getItem(
-        BUILD2_STORAGE_KEY
-      );
-
-    if (build2Saved) {
-      const migrated =
-        normalizeData(
-          JSON.parse(build2Saved)
-        );
-
-      localStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify(migrated)
-      );
-
-      return migrated;
-    }
-
-    const legacySaved =
-      localStorage.getItem(
-        LEGACY_STORAGE_KEY
-      );
-
-    if (legacySaved) {
-      const migrated =
-        migrateBuild1(
-          JSON.parse(legacySaved)
-        );
-
-      localStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify(migrated)
-      );
-
-      return migrated;
-    }
-
-    return clone(defaultData);
+    return transform(JSON.parse(raw));
   }
   catch (error) {
-    console.error(
-      "Could not load Tsuki data:",
-      error
-    );
-
-    return clone(defaultData);
+    storageRecoveryIssue = `Tsuki could not read ${key}. A clean fallback was used.`;
+    console.warn("Could not read local Tsuki fallback:", key, error);
+    return null;
   }
 }
 
-
-function saveData() {
-  data.schemaVersion = 4;
-
-  localStorage.setItem(
-    STORAGE_KEY,
-    JSON.stringify(data)
+function loadLegacyFallback() {
+  return (
+    parseLocalData(STORAGE_KEY) ||
+    parseLocalData(BUILD4_STORAGE_KEY) ||
+    parseLocalData(BUILD3_STORAGE_KEY) ||
+    parseLocalData(BUILD2_STORAGE_KEY) ||
+    parseLocalData(LEGACY_STORAGE_KEY, migrateBuild1) ||
+    clone(defaultData)
   );
 }
 
+async function initializeDataStorage() {
+  try {
+    const stored = await dataDBGet();
+    if (stored) {
+      return normalizeData(stored);
+    }
 
-let data = loadData();
+    const migrated = loadLegacyFallback();
+    await dataDBPut(migrated);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(migrated));
+    return migrated;
+  }
+  catch (error) {
+    console.warn("IndexedDB startup failed; using recovery fallback:", error);
+    storageRecoveryIssue = storageRecoveryIssue || "IndexedDB could not be opened, so Tsuki is temporarily using its fallback copy.";
+    return loadLegacyFallback();
+  }
+}
+
+function saveData() {
+  data.schemaVersion = 5;
+
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  }
+  catch (error) {
+    console.warn("Tsuki fallback copy could not be saved:", error);
+  }
+
+  const snapshot = clone(data);
+  dataWriteQueue = dataWriteQueue
+    .catch(() => {})
+    .then(() => dataDBPut(snapshot))
+    .catch(error => {
+      storageRecoveryIssue = "Tsuki could not update IndexedDB. Your current session still has the latest data.";
+      console.warn("Tsuki IndexedDB write failed:", error);
+      updateRecoveryUI();
+    });
+}
+
+let data = clone(defaultData);
 let calendarDate = new Date();
 let toastTimer;
 let insightView = "all";
+let appHiddenAt = 0;
+let sessionUnlocked = false;
 
 
 /* ============================================================
@@ -915,6 +950,7 @@ function showScreen(name) {
   if (name === "past-moons") renderPastMoons();
   if (name === "reports") renderReports();
   if (name === "care-profile") renderCareProfile();
+  if (name === "garden") renderGarden();
 }
 
 
@@ -2032,6 +2068,11 @@ painLevel.addEventListener("input", () => {
   document.getElementById("painOutput").textContent = painLevel.value;
 });
 
+const moodIntensity = document.getElementById("moodIntensity");
+moodIntensity?.addEventListener("input", () => {
+  document.getElementById("moodIntensityOutput").textContent = moodIntensity.value;
+});
+
 logDate.addEventListener("change", loadLogForm);
 
 
@@ -2047,10 +2088,88 @@ function setCheckedValue(name, value) {
 }
 
 
+function getMoods() {
+  return Array.from(document.querySelectorAll('input[name="mood"]:checked'))
+    .map(input => input.value);
+}
+
 function getSymptoms() {
   return Array.from(document.querySelectorAll('input[name="symptom"]:checked'))
     .map(input => input.value);
 }
+
+function symptomSeverityValues() {
+  const values = {};
+  document.querySelectorAll("[data-symptom-severity]").forEach(select => {
+    if (select.value) values[select.dataset.symptomSeverity] = select.value;
+  });
+  return values;
+}
+
+function renderCustomSymptoms() {
+  const container = document.getElementById("customSymptomsGrid");
+  if (!container) return;
+
+  container.innerHTML = (data.settings.customSymptoms || []).map(symptom => `
+    <label class="custom-symptom-tag">
+      <input type="checkbox" name="symptom" value="${escapeHTML(symptom)}">
+      <span>✨ ${escapeHTML(symptom)}</span>
+    </label>
+  `).join("");
+}
+
+function renderSymptomSeverityControls(savedSeverity = {}) {
+  const container = document.getElementById("symptomSeverityControls");
+  if (!container) return;
+  const selected = getSymptoms();
+
+  if (!selected.length) {
+    container.innerHTML = "";
+    return;
+  }
+
+  container.innerHTML = `
+    <p class="field-label severity-title">Severity</p>
+    ${selected.map(symptom => `
+      <label class="symptom-severity-row">
+        <span>${escapeHTML(symptom)}</span>
+        <select class="input compact-input" data-symptom-severity="${escapeHTML(symptom)}">
+          <option value="Mild" ${savedSeverity[symptom] === "Mild" ? "selected" : ""}>Mild</option>
+          <option value="Medium" ${savedSeverity[symptom] === "Medium" ? "selected" : ""}>Medium</option>
+          <option value="Strong" ${savedSeverity[symptom] === "Strong" ? "selected" : ""}>Strong</option>
+        </select>
+      </label>
+    `).join("")}
+  `;
+}
+
+function bindSymptomSeverityRefresh(savedSeverity = {}) {
+  document.querySelectorAll('input[name="symptom"]').forEach(input => {
+    input.onchange = () => {
+      const current = symptomSeverityValues();
+      renderSymptomSeverityControls({ ...savedSeverity, ...current });
+    };
+  });
+}
+
+document.getElementById("addCustomSymptom")?.addEventListener("click", () => {
+  const input = document.getElementById("customSymptomInput");
+  const value = input.value.trim().replace(/\s+/g, " ");
+  if (!value) return;
+
+  const existing = new Set((data.settings.customSymptoms || []).map(item => item.toLowerCase()));
+  if (existing.has(value.toLowerCase())) {
+    showToast("That symptom is already in your list.");
+    return;
+  }
+
+  data.settings.customSymptoms = [...(data.settings.customSymptoms || []), value].slice(0, 24);
+  saveData();
+  renderCustomSymptoms();
+  bindSymptomSeverityRefresh();
+  input.value = "";
+  showToast("Custom symptom added ✨");
+});
 
 
 function clearRadioGroup(name) {
@@ -2186,13 +2305,20 @@ function loadLogForm() {
   const phase = renderLogPhaseUI();
 
   [
-    "flow", "mood", "energy", "sleep",
+    "flow", "energy", "sleep",
     "focus", "motivation", "discharge", "libido",
     "stress", "appetite", "cravingIntensity"
   ].forEach(clearRadioGroup);
+  document.querySelectorAll('input[name="mood"]').forEach(input => { input.checked = false; });
+
+  renderCustomSymptoms();
 
   setCheckedValue("flow", saved.flow);
-  setCheckedValue("mood", saved.mood);
+  const savedMoods = Array.isArray(saved.moods) ? saved.moods : (saved.mood ? [saved.mood] : []);
+  savedMoods.forEach(value => {
+    const input = document.querySelector(`input[name="mood"][value="${CSS.escape(String(value))}"]`);
+    if (input) input.checked = true;
+  });
   setCheckedValue("energy", saved.energy);
   setCheckedValue("sleep", saved.sleep);
   setCheckedValue("focus", saved.focus);
@@ -2209,8 +2335,14 @@ function loadLogForm() {
 
   painLevel.value = saved.pain || 0;
   document.getElementById("painOutput").textContent = painLevel.value;
+  moodIntensity.value = saved.moodIntensity || 3;
+  document.getElementById("moodIntensityOutput").textContent = moodIntensity.value;
+  document.getElementById("sleepHours").value = saved.sleepHours ?? "";
   document.getElementById("tinyJoy").value = saved.tinyJoy || "";
   document.getElementById("dailyNotes").value = saved.notes || "";
+
+  renderSymptomSeverityControls(saved.symptomSeverity || {});
+  bindSymptomSeverityRefresh(saved.symptomSeverity || {});
 
   return phase;
 }
@@ -2231,9 +2363,12 @@ document.getElementById("dailyLogForm").addEventListener("submit", event => {
     phaseAtLog: phase,
     flow: isPeriod ? (getCheckedValue("flow") || "None") : "",
     pain: isPeriod ? Number(painLevel.value) : 0,
-    mood: getCheckedValue("mood"),
+    moods: getMoods(),
+    mood: getMoods()[0] || "",
+    moodIntensity: Number(moodIntensity.value || 3),
     energy: getCheckedValue("energy"),
     sleep: getCheckedValue("sleep"),
+    sleepHours: document.getElementById("sleepHours").value === "" ? null : Number(document.getElementById("sleepHours").value),
     focus: getCheckedValue("focus"),
     motivation: getCheckedValue("motivation"),
     discharge: getCheckedValue("discharge"),
@@ -2242,6 +2377,7 @@ document.getElementById("dailyLogForm").addEventListener("submit", event => {
     appetite: getCheckedValue("appetite"),
     cravingIntensity: getCheckedValue("cravingIntensity"),
     symptoms: getSymptoms(),
+    symptomSeverity: symptomSeverityValues(),
     tinyJoy: document.getElementById("tinyJoy").value.trim(),
     notes: document.getElementById("dailyNotes").value.trim()
   };
@@ -2738,9 +2874,10 @@ function frequency(values) {
 
 function commonMood() {
   return frequency(
-    allLogs().map(
-      log =>
-        log.mood
+    allLogs().flatMap(log =>
+      Array.isArray(log.moods) && log.moods.length
+        ? log.moods
+        : (log.mood ? [log.mood] : [])
     )
   );
 }
@@ -4020,7 +4157,10 @@ function renderTinyJoyPattern() {
     container.innerHTML = `<p>No tiny joys logged yet. Add one during a daily check-in whenever something good happens.</p>`;
     return;
   }
-  const withPositiveMood = joyLogs.filter(log => log.mood === "Happy" || log.mood === "Calm").length;
+  const withPositiveMood = joyLogs.filter(log => {
+    const moods = Array.isArray(log.moods) ? log.moods : (log.mood ? [log.mood] : []);
+    return moods.includes("Happy") || moods.includes("Calm");
+  }).length;
   container.innerHTML = `<p>You saved <strong>${joyLogs.length}</strong> tiny joy${joyLogs.length === 1 ? "" : "s"}.${withPositiveMood ? ` ${withPositiveMood} were on days you also logged Happy or Calm.` : ""}</p><small>Tsuki records this as a pattern, not a claim of causation.</small>`;
 }
 
@@ -4043,6 +4183,202 @@ function renderLivingStory() {
   if (joys) parts.push(`${joys} tiny joy${joys === 1 ? "" : "s"}`);
   container.innerHTML = `<h3>This moon is still unfolding ✨</h3><p>${escapeHTML(parts.join(" · "))}</p><p class="muted small-text">This recap updates as you log more days.</p>`;
 }
+
+
+function moodValues(log) {
+  return Array.isArray(log?.moods) && log.moods.length
+    ? log.moods
+    : (log?.mood ? [log.mood] : []);
+}
+
+function similarCycleDayLogs(day, tolerance = 1) {
+  if (!day) return [];
+  return logsWithCycleContext().filter(log =>
+    Math.abs(log.context.cycleDay - day) <= tolerance
+  );
+}
+
+function renderMoonLens() {
+  const select = document.getElementById("moonLensMetric");
+  const result = document.getElementById("moonLensResult");
+  if (!select || !result) return;
+
+  const symptoms = Array.from(new Set(allLogs().flatMap(log => log.symptoms || []))).sort();
+  const previousValue = select.value;
+  select.innerHTML = `<option value="">Choose a symptom...</option>` +
+    symptoms.map(symptom => `<option value="${escapeHTML(symptom)}">${escapeHTML(symptom)}</option>`).join("");
+  if (symptoms.includes(previousValue)) select.value = previousValue;
+
+  const metric = select.value;
+  if (!metric) {
+    result.innerHTML = `<p>Choose something you have logged and Tsuki will look one day before and after its appearances.</p>`;
+    return;
+  }
+
+  const logsByDate = new Map(allLogs().map(log => [log.date, log]));
+  const occurrences = allLogs().filter(log => (log.symptoms || []).includes(metric));
+  const before = [];
+  const after = [];
+
+  occurrences.forEach(log => {
+    const date = parseDate(log.date);
+    const prev = logsByDate.get(dateKey(addDays(date, -1)));
+    const next = logsByDate.get(dateKey(addDays(date, 1)));
+    if (prev) {
+      before.push(...(prev.symptoms || []).filter(item => item !== metric));
+      if (prev.energy) before.push(`${prev.energy} energy`);
+      if (prev.sleep) before.push(`${prev.sleep} sleep`);
+    }
+    if (next) {
+      after.push(...(next.symptoms || []).filter(item => item !== metric));
+      if (next.energy) after.push(`${next.energy} energy`);
+      if (next.sleep) after.push(`${next.sleep} sleep`);
+    }
+  });
+
+  const beforeTop = frequency(before);
+  const afterTop = frequency(after);
+  result.innerHTML = occurrences.length >= 2
+    ? `<p><strong>${escapeHTML(metric)}</strong> appears in ${occurrences.length} logged day${occurrences.length === 1 ? "" : "s"}.</p>
+       <div class="lens-pair"><span><small>Often nearby before</small><strong>${escapeHTML(beforeTop?.[0] || "Not enough nearby logs")}</strong></span><span><small>Often nearby after</small><strong>${escapeHTML(afterTop?.[0] || "Not enough nearby logs")}</strong></span></div>
+       <small>Nearby association only — not a cause or diagnosis.</small>`
+    : `<p>Tsuki needs this symptom on at least 2 logged days before Moon Lens can compare nearby entries.</p>`;
+}
+
+function renderSameMoon() {
+  const result = document.getElementById("sameMoonResult");
+  if (!result) return;
+  const day = currentCycleDay();
+  if (!day) {
+    result.innerHTML = `<p>Log a period first so Tsuki can match cycle days.</p>`;
+    return;
+  }
+
+  const matches = similarCycleDayLogs(day, 0).sort((a, b) => parseDate(b.date) - parseDate(a.date));
+  const match = matches[0];
+  if (!match) {
+    result.innerHTML = `<p>No earlier Cycle Day ${day} check-in yet. This appears after you build another cycle of history.</p>`;
+    return;
+  }
+
+  const bits = [];
+  if (moodValues(match).length) bits.push(`💗 ${moodValues(match).slice(0, 2).join(" + ")}`);
+  if (match.energy) bits.push(`✨ ${match.energy} energy`);
+  if ((match.symptoms || []).length) bits.push(`🌸 ${(match.symptoms || []).slice(0, 2).join(", ")}`);
+  result.innerHTML = `<p><strong>${formatDateLong(parseDate(match.date))} · Cycle Day ${match.context.cycleDay}</strong></p>
+    <p>${escapeHTML(bits.join(" · ") || "You checked in, but kept the entry very light.")}</p>
+    ${match.tinyJoy ? `<small>“${escapeHTML(match.tinyJoy)}”</small>` : ""}`;
+}
+
+function feelOffComparison() {
+  const today = data.logs[todayKey()];
+  const day = currentCycleDay();
+  if (!today) return { message: "Log today first, then Tsuki can compare it with your own similar cycle days." };
+  if (!day) return { message: "Tsuki needs a saved period before it can compare similar cycle days." };
+
+  const history = similarCycleDayLogs(day, 2).filter(log => log.date !== todayKey());
+  if (history.length < 3) return { message: "Tsuki needs at least 3 earlier check-ins around this cycle day before it can compare today." };
+
+  const differences = [];
+  const usualEnergy = frequency(history.map(log => log.energy));
+  const usualSleep = frequency(history.map(log => log.sleep));
+  const usualMood = frequency(history.flatMap(moodValues));
+
+  if (today.energy && usualEnergy && today.energy !== usualEnergy[0]) differences.push(`Energy is ${today.energy.toLowerCase()} vs your usual ${usualEnergy[0].toLowerCase()}.`);
+  if (today.sleep && usualSleep && today.sleep !== usualSleep[0]) differences.push(`Sleep is ${today.sleep.toLowerCase()} vs your usual ${usualSleep[0].toLowerCase()}.`);
+  const todayMoods = moodValues(today);
+  if (todayMoods.length && usualMood && !todayMoods.includes(usualMood[0])) differences.push(`Your most common mood around this point is ${usualMood[0]}, while today you logged ${todayMoods.slice(0, 2).join(" + ")}.`);
+
+  const topSymptom = frequency(history.flatMap(log => log.symptoms || []));
+  if (topSymptom && !(today.symptoms || []).includes(topSymptom[0])) differences.push(`${topSymptom[0]} often appears around this point, but you did not log it today.`);
+
+  return {
+    message: differences.length
+      ? differences.slice(0, 4).join(" ")
+      : "Today looks fairly close to the patterns in your earlier similar cycle days.",
+    count: history.length
+  };
+}
+
+function renderSymptomChains() {
+  const result = document.getElementById("symptomChainsResult");
+  if (!result) return;
+  const logs = allLogs().sort((a, b) => parseDate(a.date) - parseDate(b.date));
+  const byDate = new Map(logs.map(log => [log.date, log]));
+  const chains = new Map();
+
+  logs.forEach(log => {
+    const source = [...new Set(log.symptoms || [])];
+    if (!source.length) return;
+    const date = parseDate(log.date);
+    [1, 2].forEach(offset => {
+      const later = byDate.get(dateKey(addDays(date, offset)));
+      [...new Set(later?.symptoms || [])].forEach(nextSymptom => {
+        source.forEach(firstSymptom => {
+          if (firstSymptom === nextSymptom) return;
+          const key = `${firstSymptom} → ${nextSymptom}`;
+          chains.set(key, (chains.get(key) || 0) + 1);
+        });
+      });
+    });
+  });
+
+  const best = Array.from(chains.entries()).sort((a, b) => b[1] - a[1])[0];
+  result.innerHTML = best && best[1] >= 2
+    ? `<p><strong>${escapeHTML(best[0])}</strong></p><p>appeared in that order ${best[1]} times within 2 days.</p><small>Sequence only — Tsuki does not infer that one caused the other.</small>`
+    : `<p>Keep logging symptoms on ordinary days too. Tsuki needs a repeated sequence before it shows one here.</p>`;
+}
+
+function renderCycleForks() {
+  const select = document.getElementById("cycleForkContext");
+  const result = document.getElementById("cycleForkResult");
+  if (!select || !result) return;
+  const cycles = completedCycles();
+  const contexts = Array.from(new Set(cycles.map(cycle => cycle.context).filter(Boolean))).sort();
+  const previous = select.value;
+  select.innerHTML = `<option value="">Choose a cycle label...</option>` + contexts.map(context => `<option value="${escapeHTML(context)}">${escapeHTML(context)}</option>`).join("");
+  if (contexts.includes(previous)) select.value = previous;
+
+  const context = select.value;
+  if (!context) {
+    result.innerHTML = contexts.length ? `<p>Choose one of your cycle labels to compare it with your other completed cycles.</p>` : `<p>Add labels such as Travel or High Stress when logging periods. Cycle Forks appears once tagged cycles are completed.</p>`;
+    return;
+  }
+
+  const tagged = cycles.filter(cycle => cycle.context === context);
+  const other = cycles.filter(cycle => cycle.context !== context);
+  if (!tagged.length || !other.length) {
+    result.innerHTML = `<p>Tsuki needs both a completed ${escapeHTML(context)} cycle and another completed cycle for comparison.</p>`;
+    return;
+  }
+
+  const taggedCycle = Math.round(average(tagged.map(cycle => cycle.cycleLength)) * 10) / 10;
+  const otherCycle = Math.round(average(other.map(cycle => cycle.cycleLength)) * 10) / 10;
+  const taggedPeriod = Math.round(average(tagged.map(cycle => cycle.periodLength)) * 10) / 10;
+  const otherPeriod = Math.round(average(other.map(cycle => cycle.periodLength)) * 10) / 10;
+
+  result.innerHTML = `<div class="fork-grid"><span><small>${escapeHTML(context)}</small><strong>${taggedCycle}d cycle</strong><em>${taggedPeriod}d period</em></span><span><small>Other cycles</small><strong>${otherCycle}d cycle</strong><em>${otherPeriod}d period</em></span></div><small>Descriptive comparison only. Context labels do not prove a cause.</small>`;
+}
+
+function renderAdvancedIntelligence() {
+  renderMoonLens();
+  renderSameMoon();
+  renderSymptomChains();
+  renderCycleForks();
+  const feelResult = document.getElementById("feelOffResult");
+  if (feelResult && !feelResult.dataset.userOpened) {
+    feelResult.innerHTML = `<p>Tap compare after today’s check-in whenever you want a quick comparison with your own normal.</p>`;
+  }
+}
+
+document.getElementById("moonLensMetric")?.addEventListener("change", renderMoonLens);
+document.getElementById("cycleForkContext")?.addEventListener("change", renderCycleForks);
+document.getElementById("feelOffButton")?.addEventListener("click", () => {
+  const result = document.getElementById("feelOffResult");
+  const comparison = feelOffComparison();
+  result.dataset.userOpened = "true";
+  result.innerHTML = `<p>${escapeHTML(comparison.message)}</p>${comparison.count ? `<small>Compared with ${comparison.count} earlier similar check-ins.</small>` : ""}`;
+});
 
 
 function renderInsights() {
@@ -5673,6 +6009,314 @@ document.getElementById("resetAppearance")?.addEventListener("click", async () =
 
 
 /* ============================================================
+   MOON GARDEN + COMPANION
+   ============================================================ */
+
+function renderGarden() {
+  const garden = document.getElementById("moonGarden");
+  const emoji = document.getElementById("companionEmoji");
+  const title = document.getElementById("companionTitle");
+  const message = document.getElementById("companionMessage");
+  const badge = document.getElementById("gardenCountBadge");
+  if (!garden || !emoji || !title || !message || !badge) return;
+
+  const cycles = completedCycles();
+  const logs = allLogs().length;
+  const joys = allLogs().filter(log => log.tinyJoy).length;
+  const memories = data.journal.length;
+
+  const stages = [
+    { min: 0, emoji: "🐇", title: "Your moon friend is settling in", text: "Nothing here needs a streak. Your garden grows only from the memories you choose to log." },
+    { min: 8, emoji: "🐇🌱", title: "A tiny sprout appeared", text: "Your check-ins are giving Tsuki enough context to make this space feel more like yours." },
+    { min: 24, emoji: "🐇🌸", title: "Your garden has company", text: "Your moon friend has been collecting gentle little signs of your history." },
+    { min: 60, emoji: "🐇🌕", title: "Your moon friend knows this garden well", text: "Your history is richer now — without any streaks or punishment for days you skip." }
+  ];
+
+  const score = logs + (joys * 2) + memories + (cycles.length * 5);
+  const stage = stages.filter(item => score >= item.min).slice(-1)[0];
+  emoji.textContent = stage.emoji;
+  title.textContent = stage.title;
+  message.textContent = stage.text;
+  badge.textContent = `${cycles.length} moon${cycles.length === 1 ? "" : "s"}`;
+
+  if (!cycles.length) {
+    garden.innerHTML = `<article class="garden-empty"><span>🌱</span><strong>Your first flower is waiting</strong><p>After your next period begins, the completed cycle before it becomes your first garden flower.</p></article>`;
+    return;
+  }
+
+  const flowers = ["🌸", "🌷", "🪻", "🌼", "🌺", "🌹"];
+  garden.innerHTML = cycles.slice().reverse().map((cycle, index) => {
+    const story = cycleStoryData(cycle);
+    const flower = flowers[(cycles.length - 1 - index) % flowers.length];
+    return `<button type="button" class="garden-flower" data-open-screen="past-moons">
+      <span>${flower}</span>
+      <strong>${formatDate(parseDate(cycle.start))}</strong>
+      <small>${cycle.cycleLength} days${cycle.context ? ` · ${escapeHTML(cycle.context)}` : ""}</small>
+      ${story.mood ? `<em>${escapeHTML(story.mood)}</em>` : ""}
+    </button>`;
+  }).join("");
+
+  garden.querySelectorAll("[data-open-screen]").forEach(button => {
+    button.addEventListener("click", () => showScreen(button.dataset.openScreen));
+  });
+}
+
+
+/* ============================================================
+   BUILD 5 — BACKUP, RECOVERY + OPTIONAL APP LOCK
+   ============================================================ */
+
+function formatBackupTime(value) {
+  if (!value) return "No backup recorded yet";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "No backup recorded yet";
+  return date.toLocaleString(undefined, { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" });
+}
+
+function updateStorageStatusUI() {
+  const storageStatus = document.getElementById("storageStatus");
+  if (storageStatus) {
+    storageStatus.textContent = storageRecoveryIssue
+      ? "IndexedDB with recovery fallback"
+      : "IndexedDB · local-only";
+  }
+
+  const backupStatus = document.getElementById("lastBackupStatus");
+  if (backupStatus) backupStatus.textContent = formatBackupTime(data.settings.lastBackupAt);
+}
+
+function updateRecoveryUI() {
+  const banner = document.getElementById("dataRecoveryBanner");
+  if (!banner) return;
+  banner.classList.toggle("hidden", !storageRecoveryIssue);
+  const message = document.getElementById("recoveryMessage");
+  if (message && storageRecoveryIssue) message.textContent = storageRecoveryIssue;
+  updateStorageStatusUI();
+}
+
+function openRecoveryModal() {
+  document.getElementById("recoveryModal")?.classList.remove("hidden");
+  const message = document.getElementById("recoveryMessage");
+  if (message) message.textContent = storageRecoveryIssue || "Choose how you want to restore Tsuki’s local data.";
+}
+
+function closeRecoveryModal() {
+  document.getElementById("recoveryModal")?.classList.add("hidden");
+}
+
+document.getElementById("openRecovery")?.addEventListener("click", openRecoveryModal);
+document.getElementById("closeRecovery")?.addEventListener("click", closeRecoveryModal);
+document.getElementById("recoveryModal")?.addEventListener("click", event => {
+  if (event.target.id === "recoveryModal") closeRecoveryModal();
+});
+
+document.getElementById("recoveryRestore")?.addEventListener("click", () => {
+  closeRecoveryModal();
+  document.getElementById("restoreDataFile")?.click();
+});
+
+document.getElementById("recoveryReset")?.addEventListener("click", () => {
+  if (!confirm("Start Tsuki with clean local data? Only do this if you do not need the unreadable local copy.")) return;
+  data = clone(defaultData);
+  storageRecoveryIssue = "";
+  saveData();
+  resetPeriodForm();
+  loadSettingsUI();
+  loadLogForm();
+  renderEverything();
+  updateRecoveryUI();
+  closeRecoveryModal();
+  showScreen("today");
+  showToast("Tsuki started with clean local data 🌙");
+});
+
+function validateBackupPayload(payload) {
+  if (!payload || typeof payload !== "object") throw new Error("This file is not a Tsuki backup.");
+  const backupData = payload.data && typeof payload.data === "object" ? payload.data : payload;
+  if (!backupData || typeof backupData !== "object" || !backupData.settings || !backupData.logs || !Array.isArray(backupData.periods)) {
+    throw new Error("This backup is missing required Tsuki data.");
+  }
+  return normalizeData(backupData);
+}
+
+async function restoreBackupFile(file) {
+  if (!file) return;
+  try {
+    const text = await file.text();
+    const payload = JSON.parse(text);
+    const restored = validateBackupPayload(payload);
+    const periodCount = restored.periods.length;
+    const logCount = Object.keys(restored.logs).length;
+
+    if (!confirm(`Restore this Tsuki backup? It contains ${periodCount} period entr${periodCount === 1 ? "y" : "ies"} and ${logCount} daily check-in${logCount === 1 ? "" : "s"}. Your current local data will be replaced.`)) return;
+
+    restored.settings.appLockEnabled = data.settings.appLockEnabled;
+    restored.settings.appLockPinHash = data.settings.appLockPinHash;
+    restored.settings.autoLockMinutes = data.settings.autoLockMinutes;
+
+    data = restored;
+    storageRecoveryIssue = "";
+    saveData();
+    await dataDBPut(data).catch(() => {});
+    resetPeriodForm();
+    loadSettingsUI();
+    loadLogForm();
+    renderEverything();
+    updateRecoveryUI();
+    showScreen("today");
+    showToast("Tsuki backup restored 🌙");
+  }
+  catch (error) {
+    console.error("Backup restore failed:", error);
+    alert(`Tsuki could not restore that file. ${error.message || "The backup may be damaged or incompatible."}`);
+  }
+}
+
+document.getElementById("restoreData")?.addEventListener("click", () => {
+  document.getElementById("restoreDataFile")?.click();
+});
+
+document.getElementById("restoreDataFile")?.addEventListener("change", event => {
+  const file = event.target.files?.[0];
+  restoreBackupFile(file).finally(() => { event.target.value = ""; });
+});
+
+async function hashPin(pin) {
+  if (crypto?.subtle && window.TextEncoder) {
+    const bytes = new TextEncoder().encode(`tsuki-local-pin:${pin}`);
+    const digest = await crypto.subtle.digest("SHA-256", bytes);
+    return Array.from(new Uint8Array(digest)).map(byte => byte.toString(16).padStart(2, "0")).join("");
+  }
+
+  let hash = 2166136261;
+  for (const char of `tsuki-local-pin:${pin}`) {
+    hash ^= char.charCodeAt(0);
+    hash = Math.imul(hash, 16777619);
+  }
+  return `fallback-${(hash >>> 0).toString(16)}`;
+}
+
+function validPin(pin) {
+  return /^\d{4,6}$/.test(pin || "");
+}
+
+async function askForNewPin(copy = "Choose a 4–6 digit PIN for Tsuki. This PIN stays on this device.") {
+  const first = prompt(copy, "");
+  if (first === null) return null;
+  if (!validPin(first)) {
+    alert("Use 4 to 6 numbers for your Tsuki PIN.");
+    return null;
+  }
+  const second = prompt("Enter the same PIN again to confirm.", "");
+  if (second !== first) {
+    alert("The PINs did not match.");
+    return null;
+  }
+  return first;
+}
+
+function showLockOverlay() {
+  if (!data.settings.appLockEnabled) return;
+  sessionUnlocked = false;
+  const overlay = document.getElementById("appLockOverlay");
+  overlay?.classList.remove("hidden");
+  overlay?.setAttribute("aria-hidden", "false");
+  document.body.classList.add("tsuki-locked");
+  document.getElementById("unlockPin").value = "";
+  document.getElementById("unlockError")?.classList.add("hidden");
+  setTimeout(() => document.getElementById("unlockPin")?.focus(), 80);
+}
+
+function hideLockOverlay() {
+  sessionUnlocked = true;
+  const overlay = document.getElementById("appLockOverlay");
+  overlay?.classList.add("hidden");
+  overlay?.setAttribute("aria-hidden", "true");
+  document.body.classList.remove("tsuki-locked");
+}
+
+async function unlockTsuki() {
+  const input = document.getElementById("unlockPin");
+  const entered = input?.value || "";
+  if (!validPin(entered)) {
+    document.getElementById("unlockError")?.classList.remove("hidden");
+    return;
+  }
+  const hash = await hashPin(entered);
+  if (hash !== data.settings.appLockPinHash) {
+    document.getElementById("unlockError")?.classList.remove("hidden");
+    input.value = "";
+    return;
+  }
+  hideLockOverlay();
+}
+
+document.getElementById("unlockButton")?.addEventListener("click", unlockTsuki);
+document.getElementById("unlockPin")?.addEventListener("keydown", event => {
+  if (event.key === "Enter") unlockTsuki();
+});
+
+document.getElementById("appLockToggle")?.addEventListener("change", async event => {
+  if (event.target.checked) {
+    const pin = await askForNewPin();
+    if (!pin) {
+      event.target.checked = false;
+      return;
+    }
+    data.settings.appLockPinHash = await hashPin(pin);
+    data.settings.appLockEnabled = true;
+    sessionUnlocked = true;
+    saveData();
+    loadSettingsUI();
+    showToast("Optional App Lock turned on 🔐");
+    return;
+  }
+
+  if (!confirm("Turn off Tsuki App Lock on this device?")) {
+    event.target.checked = true;
+    return;
+  }
+  data.settings.appLockEnabled = false;
+  data.settings.appLockPinHash = "";
+  sessionUnlocked = true;
+  saveData();
+  loadSettingsUI();
+  hideLockOverlay();
+  showToast("App Lock turned off");
+});
+
+document.getElementById("autoLockMinutes")?.addEventListener("change", event => {
+  data.settings.autoLockMinutes = Number(event.target.value || 0);
+  saveData();
+});
+
+document.getElementById("changeAppPin")?.addEventListener("click", async () => {
+  if (!data.settings.appLockEnabled) return;
+  const pin = await askForNewPin("Choose your new 4–6 digit Tsuki PIN.");
+  if (!pin) return;
+  data.settings.appLockPinHash = await hashPin(pin);
+  saveData();
+  showToast("PIN changed 🔐");
+});
+
+document.getElementById("lockNow")?.addEventListener("click", () => {
+  if (data.settings.appLockEnabled) showLockOverlay();
+});
+
+document.addEventListener("visibilitychange", () => {
+  if (!data.settings.appLockEnabled) return;
+  if (document.hidden) {
+    appHiddenAt = Date.now();
+    return;
+  }
+  const minutes = Number(data.settings.autoLockMinutes || 0);
+  if (minutes > 0 && appHiddenAt && Date.now() - appHiddenAt >= minutes * 60000) {
+    showLockOverlay();
+  }
+});
+
+
+/* ============================================================
    SETTINGS
    ============================================================ */
 
@@ -5718,6 +6362,13 @@ function loadSettingsUI() {
     )
     .checked =
       data.settings.discreet;
+
+  const lockToggle = document.getElementById("appLockToggle");
+  if (lockToggle) lockToggle.checked = Boolean(data.settings.appLockEnabled);
+  document.getElementById("appLockOptions")?.classList.toggle("hidden", !data.settings.appLockEnabled);
+  const autoLock = document.getElementById("autoLockMinutes");
+  if (autoLock) autoLock.value = String(data.settings.autoLockMinutes ?? 5);
+  updateStorageStatusUI();
 
   applySettings();
 }
@@ -5902,13 +6553,21 @@ document
         return;
       }
 
+      data.settings.lastBackupAt = new Date().toISOString();
+      saveData();
+      updateStorageStatusUI();
+
+      const backupData = clone(data);
+      backupData.settings.appLockEnabled = false;
+      backupData.settings.appLockPinHash = "";
+
       const exportData = {
         app: "Tsuki",
-        version: 4,
+        version: 5,
         exportedAt:
           new Date()
             .toISOString(),
-        data
+        data: backupData
       };
 
       const blob =
@@ -5985,6 +6644,10 @@ document
       );
 
       localStorage.removeItem(
+        BUILD4_STORAGE_KEY
+      );
+
+      localStorage.removeItem(
         BUILD3_STORAGE_KEY
       );
 
@@ -6000,6 +6663,7 @@ document
         clone(
           defaultData
         );
+      storageRecoveryIssue = "";
 
       appearanceAssetDelete("wallpaper")
         .then(refreshWallpaperAsset)
@@ -6010,6 +6674,8 @@ document
       loadSettingsUI();
       loadLogForm();
       renderEverything();
+      updateRecoveryUI();
+      hideLockOverlay();
       showScreen("today");
 
       showToast(
@@ -6238,6 +6904,7 @@ function renderEverything() {
   renderPastMoons();
   renderReports();
   renderCareProfile();
+  renderGarden();
 }
 
 
@@ -6245,15 +6912,30 @@ function renderEverything() {
    INIT
    ============================================================ */
 
-function init() {
+async function init() {
   installNativeTouchGuards();
+  data = await initializeDataStorage();
+
+  if (data.settings.appLockEnabled && data.settings.appLockPinHash) {
+    showLockOverlay();
+  }
+  else {
+    sessionUnlocked = true;
+    hideLockOverlay();
+  }
+
   loadSettingsUI();
   applySettings();
   loadLogForm();
   renderEverything();
   refreshWallpaperAsset();
   updateOnlineStatus();
+  updateRecoveryUI();
 }
 
 
-init();
+init().catch(error => {
+  console.error("Tsuki could not finish starting:", error);
+  storageRecoveryIssue = "Tsuki could not finish loading local data. Recovery options are available.";
+  updateRecoveryUI();
+});

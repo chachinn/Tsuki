@@ -30,6 +30,11 @@
     🌙 You’re offline. Your local Tsuki features still work.
   </div>
 
+  <div id="dataRecoveryBanner" class="recovery-banner hidden">
+    <span>🛟 Tsuki found a local data problem.</span>
+    <button type="button" id="openRecovery">Recovery options</button>
+  </div>
+
   <header class="app-header">
     <div class="brand">
       <div class="brand-moon">🌙</div>
@@ -101,6 +106,7 @@
       <section class="drawer-group">
         <p class="drawer-group-title">PERSONALIZE & PRIVATE</p>
         <button class="drawer-row" id="drawerAppearance"><span class="drawer-row-icon">🎨</span><span><strong>Appearance</strong><small>Theme and wallpaper</small></span><b>›</b></button>
+        <button class="drawer-row" data-open-screen="garden"><span class="drawer-row-icon">🌸</span><span><strong>Moon Garden</strong><small>Your companion & cycle garden</small></span><b>›</b></button>
         <button class="drawer-row" data-open-screen="privacy"><span class="drawer-row-icon">🔒</span><span><strong>Privacy</strong><small>Private display controls</small></span><b>›</b></button>
         <button class="drawer-row" data-open-screen="me"><span class="drawer-row-icon">⚙️</span><span><strong>Settings & Data</strong><small>Defaults, backup and app settings</small></span><b>›</b></button>
       </section>
@@ -548,37 +554,49 @@
           <div class="choice-grid five">
 
             <label class="choice">
-              <input type="radio" name="mood" value="Happy">
+              <input type="checkbox" name="mood" value="Happy">
               <span>😊</span>
               <small>Happy</small>
             </label>
 
             <label class="choice">
-              <input type="radio" name="mood" value="Calm">
+              <input type="checkbox" name="mood" value="Calm">
               <span>😌</span>
               <small>Calm</small>
             </label>
 
             <label class="choice">
-              <input type="radio" name="mood" value="Okay">
+              <input type="checkbox" name="mood" value="Okay">
               <span>🙂</span>
               <small>Okay</small>
             </label>
 
             <label class="choice">
-              <input type="radio" name="mood" value="Sad">
+              <input type="checkbox" name="mood" value="Sad">
               <span>🥺</span>
               <small>Sad</small>
             </label>
 
             <label class="choice">
-              <input type="radio" name="mood" value="Irritable">
+              <input type="checkbox" name="mood" value="Irritable">
               <span>😤</span>
               <small>Irritable</small>
             </label>
 
           </div>
 
+        </article>
+
+        <article class="card">
+          <div class="card-row">
+            <div>
+              <p class="card-label">Mood intensity</p>
+              <p class="muted small-text">How strongly are you feeling today’s moods?</p>
+            </div>
+            <strong id="moodIntensityOutput">3</strong>
+          </div>
+          <input id="moodIntensity" type="range" min="1" max="5" step="1" value="3" class="range">
+          <div class="range-labels compact-range-labels"><span>Light</span><span></span><span>Medium</span><span></span><span>Strong</span></div>
         </article>
 
         <article class="card">
@@ -628,6 +646,9 @@
             </label>
 
           </div>
+
+          <label class="field-label compact-field-label" for="sleepHours">Hours slept (optional)</label>
+          <input id="sleepHours" class="input compact-input" type="number" inputmode="decimal" min="0" max="24" step="0.5" placeholder="e.g. 7.5">
 
         </article>
 
@@ -680,6 +701,15 @@
             </label>
 
           </div>
+
+          <div id="customSymptomsGrid" class="tag-checkbox-grid custom-symptoms-grid"></div>
+
+          <div class="inline-add-row">
+            <input id="customSymptomInput" class="input" maxlength="32" placeholder="Add your own symptom...">
+            <button type="button" id="addCustomSymptom" class="secondary-button compact">Add</button>
+          </div>
+
+          <div id="symptomSeverityControls" class="symptom-severity-list"></div>
 
         </article>
 
@@ -749,6 +779,45 @@
           </div>
         </div>
         <div id="learningMap" class="learning-map"></div>
+      </section>
+
+      <section class="section-block compact-block">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">PERSONAL INTELLIGENCE</p>
+            <h3>Look at your own patterns</h3>
+          </div>
+        </div>
+
+        <div class="intelligence-grid">
+          <article class="intelligence-card">
+            <div class="intelligence-card-title"><span>🪞</span><div><strong>Moon Lens</strong><small>What tends to appear around a symptom</small></div></div>
+            <select id="moonLensMetric" class="input"><option value="">Choose a symptom...</option></select>
+            <div id="moonLensResult" class="intelligence-result"></div>
+          </article>
+
+          <article class="intelligence-card">
+            <div class="intelligence-card-title"><span>🌙</span><div><strong>Same Moon</strong><small>Roughly the same cycle day last time</small></div></div>
+            <div id="sameMoonResult" class="intelligence-result"></div>
+          </article>
+
+          <article class="intelligence-card">
+            <div class="intelligence-card-title"><span>💭</span><div><strong>I Feel Off</strong><small>Compare today with your own similar days</small></div></div>
+            <button type="button" id="feelOffButton" class="secondary-button compact">Compare today</button>
+            <div id="feelOffResult" class="intelligence-result"></div>
+          </article>
+
+          <article class="intelligence-card">
+            <div class="intelligence-card-title"><span>🔗</span><div><strong>Symptom Chains</strong><small>Sequences that repeat in your logs</small></div></div>
+            <div id="symptomChainsResult" class="intelligence-result"></div>
+          </article>
+
+          <article class="intelligence-card wide">
+            <div class="intelligence-card-title"><span>🌘</span><div><strong>Cycle Forks</strong><small>Compare tagged cycles with your other cycles</small></div></div>
+            <select id="cycleForkContext" class="input"><option value="">Choose a cycle label...</option></select>
+            <div id="cycleForkResult" class="intelligence-result"></div>
+          </article>
+        </div>
       </section>
 
       <div class="insight-toolbar">
@@ -1281,6 +1350,25 @@
     </section>
 
 
+    <!-- MOON GARDEN -->
+    <section class="screen" data-screen="garden">
+      <button class="back-button" data-open-screen="today">← Back</button>
+      <div class="page-title">
+        <div><p class="eyebrow">YOUR QUIET LITTLE SPACE</p><h2>Moon Garden</h2></div>
+        <span>🌸</span>
+      </div>
+      <article class="companion-card">
+        <div id="companionEmoji" class="companion-emoji">🐇</div>
+        <div><p class="eyebrow">TSUKI COMPANION</p><h3 id="companionTitle">Your moon friend is settling in</h3><p id="companionMessage" class="muted">Nothing here needs a streak. Your garden simply grows with memories you choose to log.</p></div>
+      </article>
+      <section class="section-block">
+        <div class="section-heading"><div><p class="eyebrow">MOON GARDEN</p><h3>Your completed cycles</h3></div><span id="gardenCountBadge" class="garden-count-badge">0 moons</span></div>
+        <div id="moonGarden" class="moon-garden"></div>
+      </section>
+      <article class="soft-note">🌙 Missing days never hurt your garden. Tsuki does not use streak loss, guilt, or punishment.</article>
+    </section>
+
+
     <!-- ME -->
     <section class="screen" data-screen="me">
 
@@ -1345,6 +1433,11 @@
           <span class="settings-row-value"><span id="appearanceSummary">Sakura Pink</span> ›</span>
         </button>
 
+        <button class="settings-row" data-open-screen="garden">
+          <span>🌸 Moon Garden</span>
+          <span>›</span>
+        </button>
+
       </article>
 
       <article class="card">
@@ -1365,6 +1458,21 @@
           <span>📦 Export backup</span>
           <span>›</span>
         </button>
+
+        <button class="settings-row" id="restoreData">
+          <span>📥 Restore backup</span>
+          <span>›</span>
+        </button>
+        <input id="restoreDataFile" type="file" accept="application/json,.json" class="hidden">
+
+        <div class="settings-status-row">
+          <span>🗃️ Local storage</span>
+          <small id="storageStatus">Preparing IndexedDB…</small>
+        </div>
+        <div class="settings-status-row">
+          <span>🕒 Last backup</span>
+          <small id="lastBackupStatus">No backup recorded yet</small>
+        </div>
 
         <label class="settings-row">
           <span>🌸 Sakura accents</span>
@@ -1458,6 +1566,25 @@
           <input id="discreetToggle" type="checkbox" checked>
         </label>
 
+        <label class="settings-row">
+          <span><strong>🔐 Optional App Lock</strong><small class="settings-subcopy">Off by default. Turn it on only if you want a PIN.</small></span>
+          <input id="appLockToggle" type="checkbox">
+        </label>
+
+        <div id="appLockOptions" class="app-lock-options hidden">
+          <label class="field-label" for="autoLockMinutes">Auto-lock after leaving Tsuki</label>
+          <select id="autoLockMinutes" class="input">
+            <option value="0">Only after closing/reloading</option>
+            <option value="1">1 minute</option>
+            <option value="5">5 minutes</option>
+            <option value="15">15 minutes</option>
+          </select>
+          <div class="inline-button-row">
+            <button type="button" id="changeAppPin" class="secondary-button compact">Change PIN</button>
+            <button type="button" id="lockNow" class="secondary-button compact">Lock now</button>
+          </div>
+        </div>
+
       </article>
 
       <article class="privacy-card">
@@ -1467,8 +1594,7 @@
         <h3>Your data stays with you</h3>
 
         <p>
-          This version of Tsuki stores your entries locally
-          in your browser on this device.
+          Tsuki stores your entries locally in IndexedDB on this device, with a small local fallback copy for recovery.
         </p>
 
         <ul>
@@ -1600,6 +1726,34 @@
 
       <button type="button" id="resetAppearance" class="secondary-button full-width">Reset Appearance</button>
       <button type="button" id="appearanceDone" class="primary-button full-width">Done</button>
+    </section>
+  </div>
+
+  <!-- OPTIONAL APP LOCK -->
+  <div id="appLockOverlay" class="lock-overlay hidden" aria-hidden="true">
+    <section class="lock-card">
+      <div class="lock-moon">🌙</div>
+      <p class="eyebrow">TSUKI LOCK</p>
+      <h2>Welcome back</h2>
+      <p class="muted">Enter your PIN to open Tsuki.</p>
+      <input id="unlockPin" class="input pin-input" type="password" inputmode="numeric" maxlength="6" autocomplete="off" placeholder="••••">
+      <button type="button" id="unlockButton" class="primary-button full-width">Unlock</button>
+      <p id="unlockError" class="lock-error hidden">That PIN didn’t match.</p>
+    </section>
+  </div>
+
+  <!-- DATA RECOVERY -->
+  <div id="recoveryModal" class="app-modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="recoveryTitle">
+    <section class="app-modal recovery-modal">
+      <div class="modal-grabber"></div>
+      <div class="app-modal-header">
+        <div><p class="eyebrow">DATA RECOVERY</p><h2 id="recoveryTitle">Help Tsuki recover</h2></div>
+        <button type="button" id="closeRecovery" class="modal-close" aria-label="Close recovery">×</button>
+      </div>
+      <p id="recoveryMessage" class="muted">Tsuki could not read one of its local data copies.</p>
+      <button type="button" id="recoveryRestore" class="primary-button full-width">📥 Restore from backup</button>
+      <button type="button" id="recoveryReset" class="secondary-button full-width">Start with clean local data</button>
+      <p class="appearance-note">Reset only removes Tsuki’s app data on this device. It does not affect any backup file you saved elsewhere.</p>
     </section>
   </div>
 
