@@ -1,9 +1,9 @@
 /* ============================================================
-   TSUKI SERVICE WORKER — BUILD 5.0
-   UI cleanup + prominent period countdown
+   TSUKI SERVICE WORKER — BUILD 5.1
+   Moon Room + Moon Garden
    ============================================================ */
 
-const CACHE_NAME = "tsuki-cache-v5";
+const CACHE_NAME = "tsuki-cache-v5-1";
 
 const APP_SHELL = [
   "./",
