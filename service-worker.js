@@ -1,9 +1,9 @@
 /* ============================================================
-   TSUKI SERVICE WORKER — BUILD 4.3
-   UI cleanup + drawer navigation
+   TSUKI SERVICE WORKER — BUILD 4.3.1
+   UI cleanup + prominent period countdown
    ============================================================ */
 
-const CACHE_NAME = "tsuki-cache-v4-3";
+const CACHE_NAME = "tsuki-cache-v4-3-1";
 
 const APP_SHELL = [
   "./",
