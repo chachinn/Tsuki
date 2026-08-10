@@ -1,0 +1,35 @@
+{
+  "name": "Tsuki - Cycle & Wellness",
+  "short_name": "Tsuki",
+  "description": "A soft, private cycle and body-pattern tracker.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#fff9fb",
+  "theme_color": "#f8c9d9",
+  "categories": [
+    "health",
+    "lifestyle"
+  ],
+  "icons": [
+    {
+      "src": "./icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

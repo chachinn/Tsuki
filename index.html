@@ -1,0 +1,1497 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, viewport-fit=cover"
+  >
+
+  <title>Tsuki 🌙</title>
+
+  <meta
+    name="description"
+    content="Tsuki is a soft, private cycle and body-pattern tracker."
+  >
+
+  <meta name="theme-color" content="#f8c9d9">
+
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Tsuki">
+
+  <link rel="manifest" href="./manifest.json">
+  <link rel="apple-touch-icon" href="./icons/icon-192.png">
+  <link rel="stylesheet" href="./style.css">
+</head>
+
+<body>
+
+<div id="app">
+
+  <!-- OFFLINE BANNER -->
+  <div id="offlineBanner" class="offline-banner hidden">
+    🌙 You’re offline. Your local Tsuki features still work.
+  </div>
+
+
+  <!-- =========================================================
+       APP HEADER
+       ========================================================= -->
+
+  <header class="app-header">
+    <div class="brand">
+      <div class="brand-moon">🌙</div>
+
+      <div>
+        <h1>tsuki</h1>
+        <p>your body has a rhythm</p>
+      </div>
+    </div>
+
+    <button
+      class="icon-button"
+      id="privacyButton"
+      aria-label="Privacy"
+      title="Privacy"
+    >
+      🔒
+    </button>
+  </header>
+
+
+  <!-- =========================================================
+       MAIN APP
+       ========================================================= -->
+
+  <main class="main-content">
+
+    <!-- =====================================================
+         TODAY
+         ===================================================== -->
+
+    <section class="screen active" data-screen="today">
+
+      <div class="greeting">
+        <p id="greetingText">Good morning 🌸</p>
+        <h2>How are you today?</h2>
+      </div>
+
+
+      <article class="hero-card">
+
+        <div class="hero-moon">
+          <span>🌙</span>
+        </div>
+
+        <p class="eyebrow">TODAY</p>
+
+        <h2 id="cycleDayTitle">
+          Start your first cycle
+        </h2>
+
+        <p id="cyclePhaseText" class="muted">
+          Log your most recent period to begin.
+        </p>
+
+        <div class="prediction-card">
+
+          <div>
+            <span class="small-label">Next period</span>
+
+            <strong id="nextPeriodText">
+              Not enough data yet
+            </strong>
+          </div>
+
+          <span class="sakura">🌸</span>
+
+        </div>
+
+      </article>
+
+
+      <!-- QUICK STATUS -->
+
+      <div class="mini-grid">
+
+        <article class="mini-card">
+          <span>🩸</span>
+          <small>Flow</small>
+          <strong id="todayFlow">None</strong>
+        </article>
+
+        <article class="mini-card">
+          <span>💗</span>
+          <small>Mood</small>
+          <strong id="todayMood">Not logged</strong>
+        </article>
+
+        <article class="mini-card">
+          <span>✨</span>
+          <small>Energy</small>
+          <strong id="todayEnergy">Not logged</strong>
+        </article>
+
+      </div>
+
+
+      <!-- QUICK ACTIONS -->
+
+      <section class="section-block">
+
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">QUICK ACTIONS</p>
+            <h3>What do you need?</h3>
+          </div>
+        </div>
+
+        <div class="quick-actions">
+
+          <button
+            class="quick-action"
+            data-open-screen="log"
+          >
+            <span>📝</span>
+            <strong>Daily Log</strong>
+          </button>
+
+          <button
+            class="quick-action"
+            id="startPeriodButton"
+          >
+            <span>🩸</span>
+            <strong>Period Started</strong>
+          </button>
+
+          <button
+            class="quick-action"
+            data-open-screen="bad-day"
+          >
+            <span>☁️</span>
+            <strong>Bad Day</strong>
+          </button>
+
+          <button
+            class="quick-action"
+            data-open-screen="journal"
+          >
+            <span>📖</span>
+            <strong>Journal</strong>
+          </button>
+
+        </div>
+
+      </section>
+
+
+      <!-- TSUKI NOTICED -->
+
+      <section class="section-block">
+
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">TSUKI NOTICED</p>
+            <h3>Little patterns</h3>
+          </div>
+
+          <button
+            class="text-button"
+            data-open-screen="insights"
+          >
+            See all
+          </button>
+        </div>
+
+        <div id="homeInsights"></div>
+
+      </section>
+
+
+      <!-- FEATURE SHORTCUTS -->
+
+      <section class="section-block">
+
+        <p class="eyebrow">YOUR TSUKI</p>
+
+        <div class="feature-grid">
+
+          <button class="feature-card" data-open-screen="relief">
+            <span>🫖</span>
+            <strong>Relief Tracker</strong>
+            <small>Remember what helped</small>
+          </button>
+
+          <button class="feature-card" data-open-screen="kit">
+            <span>👜</span>
+            <strong>Period Kit</strong>
+            <small>Your essentials</small>
+          </button>
+
+          <button class="feature-card" data-open-screen="going-out">
+            <span>🎀</span>
+            <strong>Going Out</strong>
+            <small>Prep before leaving</small>
+          </button>
+
+          <button class="feature-card" data-open-screen="reports">
+            <span>📊</span>
+            <strong>Reports</strong>
+            <small>Your recent cycles</small>
+          </button>
+
+        </div>
+
+      </section>
+
+    </section>
+
+
+
+    <!-- =====================================================
+         CALENDAR
+         ===================================================== -->
+
+    <section class="screen" data-screen="calendar">
+
+      <div class="page-title">
+
+        <div>
+          <p class="eyebrow">YOUR MONTH</p>
+          <h2>Calendar</h2>
+        </div>
+
+        <span>🌸</span>
+
+      </div>
+
+
+      <article class="card calendar-card">
+
+        <div class="calendar-header">
+
+          <button
+            class="icon-button"
+            id="previousMonth"
+          >
+            ‹
+          </button>
+
+          <h3 id="calendarMonthTitle"></h3>
+
+          <button
+            class="icon-button"
+            id="nextMonth"
+          >
+            ›
+          </button>
+
+        </div>
+
+
+        <div class="calendar-weekdays">
+          <span>Sun</span>
+          <span>Mon</span>
+          <span>Tue</span>
+          <span>Wed</span>
+          <span>Thu</span>
+          <span>Fri</span>
+          <span>Sat</span>
+        </div>
+
+
+        <div id="calendarGrid" class="calendar-grid"></div>
+
+
+        <div class="calendar-legend">
+
+          <span>
+            <i class="legend-dot period"></i>
+            Period
+          </span>
+
+          <span>
+            <i class="legend-dot predicted"></i>
+            Estimated
+          </span>
+
+          <span>
+            <i class="legend-dot logged"></i>
+            Logged
+          </span>
+
+        </div>
+
+      </article>
+
+
+      <article class="soft-note">
+        🌙 Predictions are estimates based on the cycle information
+        you log. Bodies don’t always follow a perfect calendar.
+      </article>
+
+    </section>
+
+
+
+    <!-- =====================================================
+         DAILY LOG
+         ===================================================== -->
+
+    <section class="screen" data-screen="log">
+
+      <div class="page-title">
+
+        <div>
+          <p class="eyebrow">CHECK IN</p>
+          <h2>Daily Log</h2>
+        </div>
+
+        <span>📝</span>
+
+      </div>
+
+
+      <form id="dailyLogForm">
+
+        <article class="card">
+
+          <label class="field-label">
+            Date
+          </label>
+
+          <input
+            type="date"
+            id="logDate"
+            class="input"
+            required
+          >
+
+        </article>
+
+
+        <!-- FLOW -->
+
+        <article class="card">
+
+          <p class="card-label">Flow</p>
+
+          <div class="choice-grid four">
+
+            <label class="choice">
+              <input type="radio" name="flow" value="None">
+              <span>○</span>
+              <small>None</small>
+            </label>
+
+            <label class="choice">
+              <input type="radio" name="flow" value="Spotting">
+              <span>◔</span>
+              <small>Spotting</small>
+            </label>
+
+            <label class="choice">
+              <input type="radio" name="flow" value="Light">
+              <span>◑</span>
+              <small>Light</small>
+            </label>
+
+            <label class="choice">
+              <input type="radio" name="flow" value="Medium">
+              <span>◕</span>
+              <small>Medium</small>
+            </label>
+
+            <label class="choice">
+              <input type="radio" name="flow" value="Heavy">
+              <span>●</span>
+              <small>Heavy</small>
+            </label>
+
+          </div>
+
+        </article>
+
+
+        <!-- PAIN -->
+
+        <article class="card">
+
+          <div class="card-row">
+
+            <div>
+              <p class="card-label">
+                Cramps / Pain
+              </p>
+
+              <p class="muted small-text">
+                How uncomfortable are you?
+              </p>
+            </div>
+
+            <strong id="painOutput">0</strong>
+
+          </div>
+
+          <input
+            id="painLevel"
+            type="range"
+            min="0"
+            max="4"
+            step="1"
+            value="0"
+            class="range"
+          >
+
+          <div class="range-labels">
+            <span>None</span>
+            <span>Mild</span>
+            <span>Medium</span>
+            <span>Strong</span>
+            <span>Severe</span>
+          </div>
+
+        </article>
+
+
+        <!-- MOOD -->
+
+        <article class="card">
+
+          <p class="card-label">
+            Mood
+          </p>
+
+          <div class="choice-grid five">
+
+            <label class="choice">
+              <input type="radio" name="mood" value="Happy">
+              <span>😊</span>
+              <small>Happy</small>
+            </label>
+
+            <label class="choice">
+              <input type="radio" name="mood" value="Calm">
+              <span>😌</span>
+              <small>Calm</small>
+            </label>
+
+            <label class="choice">
+              <input type="radio" name="mood" value="Okay">
+              <span>🙂</span>
+              <small>Okay</small>
+            </label>
+
+            <label class="choice">
+              <input type="radio" name="mood" value="Sad">
+              <span>🥺</span>
+              <small>Sad</small>
+            </label>
+
+            <label class="choice">
+              <input type="radio" name="mood" value="Irritable">
+              <span>😤</span>
+              <small>Irritable</small>
+            </label>
+
+          </div>
+
+        </article>
+
+
+        <!-- ENERGY -->
+
+        <article class="card">
+
+          <p class="card-label">
+            Energy
+          </p>
+
+          <div class="segmented">
+
+            <label>
+              <input type="radio" name="energy" value="Low">
+              <span>Low</span>
+            </label>
+
+            <label>
+              <input type="radio" name="energy" value="Medium">
+              <span>Medium</span>
+            </label>
+
+            <label>
+              <input type="radio" name="energy" value="High">
+              <span>High</span>
+            </label>
+
+          </div>
+
+        </article>
+
+
+        <!-- SLEEP -->
+
+        <article class="card">
+
+          <p class="card-label">
+            Sleep
+          </p>
+
+          <div class="segmented">
+
+            <label>
+              <input type="radio" name="sleep" value="Poor">
+              <span>Poor</span>
+            </label>
+
+            <label>
+              <input type="radio" name="sleep" value="Okay">
+              <span>Okay</span>
+            </label>
+
+            <label>
+              <input type="radio" name="sleep" value="Good">
+              <span>Good</span>
+            </label>
+
+          </div>
+
+        </article>
+
+
+        <!-- SYMPTOMS -->
+
+        <article class="card">
+
+          <p class="card-label">
+            Symptoms
+          </p>
+
+          <div class="tag-checkbox-grid">
+
+            <label>
+              <input
+                type="checkbox"
+                name="symptom"
+                value="Bloating"
+              >
+              <span>🫧 Bloating</span>
+            </label>
+
+            <label>
+              <input
+                type="checkbox"
+                name="symptom"
+                value="Headache"
+              >
+              <span>☁️ Headache</span>
+            </label>
+
+            <label>
+              <input
+                type="checkbox"
+                name="symptom"
+                value="Back Pain"
+              >
+              <span>🌿 Back pain</span>
+            </label>
+
+            <label>
+              <input
+                type="checkbox"
+                name="symptom"
+                value="Tender Breasts"
+              >
+              <span>🌸 Tender breasts</span>
+            </label>
+
+            <label>
+              <input
+                type="checkbox"
+                name="symptom"
+                value="Acne"
+              >
+              <span>✨ Acne / skin</span>
+            </label>
+
+            <label>
+              <input
+                type="checkbox"
+                name="symptom"
+                value="Cravings"
+              >
+              <span>🍓 Cravings</span>
+            </label>
+
+            <label>
+              <input
+                type="checkbox"
+                name="symptom"
+                value="Nausea"
+              >
+              <span>🍵 Nausea</span>
+            </label>
+
+            <label>
+              <input
+                type="checkbox"
+                name="symptom"
+                value="Fatigue"
+              >
+              <span>💤 Fatigue</span>
+            </label>
+
+          </div>
+
+        </article>
+
+
+        <!-- NOTES -->
+
+        <article class="card">
+
+          <label class="field-label">
+            Notes
+          </label>
+
+          <textarea
+            id="dailyNotes"
+            class="textarea"
+            placeholder="Anything you want Tsuki to remember?"
+          ></textarea>
+
+        </article>
+
+
+        <button
+          type="submit"
+          class="primary-button"
+        >
+          Save today’s check-in 🌙
+        </button>
+
+      </form>
+
+    </section>
+
+
+
+    <!-- =====================================================
+         INSIGHTS
+         ===================================================== -->
+
+    <section class="screen" data-screen="insights">
+
+      <div class="page-title">
+
+        <div>
+          <p class="eyebrow">YOUR RHYTHM</p>
+          <h2>Tsuki Noticed</h2>
+        </div>
+
+        <span>✨</span>
+
+      </div>
+
+
+      <article class="soft-note">
+        Tsuki looks for patterns in what you log.
+        These are personal observations, not diagnoses.
+      </article>
+
+
+      <section class="section-block">
+
+        <div id="insightList"></div>
+
+      </section>
+
+
+      <section class="section-block">
+
+        <div class="section-heading">
+
+          <div>
+            <p class="eyebrow">MY PATTERN</p>
+            <h3>Your cycle at a glance</h3>
+          </div>
+
+        </div>
+
+
+        <article class="card">
+
+          <div class="pattern-moon">
+
+            <div class="pattern-circle">
+              <span>🌙</span>
+
+              <strong id="averageCycleLength">
+                —
+              </strong>
+
+              <small>
+                avg. cycle
+              </small>
+            </div>
+
+          </div>
+
+
+          <div class="stats-grid">
+
+            <div>
+              <small>Average cycle</small>
+              <strong id="statCycleLength">—</strong>
+            </div>
+
+            <div>
+              <small>Cycles logged</small>
+              <strong id="statCyclesLogged">0</strong>
+            </div>
+
+            <div>
+              <small>Most common mood</small>
+              <strong id="statMood">—</strong>
+            </div>
+
+            <div>
+              <small>Common symptom</small>
+              <strong id="statSymptom">—</strong>
+            </div>
+
+          </div>
+
+        </article>
+
+      </section>
+
+
+      <!-- TSUKI STORY -->
+
+      <section class="section-block">
+
+        <div class="section-heading">
+
+          <div>
+            <p class="eyebrow">TSUKI STORY</p>
+            <h3>Your recent story</h3>
+          </div>
+
+        </div>
+
+        <article
+          class="story-card"
+          id="tsukiStory"
+        >
+        </article>
+
+      </section>
+
+    </section>
+
+
+
+    <!-- =====================================================
+         BAD DAY MODE
+         ===================================================== -->
+
+    <section class="screen" data-screen="bad-day">
+
+      <button
+        class="back-button"
+        data-open-screen="today"
+      >
+        ← Back
+      </button>
+
+
+      <div class="bad-day-hero">
+
+        <span>🌙</span>
+
+        <h2>Bad Day Mode</h2>
+
+        <p>
+          We’ve got you.
+        </p>
+
+      </div>
+
+
+      <article class="card">
+
+        <button
+          id="badDayPeriodStart"
+          class="wide-soft-button"
+        >
+          🩸 Period started today
+        </button>
+
+
+        <label class="field-label">
+          Pain level
+        </label>
+
+        <input
+          id="badDayPain"
+          type="range"
+          min="0"
+          max="4"
+          value="0"
+          class="range"
+        >
+
+
+        <label class="field-label">
+          Medication taken
+        </label>
+
+        <input
+          id="badDayMedication"
+          class="input"
+          placeholder="Optional — e.g. Ibuprofen"
+        >
+
+
+        <button
+          id="saveBadDay"
+          class="primary-button small"
+        >
+          Save
+        </button>
+
+      </article>
+
+
+      <section class="section-block">
+
+        <p class="eyebrow">
+          COMFORT NOW
+        </p>
+
+        <div class="comfort-grid">
+
+          <button data-relief="Heat Pack">
+            🔥
+            <span>Heat pack</span>
+          </button>
+
+          <button data-relief="Rest">
+            🛏️
+            <span>Rest</span>
+          </button>
+
+          <button data-relief="Tea">
+            🍵
+            <span>Tea</span>
+          </button>
+
+          <button data-relief="Hydration">
+            💧
+            <span>Water</span>
+          </button>
+
+          <button data-relief="Stretching">
+            🌿
+            <span>Stretch</span>
+          </button>
+
+          <button data-relief="Quiet Time">
+            ☁️
+            <span>Quiet</span>
+          </button>
+
+        </div>
+
+      </section>
+
+    </section>
+
+
+
+    <!-- =====================================================
+         RELIEF TRACKER
+         ===================================================== -->
+
+    <section class="screen" data-screen="relief">
+
+      <button
+        class="back-button"
+        data-open-screen="today"
+      >
+        ← Back
+      </button>
+
+
+      <div class="page-title">
+
+        <div>
+          <p class="eyebrow">WHAT HELPS</p>
+          <h2>Relief Tracker</h2>
+        </div>
+
+        <span>🫖</span>
+
+      </div>
+
+
+      <article class="card">
+
+        <label class="field-label">
+          What did you try?
+        </label>
+
+        <input
+          id="reliefAction"
+          class="input"
+          placeholder="Heat pack, tea, rest..."
+        >
+
+
+        <label class="field-label">
+          Did it help?
+        </label>
+
+        <select
+          id="reliefHelpfulness"
+          class="input"
+        >
+          <option value="Not sure">
+            Not sure yet
+          </option>
+
+          <option value="Helped a lot">
+            Helped a lot
+          </option>
+
+          <option value="Helped a little">
+            Helped a little
+          </option>
+
+          <option value="Did not help">
+            Didn’t help
+          </option>
+        </select>
+
+
+        <button
+          id="addReliefButton"
+          class="primary-button small"
+        >
+          Add relief action
+        </button>
+
+      </article>
+
+
+      <div id="reliefList"></div>
+
+    </section>
+
+
+
+    <!-- =====================================================
+         JOURNAL
+         ===================================================== -->
+
+    <section class="screen" data-screen="journal">
+
+      <button
+        class="back-button"
+        data-open-screen="today"
+      >
+        ← Back
+      </button>
+
+
+      <div class="page-title">
+
+        <div>
+          <p class="eyebrow">PRIVATE NOTES</p>
+          <h2>Cycle Journal</h2>
+        </div>
+
+        <span>📖</span>
+
+      </div>
+
+
+      <article class="journal-paper">
+
+        <input
+          type="date"
+          id="journalDate"
+          class="journal-date"
+        >
+
+        <textarea
+          id="journalText"
+          placeholder="How did today feel?"
+        ></textarea>
+
+        <button
+          id="saveJournal"
+          class="primary-button small"
+        >
+          Save journal entry
+        </button>
+
+      </article>
+
+
+      <div id="journalEntries"></div>
+
+    </section>
+
+
+
+    <!-- =====================================================
+         PERIOD KIT
+         ===================================================== -->
+
+    <section class="screen" data-screen="kit">
+
+      <button
+        class="back-button"
+        data-open-screen="today"
+      >
+        ← Back
+      </button>
+
+
+      <div class="page-title">
+
+        <div>
+          <p class="eyebrow">BE PREPARED</p>
+          <h2>My Period Kit</h2>
+        </div>
+
+        <span>👜</span>
+
+      </div>
+
+
+      <article class="card">
+
+        <div id="kitList"></div>
+
+
+        <div class="inline-form">
+
+          <input
+            id="newKitItem"
+            class="input"
+            placeholder="Add an item..."
+          >
+
+          <button
+            id="addKitItem"
+            class="round-button"
+          >
+            +
+          </button>
+
+        </div>
+
+      </article>
+
+    </section>
+
+
+
+    <!-- =====================================================
+         GOING OUT
+         ===================================================== -->
+
+    <section class="screen" data-screen="going-out">
+
+      <button
+        class="back-button"
+        data-open-screen="today"
+      >
+        ← Back
+      </button>
+
+
+      <div class="page-title">
+
+        <div>
+          <p class="eyebrow">BEFORE YOU LEAVE</p>
+          <h2>Going Out Mode</h2>
+        </div>
+
+        <span>🎀</span>
+
+      </div>
+
+
+      <article class="going-out-card">
+
+        <div class="going-out-illustration">
+          🌙 👜 🌸
+        </div>
+
+        <h3 id="goingOutHeadline">
+          You’re good to go.
+        </h3>
+
+        <p id="goingOutCycle">
+          Tsuki will show your current cycle information here.
+        </p>
+
+      </article>
+
+
+      <section class="section-block">
+
+        <p class="eyebrow">
+          YOUR BAG
+        </p>
+
+        <div id="goingOutKit"></div>
+
+      </section>
+
+    </section>
+
+
+
+    <!-- =====================================================
+         REPORTS
+         ===================================================== -->
+
+    <section class="screen" data-screen="reports">
+
+      <button
+        class="back-button"
+        data-open-screen="today"
+      >
+        ← Back
+      </button>
+
+
+      <div class="page-title">
+
+        <div>
+          <p class="eyebrow">YOUR HISTORY</p>
+          <h2>Reports</h2>
+        </div>
+
+        <span>📊</span>
+
+      </div>
+
+
+      <div id="reportSummary"></div>
+
+
+      <article class="soft-note">
+        Reports summarize what you entered into Tsuki.
+        They are for personal reference and are not medical diagnoses.
+      </article>
+
+    </section>
+
+
+
+    <!-- =====================================================
+         ME / SETTINGS
+         ===================================================== -->
+
+    <section class="screen" data-screen="me">
+
+      <div class="page-title">
+
+        <div>
+          <p class="eyebrow">YOUR TSUKI</p>
+          <h2>Me</h2>
+        </div>
+
+        <span>🌙</span>
+
+      </div>
+
+
+      <article class="card">
+
+        <h3>
+          Cycle settings
+        </h3>
+
+
+        <label class="field-label">
+          Typical cycle length
+        </label>
+
+        <input
+          id="settingsCycleLength"
+          class="input"
+          type="number"
+          min="15"
+          max="60"
+          value="28"
+        >
+
+
+        <label class="field-label">
+          Typical period length
+        </label>
+
+        <input
+          id="settingsPeriodLength"
+          class="input"
+          type="number"
+          min="1"
+          max="15"
+          value="5"
+        >
+
+
+        <button
+          id="saveSettings"
+          class="primary-button small"
+        >
+          Save settings
+        </button>
+
+      </article>
+
+
+      <article class="card">
+
+        <h3>
+          Privacy & data
+        </h3>
+
+        <button
+          class="settings-row"
+          data-open-screen="privacy"
+        >
+          <span>
+            🔒 Privacy & Security
+          </span>
+
+          <span>›</span>
+        </button>
+
+
+        <button
+          class="settings-row"
+          id="exportData"
+        >
+          <span>
+            📦 Export backup
+          </span>
+
+          <span>›</span>
+        </button>
+
+
+        <label class="settings-row">
+
+          <span>
+            🌸 Sakura accents
+          </span>
+
+          <input
+            id="sakuraToggle"
+            type="checkbox"
+            checked
+          >
+
+        </label>
+
+
+        <label class="settings-row">
+
+          <span>
+            ✨ Reduce motion
+          </span>
+
+          <input
+            id="motionToggle"
+            type="checkbox"
+          >
+
+        </label>
+
+
+        <button
+          class="settings-row danger"
+          id="deleteAllData"
+        >
+          <span>
+            🗑️ Delete all Tsuki data
+          </span>
+
+          <span>›</span>
+        </button>
+
+      </article>
+
+
+      <article class="soft-note">
+        🌙 Tsuki is designed as a personal tracking tool.
+        Predictions are estimates and are not medical advice,
+        diagnosis, or contraception.
+      </article>
+
+    </section>
+
+
+
+    <!-- =====================================================
+         PRIVACY
+         ===================================================== -->
+
+    <section class="screen" data-screen="privacy">
+
+      <button
+        class="back-button"
+        data-open-screen="me"
+      >
+        ← Back
+      </button>
+
+
+      <div class="page-title">
+
+        <div>
+          <p class="eyebrow">ALWAYS YOURS</p>
+          <h2>Privacy</h2>
+        </div>
+
+        <span>🔒</span>
+
+      </div>
+
+
+      <article class="card">
+
+        <label class="settings-row">
+
+          <span>
+            🙈 Hide cycle details
+          </span>
+
+          <input
+            id="hideDetailsToggle"
+            type="checkbox"
+          >
+
+        </label>
+
+
+        <label class="settings-row">
+
+          <span>
+            🔕 Discreet reminders
+          </span>
+
+          <input
+            id="discreetToggle"
+            type="checkbox"
+            checked
+          >
+
+        </label>
+
+      </article>
+
+
+      <article class="privacy-card">
+
+        <span>☁️</span>
+
+        <h3>
+          Your data stays with you
+        </h3>
+
+        <p>
+          This version of Tsuki stores your entries locally
+          in your browser on this device.
+        </p>
+
+        <ul>
+          <li>✓ No account required</li>
+          <li>✓ No cloud required</li>
+          <li>✓ No third-party health analytics</li>
+          <li>✓ You can export or delete your data</li>
+        </ul>
+
+      </article>
+
+    </section>
+
+  </main>
+
+
+
+  <!-- =========================================================
+       BOTTOM NAVIGATION
+       ========================================================= -->
+
+  <nav class="bottom-nav">
+
+    <button
+      class="nav-button active"
+      data-screen-target="today"
+    >
+      <span>🌙</span>
+      <small>Today</small>
+    </button>
+
+    <button
+      class="nav-button"
+      data-screen-target="calendar"
+    >
+      <span>📅</span>
+      <small>Calendar</small>
+    </button>
+
+    <button
+      class="nav-button add-button"
+      data-screen-target="log"
+    >
+      <span>＋</span>
+    </button>
+
+    <button
+      class="nav-button"
+      data-screen-target="insights"
+    >
+      <span>✨</span>
+      <small>Insights</small>
+    </button>
+
+    <button
+      class="nav-button"
+      data-screen-target="me"
+    >
+      <span>♡</span>
+      <small>Me</small>
+    </button>
+
+  </nav>
+
+
+
+  <!-- =========================================================
+       TOAST
+       ========================================================= -->
+
+  <div
+    id="toast"
+    class="toast"
+  ></div>
+
+</div>
+
+
+<script src="./app.js"></script>
+
+</body>
+</html>
