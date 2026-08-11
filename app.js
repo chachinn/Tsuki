@@ -1895,7 +1895,7 @@ function renderCycleHistory() {
 
 
 /* ============================================================
-   BUILD 6.1 — FAST PERIOD ENTRY + BULK HISTORY
+   BUILD 6.1.2 — MULTIPLE PERIODS PER MONTH
    ============================================================ */
 
 let quickPeriodEntryMode = "single";
@@ -1916,11 +1916,18 @@ function monthKeyFromDate(date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
 }
 
-function periodStartingInMonth(year, month) {
-  return data.periods.find(period => {
+function periodsStartingInMonth(year, month) {
+  return data.periods.filter(period => {
     const start = parseDate(period.start);
     return start && start.getFullYear() === year && start.getMonth() === month;
-  }) || null;
+  });
+}
+
+function bulkDraftPeriods() {
+  return Array.from(bulkPeriodDrafts.values()).map(start => ({
+    start,
+    end: ensurePeriodEnd(start)
+  }));
 }
 
 function quickPeriodSelectionError(start, end, ignoreId = "", extraPeriods = []) {
@@ -2096,40 +2103,67 @@ function bulkPeriodMonthHTML(monthDate) {
   const year = monthDate.getFullYear();
   const month = monthDate.getMonth();
   const key = monthKeyFromDate(monthDate);
-  const existing = periodStartingInMonth(year, month);
-  const draftStart = bulkPeriodDrafts.get(key) || "";
-  const draftEnd = draftStart ? ensurePeriodEnd(draftStart) : "";
+  const existingPeriods = periodsStartingInMonth(year, month);
+  const monthDraftStarts = Array.from(bulkPeriodDrafts.values()).filter(start => {
+    const date = parseDate(start);
+    return date && date.getFullYear() === year && date.getMonth() === month;
+  });
+  const monthDraftPeriods = monthDraftStarts.map(start => ({ start, end: ensurePeriodEnd(start) }));
   const firstDay = new Date(year, month, 1).getDay();
   const days = new Date(year, month + 1, 0).getDate();
   const today = parseDate(todayKey());
   const blanks = Array.from({ length: firstDay }, () => "<span></span>").join("");
-  const selectedStart = parseDate(draftStart);
-  const selectedEnd = parseDate(draftEnd);
 
   const dayButtons = Array.from({ length: days }, (_, index) => {
     const date = new Date(year, month, index + 1);
     const dateValue = dateKey(date);
+    const existing = periodForDate(dateValue);
+    const draftPeriod = monthDraftPeriods.find(period => {
+      const draftStart = parseDate(period.start);
+      const draftEnd = parseDate(period.end);
+      return draftStart && draftEnd && dateWithin(date, draftStart, draftEnd);
+    });
+    const isDraftStart = monthDraftStarts.includes(dateValue);
+    const isDraftEnd = monthDraftPeriods.some(period => period.end === dateValue);
     const classes = ["period-picker-day", "bulk-period-day"];
+
     if (date > today) classes.push("future");
-    if (existing && dateWithin(date, parseDate(existing.start), parseDate(existing.end || ensurePeriodEnd(existing.start)))) classes.push("saved-period");
-    if (!existing && selectedStart && selectedEnd && dateWithin(date, selectedStart, selectedEnd)) classes.push("draft-period");
-    if (dateValue === draftStart) classes.push("draft-start");
-    if (dateValue === draftEnd) classes.push("draft-end");
+    if (existing) classes.push("saved-period");
+    if (draftPeriod) classes.push("draft-period");
+    if (isDraftStart) classes.push("draft-start");
+    if (isDraftEnd) classes.push("draft-end");
+
+    /* Only the exact saved dates and future dates are untappable.
+       Another non-overlapping period may still be added in the same month. */
     const disabled = date > today || Boolean(existing);
     return `<button type="button" class="${classes.join(" ")}" data-bulk-period-date="${dateValue}" data-bulk-month="${key}" ${disabled ? "disabled" : ""}>${index + 1}</button>`;
   }).join("");
 
-  const status = existing
-    ? `<span class="bulk-month-status saved">Saved · ${formatPeriodRange(existing.start, existing.end || ensurePeriodEnd(existing.start))}</span>`
-    : draftStart
-      ? `<span class="bulk-month-status selected">Selected · ${formatPeriodRange(draftStart, draftEnd)}</span>`
-      : `<span class="bulk-month-status">Tap the first day</span>`;
+  const savedRanges = existingPeriods.map(period =>
+    formatPeriodRange(period.start, period.end || ensurePeriodEnd(period.start))
+  );
+  const selectedRanges = monthDraftPeriods.map(period =>
+    formatPeriodRange(period.start, period.end)
+  );
+
+  let statusText = "Tap the first day";
+  let statusClass = "";
+  if (savedRanges.length && selectedRanges.length) {
+    statusText = `Saved · ${savedRanges.join("; ")} · Adding · ${selectedRanges.join("; ")}`;
+    statusClass = "selected";
+  } else if (selectedRanges.length) {
+    statusText = `Selected · ${selectedRanges.join("; ")}`;
+    statusClass = "selected";
+  } else if (savedRanges.length) {
+    statusText = `Saved · ${savedRanges.join("; ")} · You can add another non-overlapping period`;
+    statusClass = "saved";
+  }
 
   return `
-    <section class="bulk-period-month ${existing ? "has-saved-period" : ""}" data-bulk-period-month="${key}">
+    <section class="bulk-period-month ${existingPeriods.length ? "has-saved-period" : ""}" data-bulk-period-month="${key}">
       <div class="bulk-period-month-header">
         <h4>${monthDate.toLocaleDateString(undefined, { month: "long", year: "numeric" })}</h4>
-        ${status}
+        <span class="bulk-month-status ${statusClass}">${escapeHTML(statusText)}</span>
       </div>
       <div class="period-picker-weekdays"><span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span></div>
       <div class="period-picker-grid">${blanks}${dayButtons}</div>
@@ -2152,7 +2186,31 @@ function renderBulkPeriodMonths() {
 
   container.querySelectorAll("[data-bulk-period-date]").forEach(button => {
     button.addEventListener("click", () => {
-      bulkPeriodDrafts.set(button.dataset.bulkMonth, button.dataset.bulkPeriodDate);
+      const start = button.dataset.bulkPeriodDate;
+
+      /* Tapping the first day again removes that draft. */
+      if (bulkPeriodDrafts.has(start)) {
+        bulkPeriodDrafts.delete(start);
+        setBulkPeriodFeedback("");
+        renderBulkPeriodMonths();
+        return;
+      }
+
+      const end = ensurePeriodEnd(start);
+      const draftPeriods = bulkDraftPeriods();
+      const error = quickPeriodSelectionError(start, end, "", draftPeriods);
+
+      if (error) {
+        setBulkPeriodFeedback(
+          `${formatPeriodRange(start, end)} can’t be added because it overlaps another saved or selected period. Choose a different start date.`,
+          "error"
+        );
+        return;
+      }
+
+      /* Key drafts by their actual start date so multiple periods can be
+         selected in one calendar month. */
+      bulkPeriodDrafts.set(start, start);
       setBulkPeriodFeedback("");
       renderBulkPeriodMonths();
       requestAnimationFrame(() => {
@@ -2209,12 +2267,6 @@ function saveBulkPeriods(event) {
 
     if (!startDate) {
       rejected.push("One selected date could not be read.");
-      continue;
-    }
-
-    const duplicateMonth = periodStartingInMonth(startDate.getFullYear(), startDate.getMonth());
-    if (duplicateMonth) {
-      rejected.push(`${startDate.toLocaleDateString(undefined, { month: "long", year: "numeric" })} already has a saved period.`);
       continue;
     }
 
