@@ -191,7 +191,7 @@
         <span class="today-checkin-icon">📝</span>
         <span class="today-checkin-copy">
           <small>YOUR CHECK-IN</small>
-          <strong>How are you feeling today?</strong>
+          <strong id="todayCheckinQuestion">How are you feeling today?</strong>
         </span>
         <span class="today-checkin-arrow">›</span>
       </button>
@@ -479,6 +479,7 @@
           <div>
             <p class="eyebrow" id="logPhaseEyebrow">TODAY'S PHASE</p>
             <h3 id="logPhaseTitle">Tsuki is finding your place in this cycle</h3>
+            <p id="logPhaseQuestion" class="phase-log-question">How are you feeling today?</p>
             <p id="logPhaseDescription" class="muted small-text">Log a period to anchor your cycle.</p>
           </div>
         </article>
@@ -1597,6 +1598,46 @@
 
       </article>
 
+      <article class="card app-lock-settings-card">
+        <div class="card-row app-lock-heading-row">
+          <div>
+            <p class="card-label">Optional App Lock</p>
+            <p class="muted small-text">Require a PIN when Tsuki opens or returns from the background. Off by default.</p>
+          </div>
+          <span class="app-lock-status-badge" id="appLockStatusBadge">Off</span>
+        </div>
+
+        <label class="settings-row app-lock-toggle-row">
+          <span>
+            🔐 Require PIN
+            <small>Only turns on if you choose it.</small>
+          </span>
+          <input id="appLockToggle" type="checkbox">
+        </label>
+
+        <div id="appLockControls" class="app-lock-controls hidden">
+          <label class="field-label" for="appLockPin">Set or change PIN</label>
+          <input id="appLockPin" class="input" type="password" inputmode="numeric" autocomplete="new-password" maxlength="6" placeholder="4–6 digit PIN">
+
+          <label class="field-label" for="appLockPinConfirm">Confirm PIN</label>
+          <input id="appLockPinConfirm" class="input" type="password" inputmode="numeric" autocomplete="new-password" maxlength="6" placeholder="Enter it again">
+
+          <button type="button" id="saveAppLockPin" class="secondary-button full-width">Save PIN</button>
+
+          <label class="settings-row app-lock-background-row">
+            <span>
+              📱 Lock after leaving Tsuki
+              <small>Ask for your PIN when you return to the app.</small>
+            </span>
+            <input id="lockOnBackgroundToggle" type="checkbox" checked>
+          </label>
+
+          <button type="button" id="lockNowButton" class="secondary-button full-width">Lock Tsuki now</button>
+        </div>
+
+        <p class="muted small-text app-lock-footnote">This is a local privacy screen for casual access protection. It does not encrypt Tsuki's stored data.</p>
+      </article>
+
       <article class="privacy-card">
 
         <span>☁️</span>
@@ -1806,6 +1847,20 @@
       <button type="button" data-quick-add="journal"><span>📖</span><strong>Journal</strong><small>Write something down</small></button>
     </div>
   </section>
+
+
+  <div id="appLockOverlay" class="app-lock-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="appLockTitle">
+    <div class="app-lock-panel">
+      <div class="app-lock-moon">🌙</div>
+      <p class="eyebrow">PRIVATE TSUKI</p>
+      <h2 id="appLockTitle">Welcome back</h2>
+      <p class="muted">Enter your Tsuki PIN to continue.</p>
+      <input id="unlockPinInput" class="input app-lock-pin-input" type="password" inputmode="numeric" autocomplete="current-password" maxlength="6" placeholder="PIN">
+      <p id="unlockPinError" class="app-lock-error hidden">That PIN doesn’t match.</p>
+      <button type="button" id="unlockAppButton" class="primary-button full-width">Unlock Tsuki</button>
+      <p class="app-lock-local-note">🔒 Your PIN is stored only on this device.</p>
+    </div>
+  </div>
 
   <div id="toast" class="toast"></div>
 

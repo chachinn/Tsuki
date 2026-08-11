@@ -1,9 +1,9 @@
 /* ============================================================
-   TSUKI SERVICE WORKER — BUILD 5.1
-   Moon Room + Moon Garden
+   TSUKI SERVICE WORKER — BUILD 5.2
+   Cycle-aware phases + optional App Lock
    ============================================================ */
 
-const CACHE_NAME = "tsuki-cache-v5-1";
+const CACHE_NAME = "tsuki-cache-v5-2";
 
 const APP_SHELL = [
   "./",

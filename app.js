@@ -1,12 +1,13 @@
 /* ============================================================
-   TSUKI 🌙 — BUILD 4.3
-   UI CLEANUP + DRAWER NAVIGATION
+   TSUKI 🌙 — BUILD 5.2
+   CYCLE-AWARE PHASES + OPTIONAL APP LOCK
    ============================================================ */
 
 const STORAGE_KEY = "tsuki-data-v4";
 const BUILD3_STORAGE_KEY = "tsuki-data-v3";
 const BUILD2_STORAGE_KEY = "tsuki-data-v2";
 const LEGACY_STORAGE_KEY = "tsuki-data-v1";
+const APP_LOCK_STORAGE_KEY = "tsuki-app-lock-v1";
 
 
 /* ============================================================
@@ -703,6 +704,49 @@ function cycleDayForDate(dateValue) {
 }
 
 
+function cycleTimingForDate(dateValue) {
+  const target = typeof dateValue === "string"
+    ? parseDate(dateValue)
+    : dateValue;
+
+  if (!target) return null;
+
+  const periods = validPeriods();
+  let anchorIndex = -1;
+
+  for (let index = 0; index < periods.length; index++) {
+    const start = parseDate(periods[index].start);
+    if (start && start <= target) anchorIndex = index;
+  }
+
+  if (anchorIndex < 0) return null;
+
+  const anchor = periods[anchorIndex];
+  const start = parseDate(anchor.start);
+  const nextSaved = periods[anchorIndex + 1];
+  const nextStart = nextSaved
+    ? parseDate(nextSaved.start)
+    : addDays(start, averageCycleLength());
+
+  if (!start || !nextStart) return null;
+
+  // Calendar-only ovulation timing is an estimate. ACOG notes that ovulation
+  // commonly occurs about 14 days before the next period, rather than always
+  // on cycle day 14. Tsuki uses a small ±1 day visual window around that date.
+  const estimatedOvulation = addDays(nextStart, -14);
+  const ovulationWindowStart = addDays(estimatedOvulation, -1);
+  const ovulationWindowEnd = addDays(estimatedOvulation, 1);
+
+  return {
+    start,
+    nextStart,
+    estimatedOvulation,
+    ovulationWindowStart,
+    ovulationWindowEnd
+  };
+}
+
+
 function phaseForDate(dateValue) {
   const key = typeof dateValue === "string"
     ? dateValue
@@ -712,22 +756,16 @@ function phaseForDate(dateValue) {
     return "Period";
   }
 
-  const day = cycleDayForDate(key);
-  if (!day) return "No cycle yet";
+  const target = parseDate(key);
+  const timing = cycleTimingForDate(key);
+  if (!target || !timing) return "No cycle yet";
 
-  const cycleLength = averageCycleLength();
-  const periodLength = averagePeriodLength();
-  const estimatedOvulation = Math.max(
-    periodLength + 3,
-    cycleLength - 14
-  );
-
-  if (day < estimatedOvulation - 1) {
+  if (target < timing.ovulationWindowStart) {
     return "Follicular phase";
   }
 
-  if (Math.abs(day - estimatedOvulation) <= 1) {
-    return "Around mid-cycle";
+  if (target <= timing.ovulationWindowEnd) {
+    return "Estimated ovulation";
   }
 
   return "Luteal phase";
@@ -810,36 +848,20 @@ function cyclePhase(day) {
     return "Log your period to begin";
   }
 
-  const periodLength =
-    averagePeriodLength();
-
-  const cycleLength =
-    averageCycleLength();
-
-  const estimatedOvulation =
-    Math.max(
-      periodLength + 3,
-      cycleLength - 14
-    );
+  const periodLength = averagePeriodLength();
+  const cycleLength = averageCycleLength();
+  const estimatedOvulationDay = Math.max(periodLength + 1, cycleLength - 14);
 
   if (day <= periodLength) {
     return "Period";
   }
 
-  if (
-    day <
-    estimatedOvulation - 1
-  ) {
+  if (day < estimatedOvulationDay - 1) {
     return "Follicular phase";
   }
 
-  if (
-    Math.abs(
-      day -
-      estimatedOvulation
-    ) <= 1
-  ) {
-    return "Around mid-cycle";
+  if (day <= estimatedOvulationDay + 1) {
+    return "Estimated ovulation";
   }
 
   return "Luteal phase";
@@ -1076,6 +1098,9 @@ function renderToday() {
       "cyclePhaseText"
     );
 
+  const todayCheckinQuestion =
+    document.getElementById("todayCheckinQuestion");
+
   if (day) {
     cycleDayTitle.textContent =
       `Cycle Day ${day}`;
@@ -1089,6 +1114,10 @@ function renderToday() {
 
     cyclePhaseText.textContent =
       "Log your most recent period to begin.";
+  }
+
+  if (todayCheckinQuestion) {
+    todayCheckinQuestion.textContent = dailyQuestionForPhase(phaseForDate(today));
   }
 
   const estimate =
@@ -2067,8 +2096,9 @@ function phaseLogCopy(phase, day) {
     return {
       icon: "🩸",
       title: "Period check-in",
+      question: "How is your period feeling today?",
       eyebrow: day ? `CYCLE DAY ${day} · PERIOD` : "PERIOD",
-      description: "Flow and cramps are available because this date is inside a saved period."
+      description: "Flow, cramps and symptoms are prioritized because this date is inside a period you logged."
     };
   }
 
@@ -2076,17 +2106,19 @@ function phaseLogCopy(phase, day) {
     return {
       icon: "🌱",
       title: "Follicular check-in",
+      question: "How are you feeling in this part of your cycle?",
       eyebrow: day ? `CYCLE DAY ${day} · FOLLICULAR` : "FOLLICULAR",
-      description: "Track focus and motivation alongside your usual mood, energy, sleep and symptoms."
+      description: "Tsuki emphasizes focus and motivation here, while mood, energy, sleep and symptoms stay available."
     };
   }
 
-  if (phase === "Around mid-cycle") {
+  if (phase === "Estimated ovulation") {
     return {
       icon: "✨",
-      title: "Mid-cycle check-in",
-      eyebrow: day ? `CYCLE DAY ${day} · MID-CYCLE` : "MID-CYCLE",
-      description: "This is an estimated cycle window. Track discharge and libido only if they are useful to you."
+      title: "Estimated ovulation check-in",
+      question: "Are you noticing any mid-cycle changes?",
+      eyebrow: day ? `CYCLE DAY ${day} · EST. OVULATION` : "ESTIMATED OVULATION",
+      description: "This timing is estimated from your cycle dates. Discharge, libido and mid-cycle discomfort are optional clues, not confirmation of ovulation."
     };
   }
 
@@ -2094,17 +2126,24 @@ function phaseLogCopy(phase, day) {
     return {
       icon: "🌙",
       title: "Luteal check-in",
+      question: "How is your late-cycle day feeling?",
       eyebrow: day ? `CYCLE DAY ${day} · LUTEAL` : "LUTEAL",
-      description: "Track stress, appetite and cravings alongside your normal daily check-in."
+      description: "Tsuki emphasizes stress, appetite and cravings while keeping your usual mood, energy, sleep and symptoms."
     };
   }
 
   return {
     icon: "🌙",
     title: "Daily check-in",
+    question: "How are you feeling today?",
     eyebrow: "DAILY LOG",
-    description: "Log a period first if you want Tsuki to place this day within your cycle."
+    description: "Log a period first if you want Tsuki to estimate where this day falls in your cycle."
   };
+}
+
+
+function dailyQuestionForPhase(phase) {
+  return phaseLogCopy(phase, null).question;
 }
 
 
@@ -2138,10 +2177,11 @@ function renderPhaseSpecificLogFields(phase) {
     return;
   }
 
-  if (phase === "Around mid-cycle") {
+  if (phase === "Estimated ovulation") {
     content.innerHTML =
-      segmentedHTML("discharge", "Discharge", ["Dry", "Sticky", "Creamy", "Watery"]) +
-      segmentedHTML("libido", "Libido", ["Low", "Medium", "High"]);
+      segmentedHTML("discharge", "Cervical mucus / discharge", ["Dry", "Sticky", "Creamy", "Watery", "Slippery / stretchy"]) +
+      segmentedHTML("libido", "Libido", ["Low", "Medium", "High"]) +
+      segmentedHTML("ovulationDiscomfort", "Mid-cycle pelvic discomfort", ["None", "Mild", "Noticeable"]);
     card.classList.remove("hidden");
     return;
   }
@@ -2172,6 +2212,7 @@ function renderLogPhaseUI() {
   document.getElementById("logPhaseIcon").textContent = copy.icon;
   document.getElementById("logPhaseEyebrow").textContent = copy.eyebrow;
   document.getElementById("logPhaseTitle").textContent = phase === "No cycle yet" ? "Daily check-in" : phase;
+  document.getElementById("logPhaseQuestion").textContent = copy.question;
   document.getElementById("logPhaseDescription").textContent = copy.description;
 
   document.getElementById("periodFlowCard").classList.toggle("hidden", !isPeriod);
@@ -2189,7 +2230,7 @@ function loadLogForm() {
 
   [
     "flow", "mood", "energy", "sleep",
-    "focus", "motivation", "discharge", "libido",
+    "focus", "motivation", "discharge", "libido", "ovulationDiscomfort",
     "stress", "appetite", "cravingIntensity"
   ].forEach(clearRadioGroup);
 
@@ -2201,6 +2242,7 @@ function loadLogForm() {
   setCheckedValue("motivation", saved.motivation);
   setCheckedValue("discharge", saved.discharge);
   setCheckedValue("libido", saved.libido);
+  setCheckedValue("ovulationDiscomfort", saved.ovulationDiscomfort);
   setCheckedValue("stress", saved.stress);
   setCheckedValue("appetite", saved.appetite);
   setCheckedValue("cravingIntensity", saved.cravingIntensity);
@@ -2240,6 +2282,7 @@ document.getElementById("dailyLogForm").addEventListener("submit", event => {
     motivation: getCheckedValue("motivation"),
     discharge: getCheckedValue("discharge"),
     libido: getCheckedValue("libido"),
+    ovulationDiscomfort: getCheckedValue("ovulationDiscomfort"),
     stress: getCheckedValue("stress"),
     appetite: getCheckedValue("appetite"),
     cravingIntensity: getCheckedValue("cravingIntensity"),
@@ -5885,6 +5928,196 @@ document
   );
 
 
+
+
+/* ============================================================
+   BUILD 5.2 — OPTIONAL APP LOCK
+   Off by default. Lock settings stay outside the Tsuki backup.
+   ============================================================ */
+
+const defaultAppLockSettings = {
+  enabled: false,
+  pinHash: "",
+  pinSalt: "",
+  lockOnBackground: true
+};
+
+function loadAppLockSettings() {
+  try {
+    const saved = localStorage.getItem(APP_LOCK_STORAGE_KEY);
+    return saved
+      ? { ...defaultAppLockSettings, ...JSON.parse(saved) }
+      : { ...defaultAppLockSettings };
+  }
+  catch (error) {
+    console.error("Could not load Tsuki App Lock settings:", error);
+    return { ...defaultAppLockSettings };
+  }
+}
+
+let appLockSettings = loadAppLockSettings();
+
+function saveAppLockSettings() {
+  localStorage.setItem(APP_LOCK_STORAGE_KEY, JSON.stringify(appLockSettings));
+}
+
+function randomLockSalt() {
+  const bytes = new Uint8Array(16);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, value => value.toString(16).padStart(2, "0")).join("");
+}
+
+async function hashAppPin(pin, salt) {
+  const bytes = new TextEncoder().encode(`tsuki:${salt}:${pin}`);
+  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  return Array.from(new Uint8Array(digest), value => value.toString(16).padStart(2, "0")).join("");
+}
+
+function validAppPin(pin) {
+  return /^\d{4,6}$/.test(pin);
+}
+
+function renderAppLockSettings() {
+  const toggle = document.getElementById("appLockToggle");
+  const controls = document.getElementById("appLockControls");
+  const status = document.getElementById("appLockStatusBadge");
+  const backgroundToggle = document.getElementById("lockOnBackgroundToggle");
+  const lockNow = document.getElementById("lockNowButton");
+  const savePin = document.getElementById("saveAppLockPin");
+  if (!toggle || !controls || !status || !backgroundToggle || !lockNow || !savePin) return;
+
+  toggle.checked = Boolean(appLockSettings.enabled);
+  backgroundToggle.checked = appLockSettings.lockOnBackground !== false;
+  status.textContent = appLockSettings.enabled ? "On" : "Off";
+  status.classList.toggle("on", Boolean(appLockSettings.enabled));
+
+  controls.classList.toggle("hidden", !appLockSettings.enabled && !toggle.checked);
+  lockNow.classList.toggle("hidden", !appLockSettings.enabled);
+  savePin.textContent = appLockSettings.pinHash ? "Change PIN" : "Set PIN & turn on lock";
+}
+
+function showAppLockSetup() {
+  const controls = document.getElementById("appLockControls");
+  const toggle = document.getElementById("appLockToggle");
+  controls?.classList.remove("hidden");
+  if (toggle) toggle.checked = true;
+  document.getElementById("appLockPin")?.focus();
+}
+
+function lockApp() {
+  if (!appLockSettings.enabled || !appLockSettings.pinHash) return;
+  const overlay = document.getElementById("appLockOverlay");
+  const input = document.getElementById("unlockPinInput");
+  const error = document.getElementById("unlockPinError");
+  if (!overlay) return;
+
+  overlay.classList.remove("hidden");
+  document.body.classList.add("app-locked");
+  if (input) input.value = "";
+  error?.classList.add("hidden");
+  setTimeout(() => input?.focus(), 80);
+}
+
+function unlockAppView() {
+  document.getElementById("appLockOverlay")?.classList.add("hidden");
+  document.body.classList.remove("app-locked");
+  document.getElementById("unlockPinError")?.classList.add("hidden");
+}
+
+async function tryUnlockApp() {
+  const input = document.getElementById("unlockPinInput");
+  const error = document.getElementById("unlockPinError");
+  const pin = input?.value || "";
+  if (!pin || !appLockSettings.pinSalt || !appLockSettings.pinHash) return;
+
+  const hashed = await hashAppPin(pin, appLockSettings.pinSalt);
+  if (hashed === appLockSettings.pinHash) {
+    unlockAppView();
+    return;
+  }
+
+  error?.classList.remove("hidden");
+  if (input) {
+    input.value = "";
+    input.focus();
+  }
+}
+
+document.getElementById("appLockToggle")?.addEventListener("change", event => {
+  if (event.target.checked) {
+    if (appLockSettings.pinHash) {
+      appLockSettings.enabled = true;
+      saveAppLockSettings();
+      renderAppLockSettings();
+      showToast("App Lock turned on 🔐");
+    }
+    else {
+      showAppLockSetup();
+      showToast("Choose a PIN below to finish turning on App Lock.");
+    }
+    return;
+  }
+
+  appLockSettings.enabled = false;
+  saveAppLockSettings();
+  renderAppLockSettings();
+  showToast("App Lock is off 🌙");
+});
+
+document.getElementById("saveAppLockPin")?.addEventListener("click", async () => {
+  const pinInput = document.getElementById("appLockPin");
+  const confirmInput = document.getElementById("appLockPinConfirm");
+  const pin = pinInput?.value || "";
+  const confirmation = confirmInput?.value || "";
+
+  if (!validAppPin(pin)) {
+    showToast("Use a 4–6 digit PIN.");
+    return;
+  }
+
+  if (pin !== confirmation) {
+    showToast("The PINs do not match.");
+    return;
+  }
+
+  const salt = randomLockSalt();
+  const pinHash = await hashAppPin(pin, salt);
+  appLockSettings = {
+    ...appLockSettings,
+    enabled: true,
+    pinSalt: salt,
+    pinHash
+  };
+  saveAppLockSettings();
+
+  if (pinInput) pinInput.value = "";
+  if (confirmInput) confirmInput.value = "";
+  renderAppLockSettings();
+  showToast("App Lock is ready 🔐");
+});
+
+document.getElementById("lockOnBackgroundToggle")?.addEventListener("change", event => {
+  appLockSettings.lockOnBackground = event.target.checked;
+  saveAppLockSettings();
+});
+
+document.getElementById("lockNowButton")?.addEventListener("click", lockApp);
+document.getElementById("unlockAppButton")?.addEventListener("click", tryUnlockApp);
+document.getElementById("unlockPinInput")?.addEventListener("keydown", event => {
+  if (event.key === "Enter") tryUnlockApp();
+});
+
+document.addEventListener("visibilitychange", () => {
+  if (
+    document.visibilityState === "hidden" &&
+    appLockSettings.enabled &&
+    appLockSettings.lockOnBackground
+  ) {
+    lockApp();
+  }
+});
+
+
 /* ============================================================
    EXPORT
    ============================================================ */
@@ -6243,6 +6476,7 @@ function renderEverything() {
   renderCompanionHome();
   renderMoonRoom();
   renderMoonGarden();
+  renderAppLockSettings();
 }
 
 
@@ -6260,7 +6494,7 @@ function companionPhaseState() {
   const phase = phaseForDate(todayKey());
   if (phase === "Period") return "period";
   if (phase === "Follicular phase") return "follicular";
-  if (phase === "Around mid-cycle") return "midcycle";
+  if (phase === "Estimated ovulation") return "midcycle";
   if (phase === "Luteal phase") return "luteal";
   return "neutral";
 }
@@ -6301,7 +6535,7 @@ function companionSecondaryNote() {
   const phase = phaseForDate(todayKey());
   if (phase === "Period") return "Warm light, tea, and extra softness.";
   if (phase === "Follicular phase") return "Fresh and light — a gentle new-cycle feeling.";
-  if (phase === "Around mid-cycle") return "A brighter room with tiny sparkles today.";
+  if (phase === "Estimated ovulation") return "A brighter room with tiny sparkles today.";
   if (phase === "Luteal phase") return "A cozy evening room for slowing down.";
   return "Log a period to let Tsuki understand your rhythm more clearly.";
 }
@@ -6535,6 +6769,8 @@ function init() {
   renderEverything();
   refreshWallpaperAsset();
   updateOnlineStatus();
+  renderAppLockSettings();
+  if (appLockSettings.enabled && appLockSettings.pinHash) lockApp();
 }
 
 

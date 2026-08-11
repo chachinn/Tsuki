@@ -1294,10 +1294,17 @@ h3 {
 /* PRIVATE MODE */
 
 body.hide-sensitive #cycleDayTitle,
+body.hide-sensitive #cyclePhaseText,
 body.hide-sensitive #nextPeriodText,
+body.hide-sensitive #periodCountdownText,
+body.hide-sensitive #predictionConfidence,
+body.hide-sensitive #latePeriodNotice,
 body.hide-sensitive #todayFlow,
 body.hide-sensitive #todayMood,
-body.hide-sensitive #todayEnergy {
+body.hide-sensitive #todayEnergy,
+body.hide-sensitive #companionHomeTitle,
+body.hide-sensitive #companionHomeMessage,
+body.hide-sensitive #companionPhaseBadge {
   filter: blur(7px);
   user-select: none;
 }
@@ -4136,4 +4143,136 @@ body.reduce-motion .bunny-paw {
   .moon-memory-stats {
     grid-template-columns: 1fr;
   }
+}
+
+
+/* ============================================================
+   BUILD 5.2 — PHASE CHECK-IN + OPTIONAL APP LOCK
+   ============================================================ */
+
+.phase-log-question {
+  margin: 8px 0 5px;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 20px;
+  line-height: 1.25;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.app-lock-settings-card .settings-row span small,
+.app-lock-toggle-row span small,
+.app-lock-background-row span small {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.35;
+}
+
+.app-lock-heading-row {
+  align-items: center;
+}
+
+.app-lock-status-badge {
+  flex: 0 0 auto;
+  padding: 7px 11px;
+  border-radius: 999px;
+  background: rgba(137, 117, 127, 0.10);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.app-lock-status-badge.on {
+  background: rgba(184, 216, 192, 0.36);
+  color: #54775d;
+}
+
+.app-lock-controls {
+  margin-top: 12px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(233, 111, 156, 0.12);
+}
+
+.app-lock-controls .input {
+  margin-bottom: 12px;
+}
+
+.app-lock-controls .settings-row {
+  margin-top: 10px;
+}
+
+.app-lock-footnote {
+  margin: 12px 0 0;
+}
+
+.app-lock-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: grid;
+  place-items: center;
+  padding: calc(24px + env(safe-area-inset-top, 0px)) 24px calc(24px + env(safe-area-inset-bottom, 0px));
+  background:
+    radial-gradient(circle at 50% 18%, rgba(255, 240, 199, 0.65), transparent 22%),
+    linear-gradient(180deg, #fff9fb 0%, #fdeff6 48%, #f5eefb 100%);
+}
+
+.app-lock-panel {
+  width: min(100%, 390px);
+  padding: 30px 22px 24px;
+  text-align: center;
+  border-radius: 32px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(233, 111, 156, 0.14);
+  box-shadow: 0 24px 60px rgba(165, 105, 139, 0.16);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.app-lock-moon {
+  width: 76px;
+  height: 76px;
+  margin: 0 auto 14px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: linear-gradient(145deg, #fff5cc, #ffdda7);
+  font-size: 40px;
+  box-shadow: 0 12px 30px rgba(215, 153, 105, 0.18);
+}
+
+.app-lock-panel h2 {
+  margin: 0 0 6px;
+  font-size: 30px;
+}
+
+.app-lock-pin-input {
+  margin: 20px 0 10px;
+  text-align: center;
+  letter-spacing: 0.35em;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.app-lock-error {
+  margin: 0 0 10px;
+  color: var(--danger);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.app-lock-local-note {
+  margin: 14px 0 0;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+body.app-locked {
+  overflow: hidden;
+}
+
+body.hide-sensitive #periodCountdownText {
+  opacity: 0.65;
 }
