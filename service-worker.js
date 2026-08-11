@@ -1,9 +1,9 @@
 /* ============================================================
-   TSUKI SERVICE WORKER — BUILD 6.1.2
-   Complete experience: calendar, check-in, insights, companion, backup & personalization
+   TSUKI SERVICE WORKER — BUILD 7.0
+   Cycle + Pregnancy life modes
    ============================================================ */
 
-const CACHE_NAME = "tsuki-cache-v6-1-2";
+const CACHE_NAME = "tsuki-cache-v7";
 
 const APP_SHELL = [
   "./",

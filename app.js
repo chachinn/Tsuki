@@ -1,6 +1,6 @@
 /* ============================================================
-   TSUKI 🌙 — BUILD 5.2.1
-   TYPICAL-CYCLE FORECASTS + 12-MONTH CALENDAR
+   TSUKI 🌙 — BUILD 7.0
+   CYCLE + PREGNANCY LIFE MODES
    ============================================================ */
 
 const STORAGE_KEY = "tsuki-data-v4";
@@ -141,7 +141,9 @@ function standardDeviation(numbers) {
 
 const defaultData = {
 
-  schemaVersion: 6,
+  schemaVersion: 7,
+
+  mode: "cycle",
 
   settings: {
     cycleLength: 28,
@@ -181,6 +183,43 @@ const defaultData = {
   gardenState: { plantedCycleIds: [] },
 
   meta: { lastBackupAt: "" },
+
+  pregnancy: {
+    active: false,
+    id: "",
+    startedAt: "",
+    datingMethod: "",
+    lmp: "",
+    edd: "",
+    clinicianConfirmed: false,
+    transferDate: "",
+    embryoAge: 5,
+    babyNickname: "",
+    logs: {},
+    appointments: [],
+    questions: [],
+    medications: [],
+    tests: [],
+    journal: [],
+    photos: [],
+    careTeam: { provider: "", contact: "", hospital: "", emergencyContact: "" },
+    hospitalBag: [
+      { id: "preg-bag-me-1", category: "For me", name: "Comfortable clothes", packed: false },
+      { id: "preg-bag-me-2", category: "For me", name: "Toiletries", packed: false },
+      { id: "preg-bag-baby-1", category: "For baby", name: "Going-home clothes", packed: false },
+      { id: "preg-bag-baby-2", category: "For baby", name: "Blanket", packed: false },
+      { id: "preg-bag-doc-1", category: "Documents", name: "IDs / hospital documents", packed: false },
+      { id: "preg-bag-partner-1", category: "For partner", name: "Phone charger", packed: false }
+    ],
+    birthPreferences: { facility: "", support: "", comfort: "", pain: "", questions: "", notes: "" },
+    gardenMilestones: [],
+    endedAt: "",
+    outcome: ""
+  },
+
+  pregnancyHistory: [],
+
+  postpartum: { active: false, birthDate: "", pregnancyId: "" },
 
   careProfile: {
     options: [],
@@ -241,11 +280,29 @@ function normalizeData(parsed) {
   return {
     ...clone(defaultData),
     ...(parsed || {}),
-    schemaVersion: 6,
+    schemaVersion: 7,
+    mode: ["cycle", "pregnancy", "postpartum"].includes(parsed?.mode) ? parsed.mode : "cycle",
     settings: {
       ...defaultData.settings,
       ...(parsed?.settings || {})
     },
+    pregnancy: {
+      ...defaultData.pregnancy,
+      ...(parsed?.pregnancy || {}),
+      logs: parsed?.pregnancy?.logs || {},
+      appointments: Array.isArray(parsed?.pregnancy?.appointments) ? parsed.pregnancy.appointments : [],
+      questions: Array.isArray(parsed?.pregnancy?.questions) ? parsed.pregnancy.questions : [],
+      medications: Array.isArray(parsed?.pregnancy?.medications) ? parsed.pregnancy.medications : [],
+      tests: Array.isArray(parsed?.pregnancy?.tests) ? parsed.pregnancy.tests : [],
+      journal: Array.isArray(parsed?.pregnancy?.journal) ? parsed.pregnancy.journal : [],
+      photos: Array.isArray(parsed?.pregnancy?.photos) ? parsed.pregnancy.photos : [],
+      hospitalBag: Array.isArray(parsed?.pregnancy?.hospitalBag) && parsed.pregnancy.hospitalBag.length ? parsed.pregnancy.hospitalBag : clone(defaultData.pregnancy.hospitalBag),
+      careTeam: { ...defaultData.pregnancy.careTeam, ...(parsed?.pregnancy?.careTeam || {}) },
+      birthPreferences: { ...defaultData.pregnancy.birthPreferences, ...(parsed?.pregnancy?.birthPreferences || {}) },
+      gardenMilestones: Array.isArray(parsed?.pregnancy?.gardenMilestones) ? parsed.pregnancy.gardenMilestones : []
+    },
+    pregnancyHistory: Array.isArray(parsed?.pregnancyHistory) ? parsed.pregnancyHistory : [],
+    postpartum: { ...defaultData.postpartum, ...(parsed?.postpartum || {}) },
     periods:
       Array.isArray(parsed?.periods)
         ? parsed.periods
@@ -296,7 +353,7 @@ function migrateBuild1(oldData) {
   const migrated = {
     ...clone(defaultData),
     ...oldData,
-    schemaVersion: 6,
+    schemaVersion: 7,
     settings: {
       ...defaultData.settings,
       ...(oldData.settings || {})
@@ -432,7 +489,7 @@ function loadData() {
 
 
 function saveData() {
-  data.schemaVersion = 6;
+  data.schemaVersion = 7;
 
   localStorage.setItem(
     STORAGE_KEY,
@@ -983,16 +1040,39 @@ function periodForDate(dateValue) {
    NAVIGATION
    ============================================================ */
 
+function resolveModeScreen(name) {
+  if (data.mode === "pregnancy" && data.pregnancy?.active) {
+    const map = {
+      today: "pregnancy-today",
+      calendar: "pregnancy-calendar",
+      insights: "pregnancy-journey",
+      log: "pregnancy-log",
+      journal: "pregnancy-journal",
+      "going-out": "pregnancy-care"
+    };
+    return map[name] || name;
+  }
+
+  if (data.mode === "postpartum" && data.postpartum?.active) {
+    if (["today", "pregnancy-today"].includes(name)) return "postpartum-today";
+    if (name === "insights") return "postpartum-today";
+  }
+
+  return name;
+}
+
 function showScreen(name) {
   if (typeof closeAppDrawer === "function") closeAppDrawer();
   if (typeof closeQuickAdd === "function") closeQuickAdd();
+
+  const resolvedName = resolveModeScreen(name);
 
   document
     .querySelectorAll(".screen")
     .forEach(screen => {
       screen.classList.toggle(
         "active",
-        screen.dataset.screen === name
+        screen.dataset.screen === resolvedName
       );
     });
 
@@ -1001,7 +1081,7 @@ function showScreen(name) {
     .forEach(button => {
       button.classList.toggle(
         "active",
-        button.dataset.screenTarget === name
+        button.dataset.screenTarget === resolvedName
       );
     });
 
@@ -1013,19 +1093,30 @@ function showScreen(name) {
         : "smooth"
   });
 
-  if (name === "calendar") renderCalendar();
-  if (name === "cycle-history") renderCycleHistory();
-  if (name === "insights") renderInsights();
-  if (name === "relief") renderRelief();
-  if (name === "journal") renderJournal();
-  if (name === "kit") renderKit();
-  if (name === "going-out") renderGoingOut();
-  if (name === "past-moons") renderPastMoons();
-  if (name === "reports") renderReports();
-  if (name === "care-profile") renderCareProfile();
-  if (name === "moon-room") renderMoonRoom();
-  if (name === "moon-garden") renderMoonGarden();
-  if (name === "moon-year") renderMoonYear();
+  if (resolvedName === "calendar") renderCalendar();
+  if (resolvedName === "cycle-history") renderCycleHistory();
+  if (resolvedName === "insights") renderInsights();
+  if (resolvedName === "relief") renderRelief();
+  if (resolvedName === "journal") renderJournal();
+  if (resolvedName === "kit") renderKit();
+  if (resolvedName === "going-out") renderGoingOut();
+  if (resolvedName === "past-moons") renderPastMoons();
+  if (resolvedName === "reports") renderReports();
+  if (resolvedName === "care-profile") renderCareProfile();
+  if (resolvedName === "moon-room") renderMoonRoom();
+  if (resolvedName === "moon-garden") renderMoonGarden();
+  if (resolvedName === "moon-year") renderMoonYear();
+  if (resolvedName === "pregnancy-today") renderPregnancyToday();
+  if (resolvedName === "pregnancy-calendar") renderPregnancyCalendar();
+  if (resolvedName === "pregnancy-log") loadPregnancyLogForm();
+  if (resolvedName === "pregnancy-journey") renderPregnancyJourney();
+  if (resolvedName === "pregnancy-care") renderPregnancyCare();
+  if (resolvedName === "pregnancy-journal") renderPregnancyJournal();
+  if (resolvedName === "pregnancy-photos") renderPregnancyPhotos();
+  if (resolvedName === "pregnancy-hospital") renderPregnancyHospitalBag();
+  if (resolvedName === "pregnancy-preferences") renderBirthPreferences();
+  if (resolvedName === "pregnancy-garden") renderPregnancyGarden();
+  if (resolvedName === "postpartum-today") renderPostpartumToday();
 }
 
 
@@ -6812,7 +6903,7 @@ document
     () => {
       if (
         !confirm(
-          "This backup contains private cycle and wellness information. Continue?"
+          "This backup contains private cycle, pregnancy, and wellness information. Continue?"
         )
       ) {
         return;
@@ -6820,7 +6911,7 @@ document
 
       const exportData = {
         app: "Tsuki",
-        version: 6,
+        version: 7,
         exportedAt:
           new Date()
             .toISOString(),
@@ -6872,12 +6963,12 @@ document
 
 let pendingRestoreData = null;
 function renderBackupStatus(){const el=document.getElementById("lastBackupText");if(!el)return;const stamp=data.meta?.lastBackupAt;el.textContent=stamp?`Last backup created on this device: ${new Date(stamp).toLocaleString()}`:"No backup created on this device yet.";document.getElementById("recoveryNotice")?.classList.toggle("hidden",localStorage.getItem("tsuki-recovery-needed")!=="1");}
-function validateTsukiBackup(parsed){if(!parsed||parsed.app!=="Tsuki"||!parsed.data||typeof parsed.data!=="object")throw new Error("This is not a valid Tsuki backup.");const normalized=normalizeData(parsed.data);return{normalized,version:parsed.version||"unknown",exportedAt:parsed.exportedAt||"",counts:{periods:normalized.periods.length,logs:Object.keys(normalized.logs).length,journal:normalized.journal.length,relief:normalized.relief.length,events:normalized.trips.length}};}
+function validateTsukiBackup(parsed){if(!parsed||parsed.app!=="Tsuki"||!parsed.data||typeof parsed.data!=="object")throw new Error("This is not a valid Tsuki backup.");const normalized=normalizeData(parsed.data);return{normalized,version:parsed.version||"unknown",exportedAt:parsed.exportedAt||"",counts:{periods:normalized.periods.length,logs:Object.keys(normalized.logs).length,journal:normalized.journal.length,events:normalized.trips.length,pregnancyLogs:Object.keys(normalized.pregnancy?.logs||{}).length,pregnancyAppointments:(normalized.pregnancy?.appointments||[]).length,pregnancyJournal:(normalized.pregnancy?.journal||[]).length,pregnancyMode:normalized.mode}};}
 document.getElementById("restoreData")?.addEventListener("click",()=>document.getElementById("restoreDataInput")?.click());
-document.getElementById("restoreDataInput")?.addEventListener("change",async event=>{const file=event.target.files?.[0];if(!file)return;try{const parsed=JSON.parse(await file.text());const check=validateTsukiBackup(parsed);pendingRestoreData=check.normalized;document.getElementById("restorePreviewContent").innerHTML=`<article class="restore-preview-card"><p><strong>Backup version:</strong> ${escapeHTML(String(check.version))}</p>${check.exportedAt?`<p><strong>Exported:</strong> ${escapeHTML(new Date(check.exportedAt).toLocaleString())}</p>`:""}<div class="restore-count-grid"><span>${check.counts.periods}<small>Periods</small></span><span>${check.counts.logs}<small>Check-ins</small></span><span>${check.counts.journal}<small>Journal</small></span><span>${check.counts.events}<small>Events</small></span></div><p class="muted small-text">Restoring replaces Tsuki’s current tracking data. Your device-specific App Lock PIN and wallpaper file stay on this device.</p></article>`;document.getElementById("restorePreviewModal").classList.remove("hidden");document.body.classList.add("modal-open");}catch(error){showToast(error.message||"Tsuki could not read that backup.");}event.target.value="";});
+document.getElementById("restoreDataInput")?.addEventListener("change",async event=>{const file=event.target.files?.[0];if(!file)return;try{const parsed=JSON.parse(await file.text());const check=validateTsukiBackup(parsed);pendingRestoreData=check.normalized;document.getElementById("restorePreviewContent").innerHTML=`<article class="restore-preview-card"><p><strong>Backup version:</strong> ${escapeHTML(String(check.version))}</p>${check.exportedAt?`<p><strong>Exported:</strong> ${escapeHTML(new Date(check.exportedAt).toLocaleString())}</p>`:""}<div class="restore-count-grid"><span>${check.counts.periods}<small>Periods</small></span><span>${check.counts.logs}<small>Cycle check-ins</small></span><span>${check.counts.pregnancyLogs}<small>Pregnancy check-ins</small></span><span>${check.counts.pregnancyAppointments}<small>Appointments</small></span><span>${check.counts.pregnancyJournal}<small>Pregnancy memories</small></span><span>${escapeHTML(check.counts.pregnancyMode)}<small>Life mode</small></span></div><p class="muted small-text">Restoring replaces Tsuki’s current cycle and pregnancy tracking data. Your device-specific App Lock PIN, wallpaper file, and local pregnancy photos stay on this device.</p></article>`;document.getElementById("restorePreviewModal").classList.remove("hidden");document.body.classList.add("modal-open");}catch(error){showToast(error.message||"Tsuki could not read that backup.");}event.target.value="";});
 function closeRestorePreview(){document.getElementById("restorePreviewModal")?.classList.add("hidden");document.body.classList.remove("modal-open");pendingRestoreData=null;}
 document.getElementById("closeRestorePreview")?.addEventListener("click",closeRestorePreview);document.getElementById("cancelRestore")?.addEventListener("click",closeRestorePreview);
-document.getElementById("confirmRestore")?.addEventListener("click",()=>{if(!pendingRestoreData)return;const currentLock={...appLockSettings};data=normalizeData(pendingRestoreData);saveData();appLockSettings=currentLock;saveAppLockSettings();localStorage.removeItem("tsuki-recovery-needed");pendingRestoreData=null;document.getElementById("restorePreviewModal")?.classList.add("hidden");document.body.classList.remove("modal-open");loadSettingsUI();applySettings();renderEverything();showToast("Backup restored 🌙");});
+document.getElementById("confirmRestore")?.addEventListener("click",()=>{if(!pendingRestoreData)return;const currentLock={...appLockSettings};data=normalizeData(pendingRestoreData);saveData();appLockSettings=currentLock;saveAppLockSettings();localStorage.removeItem("tsuki-recovery-needed");pendingRestoreData=null;document.getElementById("restorePreviewModal")?.classList.add("hidden");document.body.classList.remove("modal-open");loadSettingsUI();applySettings();renderEverything();if(data.mode==="pregnancy"&&data.pregnancy?.active)showScreen("pregnancy-today");else if(data.mode==="postpartum"&&data.postpartum?.active)showScreen("postpartum-today");else showScreen("today");showToast("Backup restored 🌙");});
 
 
 /* ============================================================
@@ -7169,6 +7260,594 @@ document.getElementById("openTodayCustomize")?.addEventListener("click",openToda
 document.getElementById("saveTodayCustomize")?.addEventListener("click",()=>{data.settings.customGreeting=document.getElementById("customGreetingInput").value.trim();data.settings.weekStart=document.getElementById("weekStartSelect").value;data.settings.textSize=document.getElementById("textSizeSelect").value;data.settings.density=document.getElementById("densitySelect").value;data.settings.todayHidden=Array.from(document.querySelectorAll('[data-today-visible]')).filter(x=>!x.checked).map(x=>x.dataset.todayVisible);saveData();applySettings();renderEverything();closeTodayCustomize();showToast("Today personalized 🌸");});
 
 /* ============================================================
+   BUILD 7.0 — LIFE MODE + PREGNANCY EXPERIENCE
+   Clinical framing: ACOG pregnancy dating / trimesters,
+   CDC urgent maternal warning signs, WHO antenatal contacts.
+   ============================================================ */
+
+let pregnancyCalendarDate = new Date();
+let selectedPregnancyCalendarDate = todayKey();
+let pendingPregnancyPhotoFile = null;
+let pendingPregnancyPhotoPreviewUrl = "";
+let pregnancyPhotoObjectUrls = [];
+
+function pregnancyRecord() {
+  return data.pregnancy || defaultData.pregnancy;
+}
+
+function pregnancyEDD() {
+  return parseDate(pregnancyRecord().edd);
+}
+
+function pregnancyStartDate() {
+  const edd = pregnancyEDD();
+  return edd ? addDays(edd, -280) : null;
+}
+
+function gestationalAgeForDate(value = todayKey()) {
+  const edd = pregnancyEDD();
+  const date = typeof value === "string" ? parseDate(value) : new Date(value);
+  if (!edd || !date) return null;
+  const totalDays = 280 - daysBetween(date, edd);
+  const weeks = Math.floor(totalDays / 7);
+  const days = ((totalDays % 7) + 7) % 7;
+  return { totalDays, weeks, days, date, edd };
+}
+
+function trimesterForGestation(ga) {
+  if (!ga) return "Pregnancy";
+  if (ga.totalDays <= 97) return "First trimester"; // through 13w6d
+  if (ga.totalDays <= 195) return "Second trimester"; // through 27w6d
+  return "Third trimester";
+}
+
+function pregnancyWeekLabel(value = todayKey()) {
+  const ga = gestationalAgeForDate(value);
+  if (!ga) return "Pregnancy week —";
+  if (ga.totalDays < 0) return "Before pregnancy dating";
+  return `${Math.max(0, ga.weeks)} weeks + ${ga.days} days`;
+}
+
+function pregnancyDateInRange(value) {
+  const ga = gestationalAgeForDate(value);
+  return Boolean(ga && ga.totalDays >= 0 && ga.totalDays <= 294);
+}
+
+function pregnancyWeekInfo(week) {
+  if (week < 4) return { icon: "🌱", title: "Very early pregnancy", text: "Pregnancy dating begins from the first day of the last menstrual period, so the earliest counted weeks begin before conception has occurred." };
+  if (week <= 7) return { icon: "🌱", title: "Early development", text: "Early pregnancy is a period of rapid development. Your maternity provider can guide you on when to schedule your first prenatal care and dating assessment." };
+  if (week <= 13) return { icon: "🌿", title: "First trimester", text: "Development continues quickly through the first trimester. First-trimester ultrasound is the most accurate ultrasound period for establishing or confirming gestational age." };
+  if (week <= 20) return { icon: "🌷", title: "Growing into the second trimester", text: "The second trimester is a period of rapid growth and development. Some people begin noticing movement during this part of pregnancy, but timing varies." };
+  if (week <= 27) return { icon: "🌸", title: "Second-trimester growth", text: "Growth and development continue through the second trimester. Keep your provider's own schedule for visits, scans, and tests as your main guide." };
+  if (week <= 32) return { icon: "🪻", title: "Third trimester", text: "The third trimester begins at 28 weeks. Fetal growth and organ maturation continue while your care team follows your health and your baby's health." };
+  if (week <= 36) return { icon: "🌼", title: "Later pregnancy", text: "Late-pregnancy growth continues. Many care plans include more frequent contact as pregnancy advances, depending on individual needs." };
+  if (week <= 40) return { icon: "🌕", title: "Approaching your due date", text: "Your estimated due date is a guide rather than a guaranteed birth date. Keep following the plan you made with your maternity provider." };
+  return { icon: "🌙", title: "Past the estimated due date", text: "The estimated due date is only an estimate. If you are still pregnant after your EDD, use your maternity provider's plan for follow-up and timing of care." };
+}
+
+function pregnancyCuteComparison(week) {
+  const items = [
+    [4, "🌱 tiny seed"], [6, "🫐 little berry"], [8, "🍓 strawberry"],
+    [10, "🍑 tiny peach"], [12, "🍋 little lemon"], [14, "🍙 onigiri"],
+    [16, "🥑 avocado"], [18, "🍠 sweet potato"], [20, "🍌 banana"],
+    [22, "🥭 mango"], [24, "🌽 corn"], [26, "🥬 little lettuce"],
+    [28, "🍆 eggplant"], [30, "🥥 coconut"], [32, "🍈 melon"],
+    [34, "🍍 pineapple"], [36, "🥬 napa cabbage"], [38, "🎃 little pumpkin"], [40, "🌕 full moon"]
+  ];
+  const found = items.find(([maxWeek]) => week <= maxWeek) || items[items.length - 1];
+  return `${found[1]} · just for fun, not a measurement`;
+}
+
+function pregnancyDatingDescription() {
+  const p = pregnancyRecord();
+  const labels = {
+    lmp: "Estimated from last menstrual period",
+    clinician: "Clinician-confirmed due date",
+    ultrasound: "Ultrasound-confirmed due date",
+    ivf: p.edd ? "ART / IVF dating" : "Pregnancy dating"
+  };
+  return labels[p.datingMethod] || "Pregnancy dating";
+}
+
+function calculatePregnancyDatingFromForm() {
+  const method = document.getElementById("pregnancyDatingMethod")?.value || "lmp";
+  let edd = null;
+  let lmp = "";
+  let transferDate = "";
+  let embryoAge = Number(document.getElementById("pregnancyEmbryoAge")?.value || 5);
+  let clinicianConfirmed = false;
+
+  if (method === "lmp") {
+    lmp = document.getElementById("pregnancyLMPDate")?.value || "";
+    const date = parseDate(lmp);
+    if (date) edd = addDays(date, 280);
+  }
+  else if (["clinician", "ultrasound"].includes(method)) {
+    edd = parseDate(document.getElementById("pregnancyDirectEDD")?.value || "");
+    clinicianConfirmed = Boolean(edd);
+  }
+  else if (method === "ivf") {
+    const direct = parseDate(document.getElementById("pregnancyIVFDirectEDD")?.value || "");
+    transferDate = document.getElementById("pregnancyTransferDate")?.value || "";
+    if (direct) {
+      edd = direct;
+      clinicianConfirmed = true;
+    }
+    else {
+      const transfer = parseDate(transferDate);
+      if (transfer) edd = addDays(transfer, embryoAge === 3 ? 263 : 261);
+    }
+  }
+
+  return { method, edd, lmp, transferDate, embryoAge, clinicianConfirmed };
+}
+
+function updatePregnancySetupFields() {
+  const method = document.getElementById("pregnancyDatingMethod")?.value || "lmp";
+  document.getElementById("pregnancyLMPFields")?.classList.toggle("hidden", method !== "lmp");
+  document.getElementById("pregnancyEDDFields")?.classList.toggle("hidden", !["clinician", "ultrasound"].includes(method));
+  document.getElementById("pregnancyIVFFields")?.classList.toggle("hidden", method !== "ivf");
+
+  const preview = document.getElementById("pregnancyDatingPreview");
+  if (!preview) return;
+  const dating = calculatePregnancyDatingFromForm();
+  if (!dating.edd) {
+    preview.innerHTML = "Enter your dating information to preview the estimate.";
+    return;
+  }
+  const ga = { totalDays: 280 - daysBetween(new Date(), dating.edd) };
+  const weeks = Math.floor(ga.totalDays / 7);
+  const days = ((ga.totalDays % 7) + 7) % 7;
+  preview.innerHTML = `<strong>${weeks} weeks + ${days} days today</strong><span>Estimated due date: ${formatDateLong(dating.edd)}</span>`;
+}
+
+function openPregnancySetup() {
+  const p = pregnancyRecord();
+  const latest = latestPeriod();
+  const method = p.datingMethod || "lmp";
+  document.getElementById("pregnancyDatingMethod").value = method;
+  document.getElementById("pregnancyLMPDate").value = p.lmp || latest?.start || "";
+  document.getElementById("pregnancyDirectEDD").value = ["clinician", "ultrasound"].includes(method) ? (p.edd || "") : "";
+  document.getElementById("pregnancyTransferDate").value = p.transferDate || "";
+  document.getElementById("pregnancyEmbryoAge").value = String(p.embryoAge || 5);
+  document.getElementById("pregnancyIVFDirectEDD").value = method === "ivf" && p.clinicianConfirmed ? (p.edd || "") : "";
+  document.getElementById("pregnancyBabyNickname").value = p.babyNickname || "";
+  updatePregnancySetupFields();
+  document.getElementById("pregnancySetupModal")?.classList.remove("hidden");
+  document.body.classList.add("modal-open");
+}
+
+function closePregnancySetup() {
+  document.getElementById("pregnancySetupModal")?.classList.add("hidden");
+  document.body.classList.remove("modal-open");
+}
+
+function savePregnancySetup() {
+  const dating = calculatePregnancyDatingFromForm();
+  if (!dating.edd) {
+    showToast("Add the pregnancy dating information first.");
+    return;
+  }
+
+  if (!data.pregnancy?.active && data.pregnancy?.endedAt) {
+    data.pregnancy = clone(defaultData.pregnancy);
+  }
+
+  data.pregnancy = {
+    ...clone(defaultData.pregnancy),
+    ...data.pregnancy,
+    active: true,
+    id: data.pregnancy?.id || uid(),
+    startedAt: data.pregnancy?.startedAt || todayKey(),
+    datingMethod: dating.method,
+    lmp: dating.lmp,
+    edd: dateKey(dating.edd),
+    clinicianConfirmed: dating.clinicianConfirmed || ["clinician", "ultrasound"].includes(dating.method),
+    transferDate: dating.transferDate,
+    embryoAge: dating.embryoAge,
+    babyNickname: document.getElementById("pregnancyBabyNickname")?.value.trim() || "",
+    endedAt: "",
+    outcome: ""
+  };
+  data.mode = "pregnancy";
+  data.postpartum.active = false;
+  saveData();
+  closePregnancySetup();
+  renderEverything();
+  showScreen("pregnancy-today");
+  showToast("Pregnancy Mode is on 🤍");
+}
+
+function openPregnancyTransition() {
+  document.getElementById("pregnancyTransitionDate").value = todayKey();
+  document.getElementById("pregnancyTransitionModal")?.classList.remove("hidden");
+  document.body.classList.add("modal-open");
+}
+
+function closePregnancyTransition() {
+  document.getElementById("pregnancyTransitionModal")?.classList.add("hidden");
+  document.body.classList.remove("modal-open");
+}
+
+function archiveCurrentPregnancy(outcome, endDate) {
+  const snapshot = clone(pregnancyRecord());
+  snapshot.active = false;
+  snapshot.outcome = outcome;
+  snapshot.endedAt = endDate || todayKey();
+  snapshot.archivedAt = new Date().toISOString();
+  data.pregnancyHistory = Array.isArray(data.pregnancyHistory) ? data.pregnancyHistory : [];
+  data.pregnancyHistory.push(snapshot);
+  data.pregnancy.active = false;
+  data.pregnancy.outcome = outcome;
+  data.pregnancy.endedAt = snapshot.endedAt;
+}
+
+function renderLifeModeUI() {
+  const pregnancyActive = Boolean(data.pregnancy?.active);
+  const isPregnancy = data.mode === "pregnancy" && pregnancyActive;
+  const isPostpartum = data.mode === "postpartum" && data.postpartum?.active;
+
+  document.body.classList.toggle("pregnancy-mode", isPregnancy);
+  document.body.classList.toggle("postpartum-mode", isPostpartum);
+  document.body.dataset.lifeMode = isPregnancy ? "pregnancy" : isPostpartum ? "postpartum" : "cycle";
+
+  const subtitle = document.getElementById("brandSubtitle");
+  if (subtitle) subtitle.textContent = isPregnancy ? "with you through every week" : isPostpartum ? "with you through every season" : "your body has a rhythm";
+
+  const status = document.getElementById("lifeModeStatus");
+  if (status) status.textContent = isPregnancy ? "Pregnancy Mode" : isPostpartum ? "Postpartum" : "Cycle Mode";
+  const privacyLabel = document.getElementById("hideDetailsLabel");
+  if (privacyLabel) privacyLabel.textContent = isPregnancy ? "🙈 Hide pregnancy details" : isPostpartum ? "🙈 Hide postpartum details" : "🙈 Hide cycle details";
+
+  document.getElementById("chooseCycleMode")?.classList.toggle("active", !isPregnancy && !isPostpartum);
+  document.getElementById("choosePregnancyMode")?.classList.toggle("active", isPregnancy);
+  document.getElementById("activePregnancySettings")?.classList.toggle("hidden", !pregnancyActive);
+  document.querySelectorAll(".cycle-settings-card").forEach(card => card.classList.toggle("hidden", isPregnancy || isPostpartum));
+
+  document.querySelectorAll("#appDrawer .drawer-group").forEach(group => group.classList.toggle("hidden", isPregnancy));
+  document.getElementById("pregnancyDrawerMenu")?.classList.toggle("hidden", !isPregnancy);
+
+  const navToday = document.getElementById("navTodayButton");
+  const navCalendar = document.getElementById("navCalendarButton");
+  const navInsights = document.getElementById("navInsightsButton");
+  if (isPregnancy) {
+    if (navToday) navToday.dataset.screenTarget = "pregnancy-today";
+    if (navCalendar) navCalendar.dataset.screenTarget = "pregnancy-calendar";
+    if (navInsights) navInsights.dataset.screenTarget = "pregnancy-journey";
+    document.getElementById("navInsightsIcon").textContent = "🌱";
+    document.getElementById("navInsightsLabel").textContent = "Journey";
+  }
+  else if (isPostpartum) {
+    if (navToday) navToday.dataset.screenTarget = "postpartum-today";
+    if (navCalendar) navCalendar.dataset.screenTarget = "pregnancy-calendar";
+    if (navInsights) navInsights.dataset.screenTarget = "pregnancy-journey";
+    document.getElementById("navInsightsIcon").textContent = "🌱";
+    document.getElementById("navInsightsLabel").textContent = "Journey";
+  }
+  else {
+    if (navToday) navToday.dataset.screenTarget = "today";
+    if (navCalendar) navCalendar.dataset.screenTarget = "calendar";
+    if (navInsights) navInsights.dataset.screenTarget = "insights";
+    document.getElementById("navInsightsIcon").textContent = "✨";
+    document.getElementById("navInsightsLabel").textContent = "Insights";
+  }
+
+  document.getElementById("cycleQuickAddGrid")?.classList.toggle("hidden", isPregnancy);
+  document.getElementById("pregnancyQuickAddGrid")?.classList.toggle("hidden", !isPregnancy);
+  const quickTitle = document.querySelector("#quickAddSheet .quick-sheet-header h2");
+  if (quickTitle) quickTitle.textContent = isPregnancy ? "What would you like to add?" : "What would you like to log?";
+}
+
+function pregnancyGreetingText() {
+  const hour = new Date().getHours();
+  if (hour < 12) return "Good morning 🤍";
+  if (hour < 18) return "Good afternoon 🤍";
+  return "Good evening 🤍";
+}
+
+function nextPregnancyAppointment() {
+  const today = parseDate(todayKey());
+  return [...(pregnancyRecord().appointments || [])]
+    .filter(item => parseDate(item.date) && parseDate(item.date) >= today)
+    .sort((a, b) => parseDate(a.date) - parseDate(b.date))[0] || null;
+}
+
+function renderPregnancyToday() {
+  const p = pregnancyRecord();
+  const ga = gestationalAgeForDate(todayKey());
+  if (!p.edd || !ga) return;
+
+  const trimester = trimesterForGestation(ga);
+  const info = pregnancyWeekInfo(ga.weeks);
+  const daysUntil = daysBetween(new Date(), parseDate(p.edd));
+  const nickname = p.babyNickname || "baby";
+
+  document.getElementById("pregnancyGreeting").textContent = pregnancyGreetingText();
+  document.getElementById("pregnancyHomeGreeting").textContent = ga.weeks >= 0 ? `Another week with ${nickname}.` : "One week at a time.";
+  document.getElementById("pregnancyWeekTitle").textContent = `${ga.weeks} weeks + ${ga.days} days`;
+  document.getElementById("pregnancyTrimesterText").textContent = trimester;
+  document.getElementById("pregnancyEDDText").textContent = formatDateLong(parseDate(p.edd));
+  document.getElementById("pregnancyCountdownText").textContent = daysUntil >= 0 ? `~${daysUntil} day${daysUntil === 1 ? "" : "s"}` : `${Math.abs(daysUntil)} days past EDD`;
+  document.getElementById("pregnancyDatingMethodText").textContent = pregnancyDatingDescription();
+  document.getElementById("pregnancyWeekHeading").textContent = `Week ${ga.weeks}`;
+  document.getElementById("pregnancyWeekIcon").textContent = info.icon;
+  document.getElementById("pregnancyWeekSummaryTitle").textContent = info.title;
+  document.getElementById("pregnancyWeekSummary").textContent = info.text;
+  document.getElementById("pregnancyCuteComparison").textContent = pregnancyCuteComparison(ga.weeks);
+
+  const prompts = {
+    "First trimester": "How is early pregnancy feeling today?",
+    "Second trimester": "How are you feeling in your second trimester?",
+    "Third trimester": "How is your body feeling today?"
+  };
+  document.getElementById("pregnancyCheckinPrompt").textContent = prompts[trimester] || "How are you feeling today?";
+
+  const next = nextPregnancyAppointment();
+  const nextCard = document.getElementById("pregnancyNextAppointment");
+  nextCard.innerHTML = next ? `<span class="pregnancy-next-icon">🩺</span><div><small>Next appointment</small><strong>${escapeHTML(next.type || "Prenatal visit")}</strong><p>${formatDateLong(parseDate(next.date))}${next.time ? ` · ${escapeHTML(next.time)}` : ""}</p></div><b>›</b>` : `<span class="pregnancy-next-icon">🩺</span><div><small>Next appointment</small><strong>Nothing added yet</strong><p>Keep your provider's care plan here.</p></div><b>›</b>`;
+  nextCard.onclick = () => showScreen("pregnancy-care");
+
+  document.getElementById("pregnancyCompanionMessage").textContent = ga.weeks < 14 ? "A tiny seedling is growing in our room 🌱" : ga.weeks < 28 ? "The Moon Room has more flowers now 🌸" : "I’m keeping the little hospital bag nearby 👜";
+  document.getElementById("pregnancyCompanionSubtext").textContent = `Week ${ga.weeks} · ${trimester}`;
+}
+
+function pregnancyWarningsSelected() {
+  const warnings = Array.from(document.querySelectorAll('input[name="pregWarning"]:checked')).map(input => input.value);
+  const movement = document.getElementById("pregnancyMovement")?.value || "";
+  if (movement === "Less than usual") warnings.push("Baby movement is less than usual");
+  return warnings;
+}
+
+function updatePregnancySafetyAlert() {
+  const alert = document.getElementById("pregnancySafetyAlert");
+  if (!alert) return;
+  alert.classList.toggle("hidden", pregnancyWarningsSelected().length === 0);
+}
+
+document.querySelectorAll('input[name="pregWarning"]').forEach(input => input.addEventListener("change", updatePregnancySafetyAlert));
+document.getElementById("pregnancyMovement")?.addEventListener("change", updatePregnancySafetyAlert);
+
+function pregnancyStageForDate(value) {
+  const ga = gestationalAgeForDate(value);
+  if (!ga) return { ga: null, trimester: "Pregnancy" };
+  return { ga, trimester: trimesterForGestation(ga) };
+}
+
+function loadPregnancyLogForm() {
+  const dateInput = document.getElementById("pregnancyLogDate");
+  if (!dateInput) return;
+  if (!dateInput.value) dateInput.value = todayKey();
+  const key = dateInput.value;
+  const saved = pregnancyRecord().logs?.[key] || {};
+  const { ga, trimester } = pregnancyStageForDate(key);
+  document.getElementById("pregnancyLogGestation").textContent = ga ? `${ga.weeks} weeks + ${ga.days} days · ${trimester}` : "Pregnancy";
+  document.getElementById("pregnancyBodyCheckTitle").textContent = trimester === "First trimester" ? "Early-pregnancy body check" : trimester === "Second trimester" ? "Second-trimester body check" : "Third-trimester body check";
+  document.getElementById("pregnancyMovementBlock")?.classList.toggle("hidden", !ga || ga.weeks < 18);
+
+  document.querySelectorAll('input[name="pregMood"]').forEach(input => input.checked = (saved.moods || []).includes(input.value));
+  document.querySelectorAll('input[name="pregWarning"]').forEach(input => input.checked = (saved.warnings || []).includes(input.value));
+  const values = {
+    pregnancyEnergy: saved.energy || "",
+    pregnancySleep: saved.sleep || "",
+    pregnancyNausea: saved.nausea || "None",
+    pregnancyVomiting: saved.vomiting ?? "",
+    pregnancyAppetite: saved.appetite || "",
+    pregnancyBowel: saved.bowel || "",
+    pregnancyHydration: saved.hydration || "",
+    pregnancyPain: saved.pain || "None",
+    pregnancySwelling: saved.swelling || "None",
+    pregnancyDischarge: saved.discharge || "",
+    pregnancyMovement: saved.movement || "",
+    pregnancyMedsToday: saved.medsToday || "",
+    pregnancyTinyJoy: saved.tinyJoy || "",
+    pregnancyNotes: saved.notes || ""
+  };
+  Object.entries(values).forEach(([id, value]) => { const el = document.getElementById(id); if (el) el.value = value; });
+  updatePregnancySafetyAlert();
+}
+
+document.getElementById("pregnancyLogDate")?.addEventListener("change", loadPregnancyLogForm);
+document.getElementById("pregnancyLogForm")?.addEventListener("submit", event => {
+  event.preventDefault();
+  const key = document.getElementById("pregnancyLogDate").value || todayKey();
+  const moods = Array.from(document.querySelectorAll('input[name="pregMood"]:checked')).map(input => input.value);
+  const warnings = pregnancyWarningsSelected();
+  data.pregnancy.logs[key] = {
+    date: key,
+    moods,
+    energy: document.getElementById("pregnancyEnergy").value,
+    sleep: document.getElementById("pregnancySleep").value,
+    nausea: document.getElementById("pregnancyNausea").value,
+    vomiting: document.getElementById("pregnancyVomiting").value === "" ? null : Number(document.getElementById("pregnancyVomiting").value),
+    appetite: document.getElementById("pregnancyAppetite").value,
+    bowel: document.getElementById("pregnancyBowel").value,
+    hydration: document.getElementById("pregnancyHydration").value,
+    pain: document.getElementById("pregnancyPain").value,
+    swelling: document.getElementById("pregnancySwelling").value,
+    discharge: document.getElementById("pregnancyDischarge").value,
+    movement: document.getElementById("pregnancyMovement").value,
+    medsToday: document.getElementById("pregnancyMedsToday").value.trim(),
+    tinyJoy: document.getElementById("pregnancyTinyJoy").value.trim(),
+    notes: document.getElementById("pregnancyNotes").value.trim(),
+    warnings,
+    gestationalAge: pregnancyWeekLabel(key),
+    updatedAt: new Date().toISOString()
+  };
+  saveData();
+  renderEverything();
+  showToast(warnings.length ? "Check-in saved. Please follow the safety guidance shown above." : "Pregnancy check-in saved 🤍");
+});
+
+function pregnancyCalendarWeekdayLabels() {
+  return data.settings.weekStart === "monday" ? ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"] : ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+}
+
+function pregnancyEventsForDate(key) {
+  const p = pregnancyRecord();
+  return {
+    appointments: (p.appointments || []).filter(item => item.date === key),
+    checkin: p.logs?.[key] || null,
+    journal: (p.journal || []).filter(item => item.date === key),
+    photos: (p.photos || []).filter(item => item.date === key)
+  };
+}
+
+function renderPregnancyCalendar() {
+  const title = document.getElementById("pregnancyCalendarMonthTitle");
+  const grid = document.getElementById("pregnancyCalendarGrid");
+  const weekdays = document.getElementById("pregnancyCalendarWeekdays");
+  if (!title || !grid || !weekdays) return;
+  const year = pregnancyCalendarDate.getFullYear();
+  const month = pregnancyCalendarDate.getMonth();
+  title.textContent = new Date(year, month, 1).toLocaleDateString(undefined, { month: "long", year: "numeric" });
+  weekdays.innerHTML = pregnancyCalendarWeekdayLabels().map(day => `<span>${day}</span>`).join("");
+
+  const first = new Date(year, month, 1);
+  let offset = first.getDay();
+  if (data.settings.weekStart === "monday") offset = (offset + 6) % 7;
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  let html = "";
+  for (let i = 0; i < offset; i++) html += '<span class="calendar-empty"></span>';
+  for (let day = 1; day <= daysInMonth; day++) {
+    const date = new Date(year, month, day);
+    const key = dateKey(date);
+    const ga = gestationalAgeForDate(key);
+    const ev = pregnancyEventsForDate(key);
+    const inPregnancy = ga && ga.totalDays >= 0 && ga.totalDays <= 294;
+    const selected = key === selectedPregnancyCalendarDate;
+    html += `<button type="button" class="calendar-day pregnancy-calendar-day ${selected ? "selected" : ""} ${key === todayKey() ? "today" : ""}" data-preg-calendar-date="${key}"><span>${day}</span>${inPregnancy ? `<small>w${ga.weeks}+${ga.days}</small>` : ""}<i class="pregnancy-calendar-markers">${ev.appointments.length ? '<b class="appointment"></b>' : ""}${ev.checkin ? '<b class="checkin"></b>' : ""}${ev.journal.length || ev.photos.length ? '<b class="memory"></b>' : ""}</i></button>`;
+  }
+  grid.innerHTML = html;
+  grid.querySelectorAll("[data-preg-calendar-date]").forEach(button => button.addEventListener("click", () => {
+    selectedPregnancyCalendarDate = button.dataset.pregCalendarDate;
+    renderPregnancyCalendar();
+  }));
+  renderPregnancyCalendarDayDetail();
+}
+
+function renderPregnancyCalendarDayDetail() {
+  const el = document.getElementById("pregnancyCalendarDayDetail");
+  if (!el) return;
+  const key = selectedPregnancyCalendarDate || todayKey();
+  const date = parseDate(key);
+  const ga = gestationalAgeForDate(key);
+  const ev = pregnancyEventsForDate(key);
+  const trimester = ga ? trimesterForGestation(ga) : "";
+  el.innerHTML = `<div class="pregnancy-day-detail-head"><div><p class="eyebrow">${date.toLocaleDateString(undefined,{weekday:"long"}).toUpperCase()}</p><h3>${formatDateLong(date)}</h3><p class="pregnancy-sensitive">${ga && ga.totalDays >= 0 ? `${ga.weeks}w ${ga.days}d · ${trimester}` : "Outside current pregnancy dating"}</p></div><span>🤍</span></div><div class="pregnancy-day-event-list">${ev.appointments.map(a=>`<p>🩺 ${escapeHTML(a.type)}${a.time?` · ${escapeHTML(a.time)}`:""}</p>`).join("")}${ev.checkin?'<p>📝 Pregnancy check-in saved</p>':""}${ev.journal.map(j=>`<p>📖 ${escapeHTML(j.type)}</p>`).join("")}${ev.photos.length?`<p>📷 ${ev.photos.length} photo${ev.photos.length===1?"":"s"}</p>`:""}${!ev.appointments.length&&!ev.checkin&&!ev.journal.length&&!ev.photos.length?'<p class="muted">Nothing saved for this day yet.</p>':""}</div><div class="pregnancy-day-actions"><button type="button" data-preg-day-action="checkin">📝 Check in</button><button type="button" data-preg-day-action="appointment">🩺 Appointment</button><button type="button" data-preg-day-action="memory">📖 Memory</button></div>`;
+  el.querySelector('[data-preg-day-action="checkin"]')?.addEventListener("click",()=>{document.getElementById("pregnancyLogDate").value=key;showScreen("pregnancy-log");loadPregnancyLogForm();});
+  el.querySelector('[data-preg-day-action="appointment"]')?.addEventListener("click",()=>{document.getElementById("pregnancyAppointmentDate").value=key;showScreen("pregnancy-care");});
+  el.querySelector('[data-preg-day-action="memory"]')?.addEventListener("click",()=>{document.getElementById("pregnancyJournalDate").value=key;showScreen("pregnancy-journal");});
+}
+
+document.getElementById("pregnancyPreviousMonth")?.addEventListener("click",()=>{pregnancyCalendarDate.setMonth(pregnancyCalendarDate.getMonth()-1);renderPregnancyCalendar();});
+document.getElementById("pregnancyNextMonth")?.addEventListener("click",()=>{pregnancyCalendarDate.setMonth(pregnancyCalendarDate.getMonth()+1);renderPregnancyCalendar();});
+
+function renderPregnancyJourney() {
+  const p = pregnancyRecord();
+  const ga = gestationalAgeForDate(todayKey());
+  const hero = document.getElementById("pregnancyJourneyHero");
+  const timeline = document.getElementById("pregnancyTrimesterTimeline");
+  if (!ga || !hero || !timeline) return;
+  hero.innerHTML = `<span>${pregnancyWeekInfo(ga.weeks).icon}</span><div><p class="eyebrow">PREGNANCY STORY</p><h3>${ga.weeks} weeks + ${ga.days} days</h3><p>${trimesterForGestation(ga)} · EDD ${formatDateLong(parseDate(p.edd))}</p></div>`;
+  const trimesters = [
+    { name:"First trimester", start:0, end:97, icon:"🌱" },
+    { name:"Second trimester", start:98, end:195, icon:"🌸" },
+    { name:"Third trimester", start:196, end:280, icon:"🌕" }
+  ];
+  timeline.innerHTML = trimesters.map(t=>{const status=ga.totalDays>t.end?"complete":ga.totalDays>=t.start?"current":"future";return `<article class="trimester-card ${status}"><span>${t.icon}</span><div><strong>${t.name}</strong><small>${status==="complete"?"Completed":status==="current"?"You are here":"Ahead"}</small></div></article>`;}).join("");
+  const props=[];
+  if(ga.weeks<14)props.push("🌱 seedling","🌙 moon mobile");
+  else if(ga.weeks<28)props.push("🌸 flowers","⭐ baby-star mobile");
+  else props.push("👜 hospital bag","🧸 tiny folded clothes");
+  if((p.journal||[]).length)props.push("📖 little book");
+  if((p.photos||[]).length)props.push("📷 photo frame");
+  document.getElementById("pregnancyRoomProps").textContent=props.join("  ");
+  document.getElementById("pregnancyRoomSpeech").textContent = ga.weeks < 14 ? "A small seedling for a new chapter 🌱" : ga.weeks < 28 ? `Week ${ga.weeks} already 🌸` : "I saved a little space for the things you're preparing 👜";
+}
+
+function renderPregnancyCare() {
+  const p = pregnancyRecord();
+  const team = p.careTeam || {};
+  [["pregnancyProviderName",team.provider],["pregnancyProviderContact",team.contact],["pregnancyHospital",team.hospital],["pregnancyEmergencyContact",team.emergencyContact]].forEach(([id,value])=>{const el=document.getElementById(id);if(el)el.value=value||"";});
+  const list = document.getElementById("pregnancyAppointmentList");
+  if (list) {
+    const sorted=[...(p.appointments||[])].sort((a,b)=>parseDate(a.date)-parseDate(b.date));
+    list.innerHTML=sorted.length?sorted.map(a=>`<article class="pregnancy-list-card"><span>🩺</span><div><strong>${escapeHTML(a.type)}</strong><p>${formatDateLong(parseDate(a.date))}${a.time?` · ${escapeHTML(a.time)}`:""}${a.location?` · ${escapeHTML(a.location)}`:""}</p>${a.notes?`<small>${escapeHTML(a.notes)}</small>`:""}</div><button type="button" data-delete-preg-appt="${a.id}">×</button></article>`).join(""):'<article class="soft-note">No appointments added yet.</article>';
+    list.querySelectorAll("[data-delete-preg-appt]").forEach(btn=>btn.addEventListener("click",()=>{data.pregnancy.appointments=data.pregnancy.appointments.filter(a=>a.id!==btn.dataset.deletePregAppt);saveData();renderPregnancyCare();renderPregnancyToday();renderPregnancyCalendar();}));
+  }
+  renderPregnancyQuestions();
+  renderPregnancyMedications();
+  renderPregnancyTests();
+  renderWHOContactTimeline();
+}
+
+function renderPregnancyQuestions(){const c=document.getElementById("pregnancyQuestionList");if(!c)return;const qs=pregnancyRecord().questions||[];c.innerHTML=qs.length?qs.map(q=>`<article class="question-row ${q.answered?"answered":""}"><button type="button" data-toggle-preg-q="${q.id}">${q.answered?"✓":"○"}</button><div><strong>${escapeHTML(q.text)}</strong>${q.answer?`<small>${escapeHTML(q.answer)}</small>`:""}</div><button type="button" data-answer-preg-q="${q.id}">Answer</button><button type="button" data-delete-preg-q="${q.id}">×</button></article>`).join(""):'<p class="muted small-text">No questions saved yet.</p>';c.querySelectorAll("[data-toggle-preg-q]").forEach(btn=>btn.addEventListener("click",()=>{const q=qs.find(x=>x.id===btn.dataset.togglePregQ);if(q){q.answered=!q.answered;saveData();renderPregnancyQuestions();}}));c.querySelectorAll("[data-answer-preg-q]").forEach(btn=>btn.addEventListener("click",()=>{const q=qs.find(x=>x.id===btn.dataset.answerPregQ);if(!q)return;const answer=prompt("Write the answer or note from your provider:",q.answer||"");if(answer!==null){q.answer=answer.trim();q.answered=Boolean(q.answer);saveData();renderPregnancyQuestions();}}));c.querySelectorAll("[data-delete-preg-q]").forEach(btn=>btn.addEventListener("click",()=>{data.pregnancy.questions=qs.filter(x=>x.id!==btn.dataset.deletePregQ);saveData();renderPregnancyQuestions();}));}
+function renderPregnancyTests(){const c=document.getElementById("pregnancyTestList");if(!c)return;const tests=pregnancyRecord().tests||[];c.innerHTML=tests.length?tests.slice().sort((a,b)=>parseDate(b.date)-parseDate(a.date)).map(t=>`<article class="pregnancy-list-card"><span>🧪</span><div><strong>${escapeHTML(t.name)}</strong><p>${t.date?formatDateLong(parseDate(t.date)):"No date"}</p>${t.result?`<small>${escapeHTML(t.result)}</small>`:""}</div><button type="button" data-delete-preg-test="${t.id}">×</button></article>`).join(""):'<p class="muted small-text">No tests or results added yet.</p>';c.querySelectorAll("[data-delete-preg-test]").forEach(btn=>btn.addEventListener("click",()=>{data.pregnancy.tests=tests.filter(t=>t.id!==btn.dataset.deletePregTest);saveData();renderPregnancyTests();}));}
+function renderPregnancyMedications(){const c=document.getElementById("pregnancyMedicationList");if(!c)return;const meds=pregnancyRecord().medications||[];c.innerHTML=meds.length?meds.map(m=>`<article class="medication-row"><span>💊</span><div><strong>${escapeHTML(m.name)}</strong><small>${escapeHTML(m.dose||"No dose/schedule noted")}</small></div><button type="button" data-delete-preg-med="${m.id}">×</button></article>`).join(""):'<p class="muted small-text">No medicines or supplements added.</p>';c.querySelectorAll("[data-delete-preg-med]").forEach(btn=>btn.addEventListener("click",()=>{data.pregnancy.medications=meds.filter(m=>m.id!==btn.dataset.deletePregMed);saveData();renderPregnancyMedications();}));}
+function renderWHOContactTimeline(){const c=document.getElementById("whoContactTimeline");if(!c)return;const ga=gestationalAgeForDate(todayKey());const weeks=[12,20,26,30,34,36,38,40];c.innerHTML=weeks.map((w,i)=>`<span class="who-contact ${ga&&ga.weeks>=w?"past":""}"><b>${i+1}</b><small>~${w}w</small></span>`).join("");}
+
+document.getElementById("savePregnancyCareTeam")?.addEventListener("click",()=>{data.pregnancy.careTeam={provider:document.getElementById("pregnancyProviderName").value.trim(),contact:document.getElementById("pregnancyProviderContact").value.trim(),hospital:document.getElementById("pregnancyHospital").value.trim(),emergencyContact:document.getElementById("pregnancyEmergencyContact").value.trim()};saveData();showToast("Care team saved 🩺");});
+document.getElementById("savePregnancyAppointment")?.addEventListener("click",()=>{const date=document.getElementById("pregnancyAppointmentDate").value;if(!date){showToast("Choose an appointment date.");return;}data.pregnancy.appointments.push({id:uid(),date,time:document.getElementById("pregnancyAppointmentTime").value,type:document.getElementById("pregnancyAppointmentType").value,location:document.getElementById("pregnancyAppointmentLocation").value.trim(),notes:document.getElementById("pregnancyAppointmentNotes").value.trim()});saveData();document.getElementById("pregnancyAppointmentNotes").value="";renderPregnancyCare();renderPregnancyToday();renderPregnancyCalendar();showToast("Appointment added 🩺");});
+document.getElementById("addPregnancyQuestion")?.addEventListener("click",()=>{const input=document.getElementById("pregnancyQuestionInput");const text=input.value.trim();if(!text)return;data.pregnancy.questions.push({id:uid(),text,answer:"",answered:false});input.value="";saveData();renderPregnancyQuestions();});
+document.getElementById("addPregnancyMedication")?.addEventListener("click",()=>{const name=document.getElementById("pregnancyMedicationName").value.trim();if(!name)return;data.pregnancy.medications.push({id:uid(),name,dose:document.getElementById("pregnancyMedicationDose").value.trim()});document.getElementById("pregnancyMedicationName").value="";document.getElementById("pregnancyMedicationDose").value="";saveData();renderPregnancyMedications();});
+document.getElementById("addPregnancyTest")?.addEventListener("click",()=>{const name=document.getElementById("pregnancyTestName").value.trim();if(!name){showToast("Add the test or scan name first.");return;}data.pregnancy.tests.push({id:uid(),name,date:document.getElementById("pregnancyTestDate").value||todayKey(),result:document.getElementById("pregnancyTestResult").value.trim()});document.getElementById("pregnancyTestName").value="";document.getElementById("pregnancyTestResult").value="";saveData();renderPregnancyTests();showToast("Test result saved 🧪");});
+
+function renderPregnancyJournal(){const p=pregnancyRecord();const date=document.getElementById("pregnancyJournalDate");if(date&&!date.value)date.value=todayKey();const list=document.getElementById("pregnancyJournalList");if(!list)return;const entries=[...(p.journal||[])].sort((a,b)=>parseDate(b.date)-parseDate(a.date));if(!entries.length){list.innerHTML='<article class="soft-note">Your pregnancy journal is waiting for its first memory.</article>';return;}const groups={"First trimester":[],"Second trimester":[],"Third trimester":[],"Other":[]};entries.forEach(j=>{const ga=gestationalAgeForDate(j.date);const key=ga&&ga.totalDays>=0?trimesterForGestation(ga):"Other";groups[key].push(j);});list.innerHTML=Object.entries(groups).filter(([,items])=>items.length).map(([group,items])=>`<section class="pregnancy-journal-group"><div class="section-heading compact-heading"><div><p class="eyebrow">${escapeHTML(group).toUpperCase()}</p><h3>${items.length} memor${items.length===1?"y":"ies"}</h3></div></div>${items.map(j=>{const ga=gestationalAgeForDate(j.date);return`<article class="pregnancy-journal-card"><div><p class="eyebrow">${escapeHTML(j.type).toUpperCase()}</p><h3>${formatDateLong(parseDate(j.date))}</h3><small>${ga&&ga.totalDays>=0?`${ga.weeks}w ${ga.days}d`:""}</small></div><p>${escapeHTML(j.text)}</p><button type="button" data-delete-preg-journal="${j.id}">Delete</button></article>`;}).join("")}</section>`).join("");list.querySelectorAll("[data-delete-preg-journal]").forEach(btn=>btn.addEventListener("click",()=>{data.pregnancy.journal=data.pregnancy.journal.filter(j=>j.id!==btn.dataset.deletePregJournal);saveData();renderPregnancyJournal();renderPregnancyJourney();}));}
+document.getElementById("savePregnancyJournal")?.addEventListener("click",()=>{const text=document.getElementById("pregnancyJournalText").value.trim();if(!text){showToast("Write something first.");return;}data.pregnancy.journal.push({id:uid(),date:document.getElementById("pregnancyJournalDate").value||todayKey(),type:document.getElementById("pregnancyJournalType").value,text});document.getElementById("pregnancyJournalText").value="";saveData();renderPregnancyJournal();renderPregnancyJourney();renderPregnancyGarden();showToast("Memory saved 📖");});
+
+function clearPregnancyPhotoUrls(){pregnancyPhotoObjectUrls.forEach(url=>URL.revokeObjectURL(url));pregnancyPhotoObjectUrls=[];}
+async function renderPregnancyPhotos(){const date=document.getElementById("pregnancyPhotoDate");if(date&&!date.value)date.value=todayKey();const timeline=document.getElementById("pregnancyPhotoTimeline");if(!timeline)return;clearPregnancyPhotoUrls();const photos=[...(pregnancyRecord().photos||[])].sort((a,b)=>parseDate(b.date)-parseDate(a.date));if(!photos.length){timeline.innerHTML='<article class="soft-note">No belly photos yet. Add them only if this is a memory you want to keep.</article>';return;}timeline.innerHTML="";for(const photo of photos){let url="";try{const blob=await appearanceAssetGet(photo.assetKey);if(blob){url=URL.createObjectURL(blob);pregnancyPhotoObjectUrls.push(url);}}catch{}const ga=gestationalAgeForDate(photo.date);const card=document.createElement("article");card.className="pregnancy-photo-card";card.innerHTML=`${url?`<img src="${url}" alt="Pregnancy photo from ${escapeHTML(photo.date)}">`:'<div class="pregnancy-photo-missing">Photo file is not on this device</div>'}<div><strong>${ga&&ga.totalDays>=0?`Week ${ga.weeks} + ${ga.days}`:formatDateLong(parseDate(photo.date))}</strong><small>${formatDateLong(parseDate(photo.date))}</small>${photo.caption?`<p>${escapeHTML(photo.caption)}</p>`:""}<button type="button" data-delete-preg-photo="${photo.id}">Delete</button></div>`;timeline.appendChild(card);}timeline.querySelectorAll("[data-delete-preg-photo]").forEach(btn=>btn.addEventListener("click",async()=>{const photo=data.pregnancy.photos.find(p=>p.id===btn.dataset.deletePregPhoto);if(photo)await appearanceAssetDelete(photo.assetKey).catch(()=>{});data.pregnancy.photos=data.pregnancy.photos.filter(p=>p.id!==btn.dataset.deletePregPhoto);saveData();renderPregnancyPhotos();renderPregnancyGarden();}));}
+
+document.getElementById("choosePregnancyPhoto")?.addEventListener("click",()=>document.getElementById("pregnancyPhotoInput")?.click());
+document.getElementById("pregnancyPhotoInput")?.addEventListener("change",event=>{const file=event.target.files?.[0];if(!file)return;pendingPregnancyPhotoFile=file;if(pendingPregnancyPhotoPreviewUrl)URL.revokeObjectURL(pendingPregnancyPhotoPreviewUrl);pendingPregnancyPhotoPreviewUrl=URL.createObjectURL(file);const pending=document.getElementById("pregnancyPhotoPending");pending.classList.remove("hidden");pending.innerHTML=`<img src="${pendingPregnancyPhotoPreviewUrl}" alt="Selected pregnancy photo"><span>Ready to save</span>`;document.getElementById("savePregnancyPhoto").disabled=false;});
+document.getElementById("savePregnancyPhoto")?.addEventListener("click",async()=>{if(!pendingPregnancyPhotoFile)return;const id=uid();const assetKey=`pregnancy-photo:${id}`;try{await appearanceAssetPut(assetKey,pendingPregnancyPhotoFile);data.pregnancy.photos.push({id,assetKey,date:document.getElementById("pregnancyPhotoDate").value||todayKey(),caption:document.getElementById("pregnancyPhotoCaption").value.trim()});saveData();pendingPregnancyPhotoFile=null;document.getElementById("pregnancyPhotoInput").value="";document.getElementById("pregnancyPhotoCaption").value="";document.getElementById("pregnancyPhotoPending").classList.add("hidden");document.getElementById("savePregnancyPhoto").disabled=true;await renderPregnancyPhotos();renderPregnancyGarden();showToast("Photo saved locally 📷");}catch(error){showToast("Tsuki couldn't save that photo on this device.");}});
+
+function renderPregnancyHospitalBag(){const c=document.getElementById("pregnancyHospitalBagList");if(!c)return;const items=pregnancyRecord().hospitalBag||[];const groups=[...new Set(items.map(i=>i.category))];c.innerHTML=groups.map(group=>`<section class="bag-category"><div class="section-heading compact-heading"><div><p class="eyebrow">${escapeHTML(group).toUpperCase()}</p><h3>${items.filter(i=>i.category===group&&i.packed).length}/${items.filter(i=>i.category===group).length} packed</h3></div></div>${items.filter(i=>i.category===group).map(item=>`<label class="bag-item"><input type="checkbox" data-preg-bag-item="${item.id}" ${item.packed?"checked":""}><span>${escapeHTML(item.name)}</span><button type="button" data-delete-preg-bag="${item.id}">×</button></label>`).join("")}</section>`).join("");c.querySelectorAll("[data-preg-bag-item]").forEach(input=>input.addEventListener("change",()=>{const item=items.find(i=>i.id===input.dataset.pregBagItem);if(item){item.packed=input.checked;saveData();renderPregnancyHospitalBag();renderPregnancyJourney();}}));c.querySelectorAll("[data-delete-preg-bag]").forEach(btn=>btn.addEventListener("click",event=>{event.preventDefault();data.pregnancy.hospitalBag=items.filter(i=>i.id!==btn.dataset.deletePregBag);saveData();renderPregnancyHospitalBag();}));}
+document.getElementById("addHospitalBagItem")?.addEventListener("click",()=>{const input=document.getElementById("hospitalBagItem");const name=input.value.trim();if(!name)return;data.pregnancy.hospitalBag.push({id:uid(),category:document.getElementById("hospitalBagCategory").value,name,packed:false});input.value="";saveData();renderPregnancyHospitalBag();});
+
+function renderBirthPreferences(){const pref=pregnancyRecord().birthPreferences||{};[["birthPrefFacility",pref.facility],["birthPrefSupport",pref.support],["birthPrefComfort",pref.comfort],["birthPrefPain",pref.pain],["birthPrefQuestions",pref.questions],["birthPrefNotes",pref.notes]].forEach(([id,value])=>{const el=document.getElementById(id);if(el)el.value=value||"";});}
+document.getElementById("saveBirthPreferences")?.addEventListener("click",()=>{data.pregnancy.birthPreferences={facility:document.getElementById("birthPrefFacility").value.trim(),support:document.getElementById("birthPrefSupport").value.trim(),comfort:document.getElementById("birthPrefComfort").value.trim(),pain:document.getElementById("birthPrefPain").value.trim(),questions:document.getElementById("birthPrefQuestions").value.trim(),notes:document.getElementById("birthPrefNotes").value.trim()};saveData();showToast("Birth preferences saved 💌");});
+
+function pregnancyMilestones(){const p=pregnancyRecord();const ga=gestationalAgeForDate(todayKey());const weeks=ga?.weeks??0;return[
+  {icon:"🌱",title:"Pregnancy Mode began",done:Boolean(p.startedAt),note:p.startedAt?formatDateLong(parseDate(p.startedAt)):"Waiting"},
+  {icon:"🩺",title:"First appointment saved",done:(p.appointments||[]).length>0,note:(p.appointments||[]).length?"A care memory is in your timeline":"Add an appointment when you want"},
+  {icon:"🌸",title:"Second trimester",done:weeks>=14,note:"Begins at 14w0d"},
+  {icon:"📷",title:"First photo memory",done:(p.photos||[]).length>0,note:"Optional and private to this device"},
+  {icon:"📖",title:"First journal memory",done:(p.journal||[]).length>0,note:"Letters, tiny joys, or notes"},
+  {icon:"🪻",title:"Third trimester",done:weeks>=28,note:"Begins at 28w0d"},
+  {icon:"👜",title:"Hospital bag started",done:(p.hospitalBag||[]).some(i=>i.packed),note:"Your own checklist, your own pace"},
+  {icon:"🌕",title:"Due-date week",done:weeks>=40,note:"EDD is a guide, not a guaranteed birth date"}
+];}
+function renderPregnancyGarden(){const ga=gestationalAgeForDate(todayKey());const weeks=ga?.weeks??0;const plant=document.getElementById("pregnancyGardenPlant");const title=document.getElementById("pregnancyGardenTitle");const text=document.getElementById("pregnancyGardenText");const grid=document.getElementById("pregnancyGardenMilestones");if(!plant||!title||!text||!grid)return;plant.textContent=weeks<14?"🌱":weeks<28?"🌿":weeks<37?"🌷":"🌸";title.textContent=weeks<14?"A new little seed":weeks<28?"Your garden is filling in":"Your garden is in bloom";text.textContent=`Week ${weeks} · Your garden grows from milestones, never daily streaks.`;grid.innerHTML=pregnancyMilestones().map(m=>`<article class="pregnancy-milestone ${m.done?"done":""}"><span>${m.icon}</span><div><strong>${escapeHTML(m.title)}</strong><small>${escapeHTML(m.note)}</small></div><b>${m.done?"✓":"○"}</b></article>`).join("");}
+
+function renderPostpartumToday(){const birth=parseDate(data.postpartum?.birthDate);const age=document.getElementById("postpartumAgeText");if(!age)return;if(!birth){age.textContent="Postpartum";return;}const days=Math.max(0,daysBetween(birth,new Date()));age.textContent=days<14?`Day ${days} postpartum`:`${Math.floor(days/7)} weeks postpartum`;document.getElementById("postpartumModeText").textContent="Cycle predictions are paused until you choose Cycle Mode.";}
+
+function archiveForBirth(){const date=document.getElementById("pregnancyTransitionDate").value||todayKey();archiveCurrentPregnancy("birth",date);data.postpartum={active:true,birthDate:date,pregnancyId:data.pregnancy.id};data.mode="postpartum";saveData();closePregnancyTransition();renderEverything();showScreen("postpartum-today");showToast("Pregnancy archived. Tsuki is ready for your postpartum transition 🌙");}
+function archivePregnancyEnded(){const date=document.getElementById("pregnancyTransitionDate").value||todayKey();archiveCurrentPregnancy("ended",date);data.mode="cycle";data.postpartum.active=false;saveData();closePregnancyTransition();renderEverything();showScreen("today");showToast("Pregnancy archived. Your cycle history is still here.");}
+
+function pregnancyQuickAction(action){closeQuickAdd();if(action==="checkin")showScreen("pregnancy-log");if(action==="appointment"){document.getElementById("pregnancyAppointmentDate").value=todayKey();showScreen("pregnancy-care");}if(action==="journal"){document.getElementById("pregnancyJournalDate").value=todayKey();showScreen("pregnancy-journal");}if(action==="photo"){document.getElementById("pregnancyPhotoDate").value=todayKey();showScreen("pregnancy-photos");}if(action==="question"){showScreen("pregnancy-care");requestAnimationFrame(()=>document.getElementById("pregnancyQuestionInput")?.focus());}}
+document.querySelectorAll("[data-pregnancy-quick]").forEach(btn=>btn.addEventListener("click",()=>pregnancyQuickAction(btn.dataset.pregnancyQuick)));
+
+document.getElementById("pregnancyDatingMethod")?.addEventListener("change",updatePregnancySetupFields);
+["pregnancyLMPDate","pregnancyDirectEDD","pregnancyTransferDate","pregnancyEmbryoAge","pregnancyIVFDirectEDD"].forEach(id=>document.getElementById(id)?.addEventListener("input",updatePregnancySetupFields));
+document.getElementById("closePregnancySetup")?.addEventListener("click",closePregnancySetup);
+document.getElementById("savePregnancySetup")?.addEventListener("click",savePregnancySetup);
+document.getElementById("pregnancySetupModal")?.addEventListener("click",event=>{if(event.target.id==="pregnancySetupModal")closePregnancySetup();});
+document.getElementById("closePregnancyTransition")?.addEventListener("click",closePregnancyTransition);
+document.getElementById("pregnancyTransitionModal")?.addEventListener("click",event=>{if(event.target.id==="pregnancyTransitionModal")closePregnancyTransition();});
+document.getElementById("pregnancyOutcomeBirth")?.addEventListener("click",archiveForBirth);
+document.getElementById("pregnancyOutcomeEnded")?.addEventListener("click",archivePregnancyEnded);
+document.getElementById("pregnancyPauseMode")?.addEventListener("click",()=>{data.mode="cycle";saveData();closePregnancyTransition();renderEverything();showScreen("today");showToast("Cycle Mode is back. Pregnancy data is still saved.");});
+document.getElementById("choosePregnancyMode")?.addEventListener("click",()=>{if(data.pregnancy?.active){data.mode="pregnancy";saveData();renderEverything();showScreen("pregnancy-today");}else openPregnancySetup();});
+document.getElementById("chooseCycleMode")?.addEventListener("click",()=>{if(data.mode==="cycle")return;if(!confirm("Switch to Cycle Mode? Your pregnancy record will stay saved."))return;data.mode="cycle";saveData();renderEverything();showScreen("today");});
+document.getElementById("editPregnancyDetails")?.addEventListener("click",openPregnancySetup);
+document.getElementById("pregnancyTransitionButton")?.addEventListener("click",openPregnancyTransition);
+document.getElementById("drawerEditPregnancy")?.addEventListener("click",()=>{closeAppDrawer();openPregnancySetup();});
+document.getElementById("drawerEndPregnancy")?.addEventListener("click",()=>{closeAppDrawer();openPregnancyTransition();});
+document.getElementById("returnToCycleFromPostpartum")?.addEventListener("click",()=>{if(!confirm("Restart Cycle Mode? Pregnancy and postpartum history will remain saved."))return;data.mode="cycle";data.postpartum.active=false;saveData();renderEverything();showScreen("today");});
+
+
+/* ============================================================
    RENDER EVERYTHING
    ============================================================ */
 
@@ -7194,6 +7873,16 @@ function renderEverything() {
   renderMoonYear();
   renderTodayLayout();
   renderAppLockSettings();
+  renderLifeModeUI();
+  renderPregnancyToday();
+  renderPregnancyCalendar();
+  renderPregnancyJourney();
+  renderPregnancyCare();
+  renderPregnancyJournal();
+  renderPregnancyHospitalBag();
+  renderBirthPreferences();
+  renderPregnancyGarden();
+  renderPostpartumToday();
 }
 
 
@@ -7497,6 +8186,8 @@ function init() {
   refreshWallpaperAsset();
   updateOnlineStatus();
   renderAppLockSettings();
+  if (data.mode === "pregnancy" && data.pregnancy?.active) showScreen("pregnancy-today");
+  else if (data.mode === "postpartum" && data.postpartum?.active) showScreen("postpartum-today");
   if (appLockSettings.enabled && appLockSettings.pinHash) lockApp();
 }
 

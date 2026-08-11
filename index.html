@@ -36,7 +36,7 @@
 
       <div>
         <h1>tsuki</h1>
-        <p>your body has a rhythm</p>
+        <p id="brandSubtitle">your body has a rhythm</p>
       </div>
     </div>
 
@@ -75,6 +75,33 @@
     </div>
 
     <div class="drawer-scroll">
+      <div id="pregnancyDrawerMenu" class="pregnancy-drawer-menu hidden">
+        <section class="pregnancy-drawer-section">
+          <p class="drawer-group-title">PREGNANCY</p>
+          <button class="drawer-row" data-open-screen="pregnancy-today"><span class="drawer-row-icon">🤍</span><span><strong>Pregnancy Today</strong><small>Your week, due date & check-in</small></span><b>›</b></button>
+          <button class="drawer-row" data-open-screen="pregnancy-log"><span class="drawer-row-icon">📝</span><span><strong>Pregnancy Check-in</strong><small>How your body feels today</small></span><b>›</b></button>
+          <button class="drawer-row" data-open-screen="pregnancy-calendar"><span class="drawer-row-icon">📅</span><span><strong>Pregnancy Calendar</strong><small>Weeks, appointments & memories</small></span><b>›</b></button>
+        </section>
+        <section class="pregnancy-drawer-section">
+          <p class="drawer-group-title">CARE & PREP</p>
+          <button class="drawer-row" data-open-screen="pregnancy-care"><span class="drawer-row-icon">🩺</span><span><strong>My Pregnancy Care</strong><small>Appointments, provider & questions</small></span><b>›</b></button>
+          <button class="drawer-row" data-open-screen="pregnancy-hospital"><span class="drawer-row-icon">👜</span><span><strong>Hospital Bag</strong><small>Custom packing checklist</small></span><b>›</b></button>
+          <button class="drawer-row" data-open-screen="pregnancy-preferences"><span class="drawer-row-icon">💌</span><span><strong>Birth Preferences</strong><small>Personal notes for your care team</small></span><b>›</b></button>
+        </section>
+        <section class="pregnancy-drawer-section">
+          <p class="drawer-group-title">MEMORIES</p>
+          <button class="drawer-row" data-open-screen="pregnancy-journey"><span class="drawer-row-icon">🌱</span><span><strong>Journey</strong><small>Trimester timeline & milestones</small></span><b>›</b></button>
+          <button class="drawer-row" data-open-screen="pregnancy-journal"><span class="drawer-row-icon">📖</span><span><strong>Pregnancy Journal</strong><small>Notes, letters & memories</small></span><b>›</b></button>
+          <button class="drawer-row" data-open-screen="pregnancy-photos"><span class="drawer-row-icon">📷</span><span><strong>Belly Photos</strong><small>Private local photo timeline</small></span><b>›</b></button>
+          <button class="drawer-row" data-open-screen="pregnancy-garden"><span class="drawer-row-icon">🌸</span><span><strong>Pregnancy Garden</strong><small>Gentle milestones, never streaks</small></span><b>›</b></button>
+        </section>
+        <section class="pregnancy-drawer-section">
+          <p class="drawer-group-title">MODE</p>
+          <button class="drawer-row" id="drawerEditPregnancy"><span class="drawer-row-icon">⚙️</span><span><strong>Pregnancy details</strong><small>Dating method, due date & nickname</small></span><b>›</b></button>
+          <button class="drawer-row" id="drawerEndPregnancy"><span class="drawer-row-icon">🌙</span><span><strong>Pregnancy transition</strong><small>Birth, pregnancy end or return to cycle</small></span><b>›</b></button>
+          <button class="drawer-row" data-open-screen="privacy"><span class="drawer-row-icon">🔒</span><span><strong>Privacy & Security</strong><small>Hide details or use optional App Lock</small></span><b>›</b></button>
+        </section>
+      </div>
       <section class="drawer-group">
         <p class="drawer-group-title">TODAY TOOLS</p>
         <button class="drawer-row" data-open-screen="log"><span class="drawer-row-icon">📝</span><span><strong>Daily Check-in</strong><small>Log how today feels</small></span><b>›</b></button>
@@ -1486,6 +1513,276 @@
     </section>
 
 
+    <!-- PREGNANCY TODAY -->
+    <section class="screen pregnancy-screen" data-screen="pregnancy-today">
+      <div class="pregnancy-greeting">
+        <p id="pregnancyGreeting">Good morning 🤍</p>
+        <h2 id="pregnancyHomeGreeting">One week at a time.</h2>
+      </div>
+
+      <article class="pregnancy-hero-card pregnancy-sensitive">
+        <div class="pregnancy-hero-orbit"><span>🌙</span><i>✦</i></div>
+        <p class="eyebrow">TODAY</p>
+        <h2 id="pregnancyWeekTitle">Pregnancy Week —</h2>
+        <p id="pregnancyTrimesterText" class="pregnancy-trimester">Pregnancy Mode</p>
+        <div class="pregnancy-hero-stats">
+          <div><small>Estimated due date</small><strong id="pregnancyEDDText">—</strong></div>
+          <div><small>Baby arriving in</small><strong id="pregnancyCountdownText">—</strong></div>
+        </div>
+        <p id="pregnancyDatingMethodText" class="pregnancy-dating-note">Dating details appear here.</p>
+      </article>
+
+      <button class="today-checkin-cta pregnancy-checkin-cta" data-open-screen="pregnancy-log">
+        <span class="today-checkin-icon">🤍</span>
+        <span class="today-checkin-copy"><small>YOUR CHECK-IN</small><strong id="pregnancyCheckinPrompt">How are you feeling today?</strong></span>
+        <span class="today-checkin-arrow">›</span>
+      </button>
+
+      <section class="section-block">
+        <div class="section-heading"><div><p class="eyebrow">THIS WEEK</p><h3 id="pregnancyWeekHeading">Week —</h3></div><span class="tiny-moon">🌱</span></div>
+        <article class="pregnancy-week-card">
+          <div class="pregnancy-week-icon" id="pregnancyWeekIcon">🌱</div>
+          <div><strong id="pregnancyWeekSummaryTitle">Your pregnancy journey</strong><p id="pregnancyWeekSummary">Tsuki will show a gentle educational summary for this stage.</p><span id="pregnancyCuteComparison" class="pregnancy-cute-comparison">🌱 Just-for-fun comparison</span></div>
+        </article>
+        <p class="pregnancy-source-note">General education only. Your clinician-confirmed dating and care plan take priority.</p>
+      </section>
+
+      <section class="section-block">
+        <div class="section-heading"><div><p class="eyebrow">COMING UP</p><h3>Pregnancy care</h3></div><button class="text-button" data-open-screen="pregnancy-care">See all</button></div>
+        <article id="pregnancyNextAppointment" class="pregnancy-next-card"></article>
+      </section>
+
+      <section class="section-block">
+        <div class="section-heading"><div><p class="eyebrow">TSUKI COMPANION</p><h3>Pregnancy Moon Room</h3></div><button class="text-button" data-open-screen="pregnancy-garden">Garden</button></div>
+        <button type="button" class="pregnancy-companion-home" data-open-screen="pregnancy-journey">
+          <img src="./assets/tsuki-companion.png" alt="Tsuki moon bunny" class="pregnancy-companion-mini">
+          <span><strong id="pregnancyCompanionMessage">I’m here for this chapter too 🌙</strong><small id="pregnancyCompanionSubtext">Your room changes gently as the weeks pass.</small></span><b>›</b>
+        </button>
+      </section>
+
+      <article id="pregnancyHomeSafetyNotice" class="pregnancy-safety-link">
+        <span>🩺</span><div><strong>Know urgent maternal warning signs</strong><p>Some symptoms during pregnancy should be assessed promptly rather than watched only in an app.</p></div><button type="button" data-open-screen="pregnancy-care">View</button>
+      </article>
+    </section>
+
+
+    <!-- PREGNANCY CALENDAR -->
+    <section class="screen pregnancy-screen" data-screen="pregnancy-calendar">
+      <div class="page-title"><div><p class="eyebrow">YOUR PREGNANCY</p><h2>Calendar</h2></div><span>🤍</span></div>
+      <article class="card pregnancy-calendar-card">
+        <div class="calendar-header"><button class="icon-button" id="pregnancyPreviousMonth">‹</button><h3 id="pregnancyCalendarMonthTitle"></h3><button class="icon-button" id="pregnancyNextMonth">›</button></div>
+        <div id="pregnancyCalendarWeekdays" class="calendar-weekdays"></div>
+        <div id="pregnancyCalendarGrid" class="calendar-grid pregnancy-calendar-grid"></div>
+        <div class="pregnancy-calendar-legend"><span><i class="preg-dot appointment"></i>Appointment</span><span><i class="preg-dot checkin"></i>Check-in</span><span><i class="preg-dot memory"></i>Memory</span></div>
+      </article>
+      <article id="pregnancyCalendarDayDetail" class="card pregnancy-day-detail"></article>
+    </section>
+
+
+    <!-- PREGNANCY DAILY LOG -->
+    <section class="screen pregnancy-screen" data-screen="pregnancy-log">
+      <button class="back-button" data-open-screen="pregnancy-today">← Back</button>
+      <div class="page-title"><div><p class="eyebrow">PREGNANCY CHECK-IN</p><h2>How are you today?</h2></div><span>📝</span></div>
+      <form id="pregnancyLogForm">
+        <article class="card">
+          <label class="field-label">Date</label><input id="pregnancyLogDate" class="input" type="date">
+          <div id="pregnancyLogGestation" class="pregnancy-log-gestation pregnancy-sensitive">Pregnancy week —</div>
+        </article>
+
+        <article class="card">
+          <h3>How do you feel?</h3>
+          <p class="card-label">Mood</p>
+          <div class="pregnancy-choice-grid" id="pregnancyMoodChoices">
+            <label><input type="checkbox" name="pregMood" value="Happy"><span>😊 Happy</span></label>
+            <label><input type="checkbox" name="pregMood" value="Calm"><span>😌 Calm</span></label>
+            <label><input type="checkbox" name="pregMood" value="Okay"><span>🙂 Okay</span></label>
+            <label><input type="checkbox" name="pregMood" value="Low"><span>😔 Low</span></label>
+            <label><input type="checkbox" name="pregMood" value="Anxious"><span>😟 Anxious</span></label>
+            <label><input type="checkbox" name="pregMood" value="Irritable"><span>😤 Irritable</span></label>
+          </div>
+          <label class="field-label">Energy</label><select id="pregnancyEnergy" class="input"><option value="">Not logged</option><option>Low</option><option>Medium</option><option>High</option></select>
+          <label class="field-label">Sleep quality</label><select id="pregnancySleep" class="input"><option value="">Not logged</option><option>Poor</option><option>Okay</option><option>Good</option></select>
+        </article>
+
+        <article class="card" id="pregnancyBodyCheckCard">
+          <h3 id="pregnancyBodyCheckTitle">Body check</h3>
+          <div class="pregnancy-two-column">
+            <label><span>Nausea</span><select id="pregnancyNausea" class="input"><option>None</option><option>Mild</option><option>Moderate</option><option>Severe</option></select></label>
+            <label><span>Vomiting episodes</span><input id="pregnancyVomiting" class="input" type="number" min="0" max="30" inputmode="numeric" placeholder="Optional"></label>
+            <label><span>Appetite</span><select id="pregnancyAppetite" class="input"><option value="">Not logged</option><option>Low</option><option>Usual</option><option>High</option></select></label>
+            <label><span>Bowel changes</span><select id="pregnancyBowel" class="input"><option value="">Not logged</option><option>Usual for me</option><option>Constipation</option><option>Loose stools</option><option>Other change</option></select></label>
+            <label><span>Hydration</span><select id="pregnancyHydration" class="input"><option value="">Not logged</option><option>Low</option><option>Okay</option><option>Good</option></select></label>
+            <label><span>Pain / discomfort</span><select id="pregnancyPain" class="input"><option>None</option><option>Mild</option><option>Moderate</option><option>Severe</option></select></label>
+            <label><span>Swelling</span><select id="pregnancySwelling" class="input"><option>None</option><option>Mild</option><option>Noticeable</option></select></label>
+            <label><span>Discharge</span><select id="pregnancyDischarge" class="input"><option value="">Not logged</option><option>Usual for me</option><option>Changed</option></select></label>
+          </div>
+          <div id="pregnancyMovementBlock" class="pregnancy-movement-block hidden">
+            <label class="field-label">Baby movement <small>(only if this is something you are already noticing)</small></label>
+            <select id="pregnancyMovement" class="input"><option value="">Not logged</option><option>Usual for me</option><option>More than usual</option><option>Less than usual</option><option>Haven’t noticed movement</option></select>
+            <p class="muted small-text">Tsuki does not use a universal kick count. A change from your baby's usual movement can matter.</p>
+          </div>
+        </article>
+
+        <article class="card pregnancy-warning-card">
+          <div class="section-heading compact-heading"><div><p class="eyebrow">SAFETY CHECK</p><h3>Urgent warning signs</h3></div><span>⚠️</span></div>
+          <p class="muted small-text">Select anything you are experiencing now. This does not diagnose the cause.</p>
+          <div class="pregnancy-warning-grid">
+            <label><input type="checkbox" name="pregWarning" value="Headache that will not go away or is getting worse"><span>Severe/persistent headache</span></label>
+            <label><input type="checkbox" name="pregWarning" value="Changes in vision"><span>Vision changes</span></label>
+            <label><input type="checkbox" name="pregWarning" value="Dizziness or fainting"><span>Fainting / ongoing dizziness</span></label>
+            <label><input type="checkbox" name="pregWarning" value="Fever 38°C or higher"><span>Fever ≥38°C</span></label>
+            <label><input type="checkbox" name="pregWarning" value="Trouble breathing"><span>Trouble breathing</span></label>
+            <label><input type="checkbox" name="pregWarning" value="Chest pain or fast-beating heart"><span>Chest pain / concerning heartbeat</span></label>
+            <label><input type="checkbox" name="pregWarning" value="Severe nausea and vomiting"><span>Severe nausea / vomiting</span></label>
+            <label><input type="checkbox" name="pregWarning" value="Severe belly pain that does not go away"><span>Severe persistent belly pain</span></label>
+            <label><input type="checkbox" name="pregWarning" value="Vaginal bleeding or fluid leaking"><span>Bleeding / fluid leaking</span></label>
+            <label><input type="checkbox" name="pregWarning" value="Extreme swelling of hands or face"><span>Extreme hand / face swelling</span></label>
+            <label><input type="checkbox" name="pregWarning" value="Severe swelling redness or pain in a limb"><span>Severe one-sided limb swelling/pain</span></label>
+            <label><input type="checkbox" name="pregWarning" value="Thoughts of harming myself or my baby"><span>Thoughts of harming myself / baby</span></label>
+          </div>
+          <div id="pregnancySafetyAlert" class="pregnancy-safety-alert hidden"><strong>⚠️ Please seek medical care now.</strong><p>CDC lists these as urgent maternal warning signs. Contact your maternity care provider or seek emergency medical care rather than relying on Tsuki to monitor the symptom.</p></div>
+        </article>
+
+        <article class="card">
+          <details class="pregnancy-more-details"><summary>+ More details</summary>
+            <label class="field-label">Medications / supplements taken today</label><input id="pregnancyMedsToday" class="input" placeholder="Optional">
+            <label class="field-label">Tiny Joy</label><input id="pregnancyTinyJoy" class="input" placeholder="Something small you want to remember">
+            <label class="field-label">Notes</label><textarea id="pregnancyNotes" class="textarea" placeholder="Anything else about today..."></textarea>
+          </details>
+        </article>
+        <button type="submit" class="primary-button full-width sticky-save-button">Save pregnancy check-in</button>
+      </form>
+    </section>
+
+
+    <!-- PREGNANCY JOURNEY -->
+    <section class="screen pregnancy-screen" data-screen="pregnancy-journey">
+      <div class="page-title"><div><p class="eyebrow">YOUR JOURNEY</p><h2>Pregnancy Story</h2></div><span>🌱</span></div>
+      <article id="pregnancyJourneyHero" class="pregnancy-journey-hero pregnancy-sensitive"></article>
+      <section class="section-block"><div class="section-heading"><div><p class="eyebrow">TRIMESTERS</p><h3>Your timeline</h3></div></div><div id="pregnancyTrimesterTimeline" class="pregnancy-trimester-timeline"></div></section>
+      <section class="section-block"><div class="section-heading"><div><p class="eyebrow">MEMORIES</p><h3>Keep this chapter</h3></div></div><div class="pregnancy-feature-grid"><button data-open-screen="pregnancy-journal"><span>📖</span><strong>Journal</strong><small>Notes & letters</small></button><button data-open-screen="pregnancy-photos"><span>📷</span><strong>Belly Photos</strong><small>Private timeline</small></button><button data-open-screen="pregnancy-garden"><span>🌸</span><strong>Pregnancy Garden</strong><small>Gentle milestones</small></button><button data-open-screen="pregnancy-care"><span>🩺</span><strong>Care</strong><small>Appointments & questions</small></button></div></section>
+      <section class="section-block"><div class="section-heading"><div><p class="eyebrow">TSUKI</p><h3>Pregnancy Moon Room</h3></div></div><article class="pregnancy-moon-room"><div class="pregnancy-room-window">🌙</div><img src="./assets/tsuki-companion.png" alt="Tsuki moon bunny" id="pregnancyRoomBunny"><div id="pregnancyRoomProps" class="pregnancy-room-props"></div><p id="pregnancyRoomSpeech">Another week together 🌙</p></article></section>
+    </section>
+
+
+    <!-- PREGNANCY CARE -->
+    <section class="screen pregnancy-screen" data-screen="pregnancy-care">
+      <button class="back-button" data-open-screen="pregnancy-today">← Back</button>
+      <div class="page-title"><div><p class="eyebrow">MY PREGNANCY CARE</p><h2>Care & appointments</h2></div><span>🩺</span></div>
+      <article class="card">
+        <h3>My care team</h3>
+        <label class="field-label">Provider / clinic</label><input id="pregnancyProviderName" class="input" placeholder="Name">
+        <label class="field-label">Contact</label><input id="pregnancyProviderContact" class="input" placeholder="Phone or note">
+        <label class="field-label">Hospital / birthing facility</label><input id="pregnancyHospital" class="input" placeholder="Optional">
+        <label class="field-label">Emergency contact</label><input id="pregnancyEmergencyContact" class="input" placeholder="Optional">
+        <button type="button" id="savePregnancyCareTeam" class="primary-button small">Save care team</button>
+      </article>
+      <article class="card">
+        <h3>Add appointment</h3>
+        <div class="pregnancy-two-column"><label><span>Date</span><input id="pregnancyAppointmentDate" class="input" type="date"></label><label><span>Time</span><input id="pregnancyAppointmentTime" class="input" type="time"></label></div>
+        <label class="field-label">Type</label><select id="pregnancyAppointmentType" class="input"><option>OB / prenatal visit</option><option>Midwife visit</option><option>Ultrasound</option><option>Laboratory</option><option>Dental</option><option>Other</option></select>
+        <label class="field-label">Location / provider</label><input id="pregnancyAppointmentLocation" class="input" placeholder="Optional">
+        <label class="field-label">Notes</label><textarea id="pregnancyAppointmentNotes" class="textarea" placeholder="Questions, instructions, things to bring..."></textarea>
+        <button type="button" id="savePregnancyAppointment" class="primary-button small">Add appointment</button>
+      </article>
+      <section class="section-block"><div class="section-heading"><div><p class="eyebrow">APPOINTMENTS</p><h3>Upcoming & past</h3></div></div><div id="pregnancyAppointmentList"></div></section>
+      <article class="card">
+        <h3>Questions for my provider</h3><div class="inline-add-row"><input id="pregnancyQuestionInput" class="input" placeholder="What do you want to ask?"><button type="button" id="addPregnancyQuestion" class="primary-button small">Add</button></div><div id="pregnancyQuestionList"></div>
+      </article>
+      <article class="card">
+        <h3>Tests & results</h3>
+        <div class="pregnancy-two-column"><input id="pregnancyTestName" class="input" placeholder="Test / scan name"><input id="pregnancyTestDate" class="input" type="date"></div>
+        <label class="field-label">Result / notes</label><textarea id="pregnancyTestResult" class="textarea" placeholder="Keep a personal note of the result or what your provider said..."></textarea>
+        <button type="button" id="addPregnancyTest" class="secondary-button small">Add result</button>
+        <div id="pregnancyTestList"></div>
+      </article>
+      <article class="card">
+        <h3>Medications & supplements</h3><p class="muted small-text">Keep a personal list for appointments. Do not start or stop prescribed medicines based on Tsuki.</p>
+        <div class="pregnancy-two-column"><input id="pregnancyMedicationName" class="input" placeholder="Name"><input id="pregnancyMedicationDose" class="input" placeholder="Dose / schedule"></div><button type="button" id="addPregnancyMedication" class="secondary-button small">Add to my list</button><div id="pregnancyMedicationList"></div>
+      </article>
+      <article class="card who-reference-card"><div class="section-heading compact-heading"><div><p class="eyebrow">GENERAL REFERENCE</p><h3>WHO antenatal contacts</h3></div><span>🌍</span></div><p>WHO's global antenatal-care model recommends a minimum of eight contacts, beginning in the first trimester. Your own maternity provider may recommend a different schedule based on your health, country, and pregnancy.</p><div id="whoContactTimeline" class="who-contact-timeline"></div></article>
+      <article class="pregnancy-safety-reference"><h3>⚠️ Urgent maternal warning signs</h3><p>Seek medical care immediately for urgent warning signs such as persistent/worsening headache, vision changes, fainting, fever ≥38°C, trouble breathing, chest pain, severe persistent abdominal pain, significant bleeding/fluid leakage, extreme swelling, severe nausea/vomiting, or a meaningful reduction in your baby's usual movement.</p><small>Based on CDC Hear Her urgent maternal warning signs. This list is not exhaustive.</small></article>
+    </section>
+
+
+    <!-- PREGNANCY JOURNAL -->
+    <section class="screen pregnancy-screen" data-screen="pregnancy-journal">
+      <button class="back-button" data-open-screen="pregnancy-journey">← Back</button>
+      <div class="page-title"><div><p class="eyebrow">PREGNANCY JOURNAL</p><h2>Little memories</h2></div><span>📖</span></div>
+      <article class="card">
+        <label class="field-label">Date</label><input id="pregnancyJournalDate" class="input" type="date">
+        <label class="field-label">Type</label><select id="pregnancyJournalType" class="input"><option>Today's memory</option><option>Letter to baby</option><option>Tiny Joy</option><option>Something I want to remember</option><option>Appointment note</option></select>
+        <label class="field-label">Write</label><textarea id="pregnancyJournalText" class="textarea" placeholder="Keep whatever matters to you..."></textarea>
+        <button type="button" id="savePregnancyJournal" class="primary-button small">Save memory</button>
+      </article>
+      <div id="pregnancyJournalList"></div>
+    </section>
+
+
+    <!-- BELLY PHOTOS -->
+    <section class="screen pregnancy-screen" data-screen="pregnancy-photos">
+      <button class="back-button" data-open-screen="pregnancy-journey">← Back</button>
+      <div class="page-title"><div><p class="eyebrow">PRIVATE PHOTO TIMELINE</p><h2>Belly Photos</h2></div><span>📷</span></div>
+      <article class="soft-note">Photos stay in this browser on this device. They are not included in Tsuki's JSON backup.</article>
+      <article class="card">
+        <input id="pregnancyPhotoInput" class="hidden" type="file" accept="image/*">
+        <label class="field-label">Photo date</label><input id="pregnancyPhotoDate" class="input" type="date">
+        <label class="field-label">Caption</label><input id="pregnancyPhotoCaption" class="input" placeholder="Week 20, feeling happy...">
+        <button type="button" id="choosePregnancyPhoto" class="secondary-button">Choose Photo</button>
+        <div id="pregnancyPhotoPending" class="pregnancy-photo-pending hidden"></div>
+        <button type="button" id="savePregnancyPhoto" class="primary-button full-width" disabled>Save to timeline</button>
+      </article>
+      <div id="pregnancyPhotoTimeline" class="pregnancy-photo-timeline"></div>
+    </section>
+
+
+    <!-- HOSPITAL BAG -->
+    <section class="screen pregnancy-screen" data-screen="pregnancy-hospital">
+      <button class="back-button" data-open-screen="pregnancy-today">← Back</button>
+      <div class="page-title"><div><p class="eyebrow">PREPARE YOUR WAY</p><h2>Hospital Bag</h2></div><span>👜</span></div>
+      <article class="soft-note">This is a customizable personal checklist, not a list of medical requirements. Your hospital's instructions come first.</article>
+      <div class="inline-add-row"><select id="hospitalBagCategory" class="input"><option>For me</option><option>For baby</option><option>For partner</option><option>Documents</option><option>Other</option></select><input id="hospitalBagItem" class="input" placeholder="Add an item"><button type="button" id="addHospitalBagItem" class="primary-button small">Add</button></div>
+      <div id="pregnancyHospitalBagList"></div>
+    </section>
+
+
+    <!-- BIRTH PREFERENCES -->
+    <section class="screen pregnancy-screen" data-screen="pregnancy-preferences">
+      <button class="back-button" data-open-screen="pregnancy-today">← Back</button>
+      <div class="page-title"><div><p class="eyebrow">PERSONAL REFERENCE</p><h2>Birth Preferences</h2></div><span>💌</span></div>
+      <article class="soft-note">Birth can change quickly. This is a place to organize preferences and questions, not a medical directive.</article>
+      <article class="card">
+        <label class="field-label">Preferred facility</label><input id="birthPrefFacility" class="input">
+        <label class="field-label">Support person / people</label><input id="birthPrefSupport" class="input">
+        <label class="field-label">Comfort preferences</label><textarea id="birthPrefComfort" class="textarea" placeholder="Lighting, movement, touch, music, quiet..."></textarea>
+        <label class="field-label">Pain-management questions / preferences</label><textarea id="birthPrefPain" class="textarea"></textarea>
+        <label class="field-label">Things I want to discuss with my provider</label><textarea id="birthPrefQuestions" class="textarea"></textarea>
+        <label class="field-label">Important notes</label><textarea id="birthPrefNotes" class="textarea"></textarea>
+        <button type="button" id="saveBirthPreferences" class="primary-button full-width">Save preferences</button>
+      </article>
+    </section>
+
+
+    <!-- PREGNANCY GARDEN -->
+    <section class="screen pregnancy-screen" data-screen="pregnancy-garden">
+      <button class="back-button" data-open-screen="pregnancy-journey">← Back</button>
+      <div class="page-title"><div><p class="eyebrow">PREGNANCY GARDEN</p><h2>Growing together</h2></div><span>🌸</span></div>
+      <article class="pregnancy-garden-hero"><div id="pregnancyGardenPlant" class="pregnancy-garden-plant">🌱</div><div><strong id="pregnancyGardenTitle">A new little seed</strong><p id="pregnancyGardenText">Your garden grows with milestones, never streaks.</p></div></article>
+      <div id="pregnancyGardenMilestones" class="pregnancy-milestone-grid"></div>
+      <article class="soft-note">Nothing wilts if you don't log. Every pregnancy can look different, and this garden never scores your health or your pregnancy.</article>
+    </section>
+
+
+    <!-- POSTPARTUM TRANSITION -->
+    <section class="screen pregnancy-screen" data-screen="postpartum-today">
+      <div class="page-title"><div><p class="eyebrow">POSTPARTUM TRANSITION</p><h2>Tsuki is still here</h2></div><span>🌙</span></div>
+      <article class="pregnancy-hero-card"><p class="eyebrow">TODAY</p><h2 id="postpartumAgeText">Postpartum</h2><p id="postpartumModeText">Cycle predictions are paused.</p></article>
+      <article class="soft-note">This is a transition shell, not a full postpartum tracker yet. Your pregnancy has been archived, your cycle history is preserved, and Tsuki will not restart period predictions until you choose Cycle Mode yourself.</article>
+      <article class="pregnancy-safety-reference"><h3>⚠️ Maternal warning signs still matter after birth</h3><p>CDC advises awareness of urgent maternal warning signs during pregnancy and for a year after delivery. Seek medical care immediately for concerning symptoms.</p></article>
+      <button type="button" id="returnToCycleFromPostpartum" class="secondary-button full-width">Return to Cycle Mode when I'm ready</button>
+    </section>
+
+
     <!-- ME -->
     <section class="screen" data-screen="me">
 
@@ -1498,7 +1795,23 @@
         <span>🌙</span>
       </div>
 
-      <article class="card">
+      <article class="card life-mode-card">
+        <div class="section-heading compact-heading">
+          <div><p class="eyebrow">LIFE MODE</p><h3>What should Tsuki follow?</h3></div>
+          <span id="lifeModeStatus" class="status-pill">Cycle Mode</span>
+        </div>
+        <div class="life-mode-grid">
+          <button type="button" id="chooseCycleMode" class="life-mode-option active"><span>🌸</span><strong>Cycle Mode</strong><small>Periods, phases & body patterns</small></button>
+          <button type="button" id="choosePregnancyMode" class="life-mode-option"><span>🤰</span><strong>Pregnancy Mode</strong><small>Week-by-week pregnancy journey</small></button>
+        </div>
+        <div id="activePregnancySettings" class="pregnancy-mode-settings hidden">
+          <button type="button" id="editPregnancyDetails" class="settings-row"><span>🤍 Pregnancy details</span><span>›</span></button>
+          <button type="button" id="pregnancyTransitionButton" class="settings-row"><span>🌙 Pregnancy transition</span><span>›</span></button>
+        </div>
+        <p class="muted small-text">Pregnancy Mode is always optional. Tsuki never turns it on because a period is late, and your existing cycle history is preserved when modes change.</p>
+      </article>
+
+      <article class="card cycle-settings-card">
 
         <h3>Cycle defaults</h3>
 
@@ -1598,9 +1911,7 @@
       </article>
 
       <article class="soft-note">
-        🌙 Tsuki is designed as a personal tracking tool.
-        Predictions are estimates and are not medical advice,
-        diagnosis, or contraception.
+        🌙 Tsuki is a personal tracking tool. Cycle predictions are estimates. Pregnancy information is educational and does not replace prenatal care, diagnosis, or emergency medical assessment.
       </article>
 
     </section>
@@ -1663,7 +1974,7 @@
       <article class="card">
 
         <label class="settings-row">
-          <span>🙈 Hide cycle details</span>
+          <span id="hideDetailsLabel">🙈 Hide cycle details</span>
           <input id="hideDetailsToggle" type="checkbox">
         </label>
 
@@ -1977,10 +2288,53 @@
     </section>
   </div>
 
+  <!-- PREGNANCY SETUP MODAL -->
+  <div id="pregnancySetupModal" class="app-modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="pregnancySetupTitle">
+    <section class="app-modal pregnancy-setup-modal">
+      <div class="modal-grabber"></div>
+      <div class="app-modal-header"><div><p class="eyebrow">PREGNANCY MODE</p><h2 id="pregnancySetupTitle">Set up your pregnancy</h2></div><button type="button" id="closePregnancySetup" class="modal-close">×</button></div>
+      <article class="soft-note">Tsuki never turns Pregnancy Mode on automatically. Your cycle history stays saved and can be returned to later.</article>
+      <label class="field-label">How should Tsuki date this pregnancy?</label>
+      <select id="pregnancyDatingMethod" class="input">
+        <option value="lmp">Last menstrual period (LMP)</option>
+        <option value="clinician">Clinician-confirmed due date</option>
+        <option value="ultrasound">Ultrasound-confirmed due date</option>
+        <option value="ivf">IVF / embryo transfer</option>
+      </select>
+      <div id="pregnancyLMPFields" class="pregnancy-dating-fields"><label class="field-label">First day of last menstrual period</label><input id="pregnancyLMPDate" class="input" type="date"><p class="muted small-text">By convention, LMP dating estimates the due date 280 days from the first day of the LMP.</p></div>
+      <div id="pregnancyEDDFields" class="pregnancy-dating-fields hidden"><label class="field-label">Estimated due date given by your clinician</label><input id="pregnancyDirectEDD" class="input" type="date"><p class="muted small-text">A clinician-confirmed EDD becomes Tsuki's pregnancy anchor.</p></div>
+      <div id="pregnancyIVFFields" class="pregnancy-dating-fields hidden">
+        <label class="field-label">Embryo transfer date</label><input id="pregnancyTransferDate" class="input" type="date">
+        <label class="field-label">Embryo age at transfer</label><select id="pregnancyEmbryoAge" class="input"><option value="5">Day-5 embryo</option><option value="3">Day-3 embryo</option></select>
+        <div class="pregnancy-or"><span>or</span></div>
+        <label class="field-label">Clinician-confirmed EDD (optional)</label><input id="pregnancyIVFDirectEDD" class="input" type="date">
+      </div>
+      <label class="field-label">Baby nickname <small>(optional)</small></label><input id="pregnancyBabyNickname" class="input" placeholder="Baby, Little Moon, etc.">
+      <article id="pregnancyDatingPreview" class="pregnancy-dating-preview">Enter your dating information to preview the estimate.</article>
+      <article class="pregnancy-clinical-note"><strong>Dating note</strong><p>First-trimester ultrasound is the most accurate method to establish or confirm gestational age. ART pregnancies should use ART-derived dating. Once your clinician establishes an EDD, Tsuki should not keep changing it from later calendar guesses.</p></article>
+      <button type="button" id="savePregnancySetup" class="primary-button full-width">Use Pregnancy Mode</button>
+    </section>
+  </div>
+
+  <!-- PREGNANCY TRANSITION MODAL -->
+  <div id="pregnancyTransitionModal" class="app-modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="pregnancyTransitionTitle">
+    <section class="app-modal pregnancy-transition-modal">
+      <div class="modal-grabber"></div>
+      <div class="app-modal-header"><div><p class="eyebrow">PREGNANCY TRANSITION</p><h2 id="pregnancyTransitionTitle">What would you like Tsuki to do?</h2></div><button type="button" id="closePregnancyTransition" class="modal-close">×</button></div>
+      <p class="muted">Choose only what fits your situation. Tsuki will preserve the pregnancy record either way.</p>
+      <label class="field-label">Transition date</label><input id="pregnancyTransitionDate" class="input" type="date">
+      <button type="button" id="pregnancyOutcomeBirth" class="transition-choice"><span>🍼</span><div><strong>Baby was born</strong><small>Archive pregnancy and enter the postpartum transition shell.</small></div><b>›</b></button>
+      <button type="button" id="pregnancyOutcomeEnded" class="transition-choice neutral"><span>🌙</span><div><strong>Pregnancy ended</strong><small>Archive this pregnancy quietly and return to Cycle Mode.</small></div><b>›</b></button>
+      <button type="button" id="pregnancyPauseMode" class="transition-choice"><span>🌸</span><div><strong>Return to Cycle Mode for now</strong><small>Keep this pregnancy saved without archiving it.</small></div><b>›</b></button>
+      <p class="pregnancy-transition-note">Tsuki does not add congratulations or celebratory language when a pregnancy is archived unless you choose the birth transition.</p>
+    </section>
+  </div>
+
   <nav class="bottom-nav">
 
     <button
       class="nav-button active"
+      id="navTodayButton"
       data-screen-target="today"
     >
       <span>🌙</span>
@@ -1989,6 +2343,7 @@
 
     <button
       class="nav-button"
+      id="navCalendarButton"
       data-screen-target="calendar"
     >
       <span>📅</span>
@@ -2007,10 +2362,11 @@
 
     <button
       class="nav-button"
+      id="navInsightsButton"
       data-screen-target="insights"
     >
-      <span>✨</span>
-      <small>Insights</small>
+      <span id="navInsightsIcon">✨</span>
+      <small id="navInsightsLabel">Insights</small>
     </button>
 
     <button
@@ -2035,12 +2391,19 @@
       <button type="button" id="closeQuickAdd" class="quick-sheet-close" aria-label="Close quick add">×</button>
     </div>
 
-    <div class="quick-sheet-grid">
+    <div id="cycleQuickAddGrid" class="quick-sheet-grid">
       <button type="button" data-quick-add="log"><span>📝</span><strong>Daily Check-in</strong><small>Mood, energy & today</small></button>
       <button type="button" data-quick-add="period"><span>🩸</span><strong>Log Period</strong><small>Choose dates on calendar</small></button>
       <button type="button" data-quick-add="bad-day"><span>☁️</span><strong>Quiet Day</strong><small>Keep it very simple</small></button>
       <button type="button" data-quick-add="relief"><span>🫖</span><strong>Relief</strong><small>What helped today?</small></button>
       <button type="button" data-quick-add="journal"><span>📖</span><strong>Journal</strong><small>Write something down</small></button>
+    </div>
+    <div id="pregnancyQuickAddGrid" class="quick-sheet-grid hidden">
+      <button type="button" data-pregnancy-quick="checkin"><span>🤍</span><strong>Pregnancy Check-in</strong><small>How today feels</small></button>
+      <button type="button" data-pregnancy-quick="appointment"><span>🩺</span><strong>Appointment</strong><small>Add to pregnancy care</small></button>
+      <button type="button" data-pregnancy-quick="journal"><span>📖</span><strong>Memory</strong><small>Journal or letter</small></button>
+      <button type="button" data-pregnancy-quick="photo"><span>📷</span><strong>Belly Photo</strong><small>Add to private timeline</small></button>
+      <button type="button" data-pregnancy-quick="question"><span>💭</span><strong>Provider Question</strong><small>Remember what to ask</small></button>
     </div>
   </section>
 
