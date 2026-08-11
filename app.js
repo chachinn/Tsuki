@@ -1185,6 +1185,7 @@ function showScreen(name) {
   if (resolvedName === "past-moons") renderPastMoons();
   if (resolvedName === "reports") renderReports();
   if (resolvedName === "care-profile") renderCareProfile();
+  if (resolvedName === "me") renderLifeModeUI();
   if (resolvedName === "moon-room") renderMoonRoom();
   if (resolvedName === "moon-garden") renderMoonGarden();
   if (resolvedName === "moon-year") renderMoonYear();
@@ -7518,6 +7519,7 @@ function openPregnancySetup() {
 function closePregnancySetup() {
   document.getElementById("pregnancySetupModal")?.classList.add("hidden");
   document.body.classList.remove("modal-open");
+  renderLifeModeUI();
 }
 
 function savePregnancySetup() {
@@ -7597,8 +7599,13 @@ function renderLifeModeUI() {
   const privacyLabel = document.getElementById("hideDetailsLabel");
   if (privacyLabel) privacyLabel.textContent = isPregnancy ? "🙈 Hide pregnancy details" : isPostpartum ? "🙈 Hide postpartum details" : "🙈 Hide cycle details";
 
-  document.getElementById("chooseCycleMode")?.classList.toggle("active", !isPregnancy && !isPostpartum);
-  document.getElementById("choosePregnancyMode")?.classList.toggle("active", isPregnancy);
+  const cycleModeButton = document.getElementById("chooseCycleMode");
+  const pregnancyModeButton = document.getElementById("choosePregnancyMode");
+  const cycleSelected = !isPregnancy && !isPostpartum;
+  cycleModeButton?.classList.toggle("active", cycleSelected);
+  pregnancyModeButton?.classList.toggle("active", isPregnancy);
+  cycleModeButton?.setAttribute("aria-pressed", String(cycleSelected));
+  pregnancyModeButton?.setAttribute("aria-pressed", String(isPregnancy));
   document.getElementById("activePregnancySettings")?.classList.toggle("hidden", !pregnancyActive);
   document.querySelectorAll(".cycle-settings-card").forEach(card => card.classList.toggle("hidden", isPregnancy || isPostpartum));
 
@@ -7940,8 +7947,35 @@ document.getElementById("pregnancyTransitionModal")?.addEventListener("click",ev
 document.getElementById("pregnancyOutcomeBirth")?.addEventListener("click",archiveForBirth);
 document.getElementById("pregnancyOutcomeEnded")?.addEventListener("click",archivePregnancyEnded);
 document.getElementById("pregnancyPauseMode")?.addEventListener("click",()=>{data.mode="cycle";saveData();closePregnancyTransition();renderEverything();showScreen("today");showToast("Cycle Mode is back. Pregnancy data is still saved.");});
-document.getElementById("choosePregnancyMode")?.addEventListener("click",()=>{if(data.pregnancy?.active){data.mode="pregnancy";saveData();renderEverything();showScreen("pregnancy-today");}else openPregnancySetup();});
-document.getElementById("chooseCycleMode")?.addEventListener("click",()=>{if(data.mode==="cycle")return;if(!confirm("Switch to Cycle Mode? Your pregnancy record will stay saved."))return;data.mode="cycle";saveData();renderEverything();showScreen("today");});
+document.getElementById("choosePregnancyMode")?.addEventListener("click",()=>{
+  if(data.pregnancy?.active){
+    data.mode="pregnancy";
+    saveData();
+    renderLifeModeUI();
+    renderEverything();
+    showScreen("pregnancy-today");
+    return;
+  }
+
+  // Give immediate visual feedback while the user completes Pregnancy setup.
+  document.getElementById("chooseCycleMode")?.classList.remove("active");
+  document.getElementById("choosePregnancyMode")?.classList.add("active");
+  document.getElementById("chooseCycleMode")?.setAttribute("aria-pressed","false");
+  document.getElementById("choosePregnancyMode")?.setAttribute("aria-pressed","true");
+  const status=document.getElementById("lifeModeStatus");
+  if(status) status.textContent="Setting up Pregnancy Mode";
+  openPregnancySetup();
+});
+document.getElementById("chooseCycleMode")?.addEventListener("click",()=>{
+  const alreadyCycle=data.mode==="cycle" && !data.postpartum?.active;
+  if(alreadyCycle){renderLifeModeUI();return;}
+  if(!confirm("Switch to Cycle Mode? Your pregnancy record will stay saved.")){renderLifeModeUI();return;}
+  data.mode="cycle";
+  saveData();
+  renderLifeModeUI();
+  renderEverything();
+  showScreen("today");
+});
 document.getElementById("editPregnancyDetails")?.addEventListener("click",openPregnancySetup);
 document.getElementById("pregnancyTransitionButton")?.addEventListener("click",openPregnancyTransition);
 document.getElementById("drawerEditPregnancy")?.addEventListener("click",()=>{closeAppDrawer();openPregnancySetup();});
