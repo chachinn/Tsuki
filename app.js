@@ -8626,11 +8626,35 @@ document.getElementById("petCompanionButton")?.addEventListener("click", () => {
 });
 
 
+
+
+/* ============================================================
+   BUILD 7.1.2 — COMPANION IMAGE ASSET GUARD
+   ============================================================ */
+function installCompanionImageGuard() {
+  const image = document.querySelector("#tsukiCompanionBunny .companion-png");
+  const wrapper = document.getElementById("tsukiCompanionBunny");
+  if (!image || !wrapper) return;
+
+  const markLoaded = () => wrapper.classList.remove("image-missing");
+  const markMissing = () => wrapper.classList.add("image-missing");
+
+  image.addEventListener("load", markLoaded);
+  image.addEventListener("error", markMissing);
+
+  if (image.complete) {
+    if (image.naturalWidth > 0) markLoaded();
+    else markMissing();
+  }
+}
+
+
 /* ============================================================
    INIT
    ============================================================ */
 
 function init() {
+  installCompanionImageGuard();
   installNativeTouchGuards();
   loadSettingsUI();
   applySettings();

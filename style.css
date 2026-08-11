@@ -5596,3 +5596,77 @@ body.hide-sensitive .pregnancy-room-props {
   .mini-record{grid-template-columns:30px minmax(0,1fr) auto}.mini-record button+button{grid-column:3}
 }
 .pregnancy-moon-room{position:relative}.pregnancy-moon-room::after{position:absolute;z-index:4;pointer-events:none;font-size:30px;filter:drop-shadow(0 4px 6px rgba(90,50,70,.12))}.pregnancy-moon-room[data-outfit="ribbon"]::after{content:"🎀";left:50%;top:32%;transform:translateX(35px) rotate(8deg)}.pregnancy-moon-room[data-outfit="pajamas"]::after{content:"🩷";left:50%;top:60%;transform:translateX(-15px)}.pregnancy-moon-room[data-outfit="star"]::after{content:"⭐";left:50%;top:28%;transform:translateX(37px) rotate(12deg)}.pregnancy-moon-room[data-outfit="blanket"]::after{content:"☁️";left:50%;top:65%;transform:translateX(-20px);font-size:42px}
+
+
+/* ============================================================
+   BUILD 7.1.2 — MOON ROOM COMPANION VISIBILITY FIX
+   ============================================================ */
+
+/* The legacy CSS bunny used absolute-positioned child parts. The real PNG
+   must participate in the wrapper's box so it cannot fall below the stage. */
+.moon-room-stage .companion-png-wrap {
+  width: 184px;
+  height: 276px;
+  bottom: 16px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  overflow: visible;
+  z-index: 6;
+}
+
+.moon-room-stage .companion-png-wrap .companion-png {
+  position: static !important;
+  inset: auto !important;
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+  max-width: none;
+  object-fit: contain;
+  object-position: center bottom;
+  margin: 0;
+}
+
+/* Friendly fallback if the mascot asset is missing or renamed. */
+.moon-room-stage .companion-png-wrap::before {
+  content: "🐇";
+  position: absolute;
+  left: 50%;
+  bottom: 64px;
+  transform: translateX(-50%);
+  width: 118px;
+  height: 118px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: rgba(255,255,255,.78);
+  border: 1px solid rgba(233,111,156,.14);
+  box-shadow: 0 14px 30px rgba(156,98,131,.12);
+  font-size: 54px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.moon-room-stage .companion-png-wrap.image-missing::before {
+  opacity: 1;
+}
+
+.moon-room-stage .companion-png-wrap.image-missing .companion-png {
+  display: none !important;
+}
+
+@media (max-width: 520px) {
+  .moon-room-stage .companion-png-wrap {
+    width: 172px;
+    height: 258px;
+    bottom: 14px;
+  }
+}
+
+@media (max-width: 380px) {
+  .moon-room-stage .companion-png-wrap {
+    width: 160px;
+    height: 240px;
+    bottom: 12px;
+  }
+}
