@@ -1958,6 +1958,7 @@ function setQuickPeriodEntryMode(mode) {
 
 function openQuickPeriodEntry(mode = "single", initialDate = "") {
   const modal = document.getElementById("quickPeriodModal");
+  setBulkPeriodFeedback("");
   if (!modal) return;
 
   const initial = parseDate(initialDate) || new Date(calendarDate.getFullYear(), calendarDate.getMonth(), 1);
@@ -2152,6 +2153,7 @@ function renderBulkPeriodMonths() {
   container.querySelectorAll("[data-bulk-period-date]").forEach(button => {
     button.addEventListener("click", () => {
       bulkPeriodDrafts.set(button.dataset.bulkMonth, button.dataset.bulkPeriodDate);
+      setBulkPeriodFeedback("");
       renderBulkPeriodMonths();
       requestAnimationFrame(() => {
         container.querySelector(`[data-bulk-period-month="${button.dataset.bulkMonth}"]`)?.scrollIntoView({ block: "center" });
@@ -2168,8 +2170,26 @@ function renderBulkPeriodMonths() {
   if (later) later.disabled = bulkPeriodAnchor >= currentMonth;
 }
 
-function saveBulkPeriods() {
-  if (!bulkPeriodDrafts.size) return;
+function setBulkPeriodFeedback(message = "", type = "info") {
+  const feedback = document.getElementById("bulkPeriodFeedback");
+  if (!feedback) return;
+
+  feedback.textContent = message;
+  feedback.classList.toggle("hidden", !message);
+  feedback.classList.toggle("is-error", type === "error");
+  feedback.classList.toggle("is-success", type === "success");
+}
+
+function saveBulkPeriods(event) {
+  event?.preventDefault?.();
+  event?.stopPropagation?.();
+
+  const saveButton = document.getElementById("bulkPeriodSave");
+
+  if (!bulkPeriodDrafts.size) {
+    setBulkPeriodFeedback("Choose at least one period start date first.", "error");
+    return;
+  }
 
   const drafts = Array.from(bulkPeriodDrafts.values())
     .map(start => ({
@@ -2182,25 +2202,75 @@ function saveBulkPeriods() {
     .sort((a, b) => parseDate(a.start) - parseDate(b.start));
 
   const accepted = [];
+  const rejected = [];
+
   for (const period of drafts) {
-    const duplicateMonth = periodStartingInMonth(parseDate(period.start).getFullYear(), parseDate(period.start).getMonth());
-    if (duplicateMonth) {
-      showToast(`${formatDateLong(parseDate(period.start))}: that month already has a saved period.`);
-      return;
+    const startDate = parseDate(period.start);
+
+    if (!startDate) {
+      rejected.push("One selected date could not be read.");
+      continue;
     }
+
+    const duplicateMonth = periodStartingInMonth(startDate.getFullYear(), startDate.getMonth());
+    if (duplicateMonth) {
+      rejected.push(`${startDate.toLocaleDateString(undefined, { month: "long", year: "numeric" })} already has a saved period.`);
+      continue;
+    }
+
     const error = quickPeriodSelectionError(period.start, period.end, "", accepted);
     if (error) {
-      showToast(`${formatDateLong(parseDate(period.start))}: ${error}`);
-      return;
+      rejected.push(`${formatDateLong(startDate)}: ${error}`);
+      continue;
     }
+
     accepted.push(period);
   }
 
-  data.periods.push(...accepted);
-  saveData();
-  renderEverything();
+  if (!accepted.length) {
+    setBulkPeriodFeedback(rejected[0] || "None of those selections could be saved.", "error");
+    return;
+  }
+
+  if (saveButton) {
+    saveButton.disabled = true;
+    saveButton.textContent = "Saving…";
+  }
+
+  const previousPeriods = data.periods.slice();
+
+  try {
+    data.periods.push(...accepted);
+    data.periods.sort((a, b) => parseDate(a.start) - parseDate(b.start));
+    saveData();
+  }
+  catch (error) {
+    data.periods = previousPeriods;
+    console.error("Could not save bulk periods:", error);
+    setBulkPeriodFeedback("Tsuki could not save those periods on this device. Please try again.", "error");
+    if (saveButton) {
+      saveButton.disabled = false;
+      saveButton.textContent = `Save ${bulkPeriodDrafts.size} period${bulkPeriodDrafts.size === 1 ? "" : "s"}`;
+    }
+    return;
+  }
+
+  bulkPeriodDrafts = new Map();
+
+  /* Close first so a later render error can never make Save look unresponsive. */
   closeQuickPeriodEntry();
-  showToast(`${accepted.length} past period${accepted.length === 1 ? "" : "s"} saved 🌸`);
+
+  try {
+    renderEverything();
+  }
+  catch (error) {
+    console.error("Tsuki saved the periods but could not refresh every screen:", error);
+  }
+
+  const skipped = rejected.length;
+  showToast(
+    `${accepted.length} past period${accepted.length === 1 ? "" : "s"} saved${skipped ? ` · ${skipped} skipped` : ""} 🌸`
+  );
 }
 
 document.querySelectorAll("[data-period-entry-mode]").forEach(button => {
@@ -2255,6 +2325,7 @@ document.getElementById("bulkPeriodLater")?.addEventListener("click", () => {
 
 document.getElementById("bulkPeriodClear")?.addEventListener("click", () => {
   bulkPeriodDrafts = new Map();
+  setBulkPeriodFeedback("");
   renderBulkPeriodMonths();
 });
 
