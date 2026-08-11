@@ -1,9 +1,9 @@
 /* ============================================================
-   TSUKI SERVICE WORKER — BUILD 5.2.1
-   Typical-cycle forecasts + 12-month calendar
+   TSUKI SERVICE WORKER — BUILD 6.1
+   Complete experience: calendar, check-in, insights, companion, backup & personalization
    ============================================================ */
 
-const CACHE_NAME = "tsuki-cache-v5-2-1";
+const CACHE_NAME = "tsuki-cache-v6-1";
 
 const APP_SHELL = [
   "./",
@@ -12,7 +12,8 @@ const APP_SHELL = [
   "./app.js",
   "./manifest.json",
   "./icons/icon-192.png",
-  "./icons/icon-512.png"
+  "./icons/icon-512.png",
+  "./assets/tsuki-companion.png"
 ];
 
 const UPDATE_FIRST = new Set([

@@ -90,6 +90,7 @@
         <button class="drawer-row" data-open-screen="past-moons"><span class="drawer-row-icon">🌕</span><span><strong>Past Moons</strong><small>Your completed cycle stories</small></span><b>›</b></button>
         <button class="drawer-row" data-open-screen="reports"><span class="drawer-row-icon">📊</span><span><strong>Reports</strong><small>Cycle summaries and trends</small></span><b>›</b></button>
         <button class="drawer-row" data-open-screen="moon-garden"><span class="drawer-row-icon">🌸</span><span><strong>Moon Garden</strong><small>One flower for each completed cycle</small></span><b>›</b></button>
+        <button class="drawer-row" data-open-screen="moon-year"><span class="drawer-row-icon">🌕</span><span><strong>My Moon Year</strong><small>Your cycles across the year</small></span><b>›</b></button>
       </section>
 
       <section class="drawer-group">
@@ -148,12 +149,14 @@
               Tsuki is still learning your timing
             </span>
 
-            <span
+            <button
+              type="button"
               id="predictionConfidence"
               class="confidence-badge confidence-low"
+              aria-label="Explain prediction confidence"
             >
               Low confidence
-            </span>
+            </button>
           </div>
 
           <span class="sakura">🌸</span>
@@ -187,16 +190,16 @@
 
       </div>
 
-      <button class="today-checkin-cta" data-open-screen="log">
+      <div id="todayCheckinSection" class="today-layout-section"><button class="today-checkin-cta" data-open-screen="log">
         <span class="today-checkin-icon">📝</span>
         <span class="today-checkin-copy">
           <small>YOUR CHECK-IN</small>
           <strong id="todayCheckinQuestion">How are you feeling today?</strong>
         </span>
         <span class="today-checkin-arrow">›</span>
-      </button>
+      </button></div>
 
-      <section class="section-block signature-today">
+      <section id="todayForecastSection" class="section-block signature-today today-layout-section">
 
         <div class="section-heading">
           <div>
@@ -224,7 +227,7 @@
 
       </section>
 
-      <section class="section-block">
+      <section id="todayInsightsSection" class="section-block today-layout-section">
 
         <div class="section-heading">
           <div>
@@ -241,7 +244,7 @@
 
       </section>
 
-      <section class="section-block companion-home-block">
+      <section id="todayCompanionSection" class="section-block companion-home-block today-layout-section">
         <div class="section-heading">
           <div>
             <p class="eyebrow">TSUKI COMPANION</p>
@@ -296,15 +299,7 @@
 
         </div>
 
-        <div class="calendar-weekdays">
-          <span>Sun</span>
-          <span>Mon</span>
-          <span>Tue</span>
-          <span>Wed</span>
-          <span>Thu</span>
-          <span>Fri</span>
-          <span>Sat</span>
-        </div>
+        <div id="calendarWeekdays" class="calendar-weekdays"></div>
 
         <div id="calendarGrid" class="calendar-grid"></div>
 
@@ -319,19 +314,25 @@
             Estimated
           </span>
 
-          <span>
-            <i class="legend-dot logged"></i>
-            Logged
-          </span>
+          <span><i class="legend-dot logged"></i>Logged</span>
+          <span><i class="legend-dot follicular"></i>Follicular</span>
+          <span><i class="legend-dot ovulation"></i>Est. ovulation</span>
+          <span><i class="legend-dot luteal"></i>Luteal</span>
         </div>
 
       </article>
 
-      <button
-        class="secondary-button"
-        data-open-screen="cycle-history"
-      >
-        🌙 Manage Cycle History
+      <div class="calendar-period-actions">
+        <button type="button" id="calendarLogPeriodButton" class="primary-button">
+          🩸 Log period
+        </button>
+        <button type="button" id="calendarBulkPeriodButton" class="secondary-button">
+          🗓️ Add previous months
+        </button>
+      </div>
+
+      <button type="button" class="calendar-history-link text-button" data-open-screen="cycle-history">
+        🌙 Manage / edit Cycle History
       </button>
 
       <article class="soft-note">
@@ -573,35 +574,44 @@
           <div class="choice-grid five">
 
             <label class="choice">
-              <input type="radio" name="mood" value="Happy">
+              <input type="checkbox" name="moodChoice" value="Happy">
               <span>😊</span>
               <small>Happy</small>
             </label>
 
             <label class="choice">
-              <input type="radio" name="mood" value="Calm">
+              <input type="checkbox" name="moodChoice" value="Calm">
               <span>😌</span>
               <small>Calm</small>
             </label>
 
             <label class="choice">
-              <input type="radio" name="mood" value="Okay">
+              <input type="checkbox" name="moodChoice" value="Okay">
               <span>🙂</span>
               <small>Okay</small>
             </label>
 
             <label class="choice">
-              <input type="radio" name="mood" value="Sad">
+              <input type="checkbox" name="moodChoice" value="Sad">
               <span>🥺</span>
               <small>Sad</small>
             </label>
 
             <label class="choice">
-              <input type="radio" name="mood" value="Irritable">
+              <input type="checkbox" name="moodChoice" value="Irritable">
               <span>😤</span>
               <small>Irritable</small>
             </label>
 
+          </div>
+
+          <div class="quick-intensity-row">
+            <span>Mood intensity</span>
+            <div class="segmented compact-segmented">
+              <label><input type="radio" name="moodIntensity" value="Light"><span>Light</span></label>
+              <label><input type="radio" name="moodIntensity" value="Medium"><span>Medium</span></label>
+              <label><input type="radio" name="moodIntensity" value="Strong"><span>Strong</span></label>
+            </div>
           </div>
 
         </article>
@@ -631,6 +641,9 @@
 
         </article>
 
+        <details id="logMoreDetails" class="log-more-details">
+          <summary><span>＋ More details</span><small>Sleep, tiny joy & notes</small></summary>
+
         <article class="card">
 
           <p class="card-label">Sleep</p>
@@ -653,8 +666,12 @@
             </label>
 
           </div>
+          <label class="field-label" for="sleepHours">Hours slept <span class="muted">(optional)</span></label>
+          <input id="sleepHours" class="input" type="number" inputmode="decimal" min="0" max="24" step="0.5" placeholder="e.g. 7.5">
 
         </article>
+
+        </details>
 
         <article class="card">
 
@@ -662,7 +679,7 @@
             Symptoms
           </p>
 
-          <div class="tag-checkbox-grid">
+          <div id="symptomChoiceGrid" class="tag-checkbox-grid">
 
             <label>
               <input type="checkbox" name="symptom" value="Bloating">
@@ -706,8 +723,17 @@
 
           </div>
 
+          <div id="customSymptomGrid" class="tag-checkbox-grid custom-symptom-grid"></div>
+          <div class="inline-add custom-symptom-add">
+            <input id="customSymptomInput" class="input" maxlength="30" placeholder="Add your own symptom…">
+            <button type="button" id="addCustomSymptom" class="round-button">+</button>
+          </div>
+          <div id="symptomSeverityList" class="symptom-severity-list"></div>
+
         </article>
 
+        <details id="logOptionalDetails" class="log-more-details">
+          <summary><span>＋ Notes & little things</span><small>Tiny joy and private notes</small></summary>
         <article class="card">
 
           <p class="card-label">Tiny joy</p>
@@ -735,13 +761,15 @@
           ></textarea>
 
         </article>
+        </details>
 
-        <button
-          type="submit"
-          class="primary-button"
+        <div class="sticky-log-actions">
+          <button type="button" id="deleteDailyLog" class="secondary-button danger-soft hidden">Delete check-in</button>
+          <button type="submit" class="primary-button"
         >
           Save today’s check-in 🌙
         </button>
+        </div>
 
       </form>
 
@@ -898,6 +926,31 @@
 
       </section>
 
+
+
+      <section class="section-block">
+        <div class="section-heading">
+          <div><p class="eyebrow">EXPLORE YOUR PATTERNS</p><h3>Personal cycle intelligence</h3></div>
+        </div>
+        <div class="advanced-insight-grid">
+          <article class="card advanced-insight-card"><p class="eyebrow">SAME MOON</p><div id="sameMoonInsight"></div></article>
+          <article class="card advanced-insight-card"><p class="eyebrow">I FEEL OFF</p><div id="feelOffInsight"></div></article>
+          <article class="card advanced-insight-card wide">
+            <p class="eyebrow">MOON LENS</p>
+            <label class="field-label">Look at a symptom</label>
+            <select id="moonLensSymptom" class="input"></select>
+            <div id="moonLensResult"></div>
+          </article>
+          <article class="card advanced-insight-card"><p class="eyebrow">SYMPTOM CHAINS</p><div id="symptomChains"></div></article>
+          <article class="card advanced-insight-card">
+            <p class="eyebrow">CYCLE FORKS</p>
+            <select id="cycleForkContext" class="input"></select>
+            <div id="cycleForkResult"></div>
+          </article>
+          <article class="card advanced-insight-card wide"><p class="eyebrow">ENERGY COMPASS</p><div id="energyCompass"></div></article>
+          <article class="card advanced-insight-card wide"><p class="eyebrow">PHASE HEATMAP</p><div id="phaseHeatmap"></div></article>
+        </div>
+      </section>
 
       <section class="section-block">
 
@@ -1228,9 +1281,20 @@
       </article>
 
       <section class="section-block">
-        <p class="eyebrow">TRIP × CYCLE</p>
+        <p class="eyebrow">FUTURE EVENTS × CYCLE</p>
         <article class="card">
-          <input id="tripName" class="input" placeholder="Trip or event name">
+          <label class="field-label">Event type</label>
+          <select id="tripType" class="input">
+            <option value="Trip">✈️ Trip</option>
+            <option value="Wedding">💍 Wedding</option>
+            <option value="Exam">📚 Exam</option>
+            <option value="Presentation">💼 Presentation</option>
+            <option value="Date">💗 Date</option>
+            <option value="Concert">🎵 Concert</option>
+            <option value="Vacation">🌸 Vacation</option>
+            <option value="Other">✨ Other</option>
+          </select>
+          <input id="tripName" class="input" placeholder="Name this event">
           <div class="trip-date-grid">
             <label>
               <small>Start</small>
@@ -1241,7 +1305,8 @@
               <input id="tripEnd" type="date" class="input">
             </label>
           </div>
-          <button id="saveTrip" class="primary-button small">Save trip / event</button>
+          <textarea id="tripNotes" class="textarea compact-textarea" placeholder="Anything you want to remember or prepare? (optional)"></textarea>
+          <button id="saveTrip" class="primary-button small">Save future event</button>
         </article>
         <div id="tripOverlay"></div>
       </section>
@@ -1329,23 +1394,10 @@
 
           <div id="moonRoomSpeech" class="moon-room-speech">I’m here 🌙</div>
 
-          <div id="tsukiCompanionBunny" class="tsuki-companion-bunny" aria-hidden="true">
-            <div class="bunny-ear ear-left"></div>
-            <div class="bunny-ear ear-right"></div>
-            <div class="bunny-head">
-              <div class="moon-clip"></div>
-              <span class="bunny-eye eye-left"></span>
-              <span class="bunny-eye eye-right"></span>
-              <span class="bunny-cheek cheek-left"></span>
-              <span class="bunny-cheek cheek-right"></span>
-              <span class="bunny-nose"></span>
-              <span class="bunny-mouth"></span>
-            </div>
-            <div class="bunny-body"></div>
-            <div class="bunny-paw paw-left"></div>
-            <div class="bunny-paw paw-right"></div>
-            <div class="bunny-foot foot-left"></div>
-            <div class="bunny-foot foot-right"></div>
+          <div id="tsukiCompanionBunny" class="tsuki-companion-bunny companion-png-wrap" aria-hidden="true">
+            <img class="companion-png" src="./assets/tsuki-companion.png" alt="">
+            <span id="companionRibbon" class="companion-accessory companion-ribbon hidden">🎀</span>
+            <span id="companionStarCharm" class="companion-accessory companion-star hidden">⭐</span>
           </div>
 
           <div class="room-prop prop-cushion"></div>
@@ -1408,6 +1460,11 @@
         <span>🌸</span>
       </div>
 
+      <article id="moonSeedCard" class="moon-seed-card hidden">
+        <span>🌱</span><div><strong>A Moon Seed is waiting</strong><small>A new completed cycle can be celebrated in your garden.</small></div>
+        <button type="button" id="plantMoonSeed" class="secondary-button small">Plant seed</button>
+      </article>
+
       <article class="soft-note" id="moonGardenSummary">
         Each completed cycle becomes one flower. Flowers do not mean good or bad cycles. They simply help you remember your moons.
       </article>
@@ -1416,6 +1473,16 @@
 
       <article id="moonGardenDetail" class="card moon-garden-detail hidden"></article>
 
+    </section>
+
+
+    <!-- MOON YEAR -->
+    <section class="screen" data-screen="moon-year">
+      <button class="back-button" data-open-screen="moon-garden">← Back</button>
+      <div class="page-title"><div><p class="eyebrow">MY MOON YEAR</p><h2>Your year in moons</h2></div><span>🌕</span></div>
+      <article class="card moon-year-controls"><label class="field-label">Year</label><select id="moonYearSelect" class="input"></select></article>
+      <div id="moonYearSummary" class="moon-year-summary"></div>
+      <div id="moonYearGrid" class="moon-year-grid"></div>
     </section>
 
 
@@ -1461,8 +1528,13 @@
           value="5"
         >
 
+        <label class="field-label">Prediction method</label>
+        <select id="predictionMode" class="input">
+          <option value="typical">Use my Typical Cycle Length</option>
+          <option value="recentAverage">Use recent-cycle average</option>
+        </select>
         <p class="muted small-text">
-          Typical cycle length controls Tsuki’s future period predictions. Your historical average is still shown in Reports and Insights. Typical period length controls how many days are preselected when you add a new period.
+          Typical Cycle Length remains the default. Recent-average mode uses up to your last 3 valid completed cycles. Historical averages are always available in Reports and Insights.
         </p>
 
         <button
@@ -1482,6 +1554,9 @@
           <span>🎨 Appearance</span>
           <span class="settings-row-value"><span id="appearanceSummary">Sakura Pink</span> ›</span>
         </button>
+        <button class="settings-row" id="openTodayCustomize">
+          <span>🏠 Customize Today</span><span>›</span>
+        </button>
 
       </article>
 
@@ -1499,10 +1574,11 @@
           <span>›</span>
         </button>
 
-        <button class="settings-row" id="exportData">
-          <span>📦 Export backup</span>
-          <span>›</span>
-        </button>
+        <button class="settings-row" id="exportData"><span>📦 Export backup</span><span>›</span></button>
+        <button class="settings-row" id="restoreData"><span>📥 Restore backup</span><span>›</span></button>
+        <input id="restoreDataInput" class="hidden" type="file" accept="application/json,.json">
+        <div class="settings-subnote" id="lastBackupText">No backup created on this device yet.</div>
+        <article id="recoveryNotice" class="soft-note hidden">⚠️ Tsuki recovered from a damaged local data copy. Restore a backup if anything looks missing.</article>
 
         <label class="settings-row">
           <span>🌸 Sakura accents</span>
@@ -1633,6 +1709,7 @@
           </label>
 
           <button type="button" id="lockNowButton" class="secondary-button full-width">Lock Tsuki now</button>
+          <button type="button" id="resetAppLockButton" class="text-button danger-text full-width">Turn off & reset PIN</button>
         </div>
 
         <p class="muted small-text app-lock-footnote">This is a local privacy screen for casual access protection. It does not encrypt Tsuki's stored data.</p>
@@ -1662,6 +1739,83 @@
 
   </main>
 
+
+
+  <!-- QUICK PERIOD ENTRY MODAL -->
+  <div id="quickPeriodModal" class="app-modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="quickPeriodTitle">
+    <section class="app-modal quick-period-modal">
+      <div class="modal-grabber"></div>
+      <div class="app-modal-header">
+        <div>
+          <p class="eyebrow">PERIOD LOG</p>
+          <h2 id="quickPeriodTitle">Log your period</h2>
+        </div>
+        <button type="button" id="closeQuickPeriod" class="modal-close" aria-label="Close period logger">×</button>
+      </div>
+
+      <div class="quick-period-tabs" role="tablist" aria-label="Period entry type">
+        <button type="button" class="quick-period-tab active" data-period-entry-mode="single">One period</button>
+        <button type="button" class="quick-period-tab" data-period-entry-mode="bulk">Previous months</button>
+      </div>
+
+      <section id="quickPeriodSinglePanel" class="quick-period-panel">
+        <div class="quick-period-help">
+          <span id="quickPeriodDefaultBadge">5-day default</span>
+          <p>Tap the first day. Tsuki automatically marks your usual period length. Tap another day to change the start.</p>
+        </div>
+
+        <div class="quick-period-month-nav">
+          <button type="button" id="quickPeriodPreviousMonth" class="icon-button" aria-label="Previous month">‹</button>
+          <h3 id="quickPeriodMonthTitle">Month</h3>
+          <button type="button" id="quickPeriodNextMonth" class="icon-button" aria-label="Next month">›</button>
+        </div>
+        <div class="period-picker-weekdays quick-period-weekdays">
+          <span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span>
+        </div>
+        <div id="quickPeriodSingleGrid" class="period-picker-grid quick-period-single-grid"></div>
+
+        <div class="quick-period-selection">
+          <div>
+            <small>Selected</small>
+            <strong id="quickPeriodSingleSummary">Tap the first day of your period</strong>
+          </div>
+          <button type="button" id="quickPeriodClearSingle" class="text-button">Clear</button>
+        </div>
+
+        <button type="button" id="quickPeriodSaveSingle" class="primary-button full-width" disabled>Save period</button>
+      </section>
+
+      <section id="quickPeriodBulkPanel" class="quick-period-panel hidden">
+        <div class="quick-period-help bulk-help">
+          <span id="bulkPeriodDefaultBadge">5-day default</span>
+          <p>Enter several past periods at once. Tap the start date in every month you remember. Months that already have a saved period are left alone.</p>
+        </div>
+
+        <div class="bulk-period-toolbar">
+          <button type="button" id="bulkPeriodEarlier" class="secondary-button compact">← Earlier</button>
+          <div>
+            <small>Showing</small>
+            <strong id="bulkPeriodRangeLabel">Previous 12 months</strong>
+          </div>
+          <button type="button" id="bulkPeriodLater" class="secondary-button compact">Later →</button>
+        </div>
+
+        <div id="bulkPeriodMonths" class="bulk-period-months"></div>
+
+        <div class="bulk-period-footer">
+          <div>
+            <small>Ready to add</small>
+            <strong id="bulkPeriodCount">0 periods</strong>
+          </div>
+          <button type="button" id="bulkPeriodClear" class="text-button">Clear selections</button>
+        </div>
+
+        <button type="button" id="bulkPeriodSave" class="primary-button full-width" disabled>Save selected periods</button>
+      </section>
+
+      <button type="button" id="quickPeriodManageHistory" class="text-button quick-period-history-link">Need to edit dates or add context? Open Cycle History →</button>
+    </section>
+  </div>
 
   <!-- PERIOD CALENDAR MODAL -->
   <div id="periodCalendarModal" class="app-modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="periodCalendarTitle">
@@ -1741,6 +1895,10 @@
             <span class="theme-swatch swatch-yellow"></span><strong>Soft Yellow</strong><span class="theme-check">✓</span>
           </button>
         </div>
+        <div class="appearance-mini-grid">
+          <label><span class="field-label">Custom accent</span><input id="customAccentColor" type="color" value="#d95788" class="color-input"></label>
+          <label class="wallpaper-toggle-row compact-toggle"><span><strong>Seasonal room accents</strong><small>Small month-based Moon Room details.</small></span><input id="seasonalRoomToggle" type="checkbox" checked></label>
+        </div>
       </article>
 
       <article class="appearance-section">
@@ -1765,6 +1923,12 @@
         </label>
 
         <div class="wallpaper-overlay-control">
+          <p class="field-label">Wallpaper position</p>
+          <div class="overlay-option-row wallpaper-position-row">
+            <button type="button" class="wallpaper-position-option" data-wallpaper-position="top">Top</button>
+            <button type="button" class="wallpaper-position-option" data-wallpaper-position="center">Center</button>
+            <button type="button" class="wallpaper-position-option" data-wallpaper-position="bottom">Bottom</button>
+          </div>
           <p class="field-label">Overlay strength</p>
           <div class="overlay-option-row">
             <button type="button" class="overlay-option" data-overlay="light">Light</button>
@@ -1778,6 +1942,36 @@
 
       <button type="button" id="resetAppearance" class="secondary-button full-width">Reset Appearance</button>
       <button type="button" id="appearanceDone" class="primary-button full-width">Done</button>
+    </section>
+  </div>
+
+
+  <!-- CALENDAR DAY DETAIL -->
+  <div id="dayDetailBackdrop" class="quick-sheet-backdrop hidden" aria-hidden="true"></div>
+  <section id="dayDetailSheet" class="quick-sheet day-detail-sheet" aria-hidden="true" aria-label="Day details">
+    <div class="quick-sheet-grabber"></div>
+    <div class="quick-sheet-header"><div><p class="eyebrow">DAY DETAILS</p><h2 id="dayDetailTitle">Selected day</h2></div><button type="button" id="closeDayDetail" class="quick-sheet-close">×</button></div>
+    <div id="dayDetailContent"></div>
+    <div class="day-detail-actions"><button type="button" id="dayDetailLogButton" class="primary-button">📝 Check in / edit</button><button type="button" id="dayDetailPeriodButton" class="secondary-button">🩸 Log period</button></div>
+  </section>
+
+  <!-- PREDICTION EXPLANATION -->
+  <div id="predictionInfoModal" class="app-modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="predictionInfoTitle">
+    <section class="app-modal compact-modal"><div class="modal-grabber"></div><div class="app-modal-header"><div><p class="eyebrow">PREDICTION CONFIDENCE</p><h2 id="predictionInfoTitle">Why am I seeing this?</h2></div><button type="button" id="closePredictionInfo" class="modal-close">×</button></div><div id="predictionInfoContent" class="prediction-info-content"></div><button type="button" id="predictionInfoDone" class="primary-button full-width">Done</button></section>
+  </div>
+
+  <!-- RESTORE BACKUP PREVIEW -->
+  <div id="restorePreviewModal" class="app-modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="restorePreviewTitle">
+    <section class="app-modal compact-modal"><div class="modal-grabber"></div><div class="app-modal-header"><div><p class="eyebrow">RESTORE BACKUP</p><h2 id="restorePreviewTitle">Check this backup</h2></div><button type="button" id="closeRestorePreview" class="modal-close">×</button></div><div id="restorePreviewContent"></div><div class="modal-action-row"><button type="button" id="cancelRestore" class="secondary-button">Cancel</button><button type="button" id="confirmRestore" class="primary-button">Replace current data</button></div></section>
+  </div>
+
+  <!-- CUSTOMIZE TODAY -->
+  <div id="todayCustomizeModal" class="app-modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="todayCustomizeTitle">
+    <section class="app-modal compact-modal"><div class="modal-grabber"></div><div class="app-modal-header"><div><p class="eyebrow">PERSONALIZE</p><h2 id="todayCustomizeTitle">Customize Today</h2></div><button type="button" id="closeTodayCustomize" class="modal-close">×</button></div>
+      <label class="field-label">Custom greeting <span class="muted">(optional)</span></label><input id="customGreetingInput" class="input" maxlength="40" placeholder="e.g. Welcome back 🌸">
+      <div class="customize-grid"><label><span class="field-label">Week starts</span><select id="weekStartSelect" class="input"><option value="sunday">Sunday</option><option value="monday">Monday</option></select></label><label><span class="field-label">Text size</span><select id="textSizeSelect" class="input"><option value="small">Small</option><option value="normal">Normal</option><option value="large">Large</option></select></label><label><span class="field-label">Layout density</span><select id="densitySelect" class="input"><option value="comfortable">Comfortable</option><option value="compact">Compact</option></select></label></div>
+      <p class="field-label">Today sections</p><div id="todaySectionSettings" class="today-section-settings"></div>
+      <button type="button" id="saveTodayCustomize" class="primary-button full-width">Save Today layout</button>
     </section>
   </div>
 

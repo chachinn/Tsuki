@@ -141,7 +141,7 @@ function standardDeviation(numbers) {
 
 const defaultData = {
 
-  schemaVersion: 4,
+  schemaVersion: 6,
 
   settings: {
     cycleLength: 28,
@@ -153,7 +153,17 @@ const defaultData = {
     quietInterface: false,
     theme: "sakura",
     wallpaperEnabled: false,
-    wallpaperOverlay: "medium"
+    wallpaperOverlay: "medium",
+    wallpaperPosition: "center",
+    predictionMode: "typical",
+    weekStart: "sunday",
+    textSize: "normal",
+    density: "comfortable",
+    customAccent: "",
+    customGreeting: "",
+    seasonalRoom: true,
+    todayOrder: ["checkin", "forecast", "insights", "companion"],
+    todayHidden: []
   },
 
   periods: [],
@@ -165,6 +175,12 @@ const defaultData = {
   journal: [],
 
   trips: [],
+
+  customSymptoms: [],
+
+  gardenState: { plantedCycleIds: [] },
+
+  meta: { lastBackupAt: "" },
 
   careProfile: {
     options: [],
@@ -225,7 +241,7 @@ function normalizeData(parsed) {
   return {
     ...clone(defaultData),
     ...(parsed || {}),
-    schemaVersion: 4,
+    schemaVersion: 6,
     settings: {
       ...defaultData.settings,
       ...(parsed?.settings || {})
@@ -241,9 +257,16 @@ function normalizeData(parsed) {
     journal:
       parsed?.journal || [],
     trips:
-      Array.isArray(parsed?.trips)
-        ? parsed.trips
-        : [],
+      Array.isArray(parsed?.trips) ? parsed.trips : [],
+    customSymptoms:
+      Array.isArray(parsed?.customSymptoms) ? parsed.customSymptoms : [],
+    gardenState: {
+      plantedCycleIds: Array.isArray(parsed?.gardenState?.plantedCycleIds) ? parsed.gardenState.plantedCycleIds : []
+    },
+    meta: {
+      ...defaultData.meta,
+      ...(parsed?.meta || {})
+    },
     careProfile: {
       ...defaultData.careProfile,
       ...(parsed?.careProfile || {}),
@@ -273,7 +296,7 @@ function migrateBuild1(oldData) {
   const migrated = {
     ...clone(defaultData),
     ...oldData,
-    schemaVersion: 4,
+    schemaVersion: 6,
     settings: {
       ...defaultData.settings,
       ...(oldData.settings || {})
@@ -397,18 +420,19 @@ function loadData() {
     return clone(defaultData);
   }
   catch (error) {
-    console.error(
-      "Could not load Tsuki data:",
-      error
-    );
-
+    console.error("Could not load Tsuki data:", error);
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) localStorage.setItem("tsuki-recovery-raw-v1", raw);
+      localStorage.setItem("tsuki-recovery-needed", "1");
+    } catch (_) {}
     return clone(defaultData);
   }
 }
 
 
 function saveData() {
-  data.schemaVersion = 4;
+  data.schemaVersion = 6;
 
   localStorage.setItem(
     STORAGE_KEY,
@@ -737,7 +761,7 @@ function cycleTimingForDate(dateValue) {
   const nextSaved = periods[anchorIndex + 1];
   const nextStart = nextSaved
     ? parseDate(nextSaved.start)
-    : addDays(start, typicalCycleLength());
+    : addDays(start, forecastCycleLength());
 
   if (!start || !nextStart) return null;
 
@@ -795,9 +819,21 @@ function periodCountdownText() {
   if (difference === 0) return "Period expected today";
 
   const lateBy = Math.abs(difference);
-  return `Expected date passed ${lateBy} day${lateBy === 1 ? "" : "s"} ago`;
+  return `Period is ${lateBy} day${lateBy === 1 ? "" : "s"} later than expected`;
 }
 
+
+function recentAverageCycleLength() {
+  const intervals = cycleIntervals().slice(-3);
+  if (!intervals.length) return typicalCycleLength();
+  return Math.max(15, Math.min(60, Math.round(average(intervals))));
+}
+
+function forecastCycleLength() {
+  return data.settings.predictionMode === "recentAverage"
+    ? recentAverageCycleLength()
+    : typicalCycleLength();
+}
 
 function nextEstimatedPeriodDate() {
   const period =
@@ -810,7 +846,7 @@ function nextEstimatedPeriodDate() {
 
   return addDays(
     start,
-    typicalCycleLength()
+    forecastCycleLength()
   );
 }
 
@@ -848,7 +884,7 @@ function calendarPredictionWindows(monthsAhead = 12) {
   const anchor = parseDate(period.start);
   if (!anchor) return [];
 
-  const cycleLength = typicalCycleLength();
+  const cycleLength = forecastCycleLength();
   const padding = predictionPaddingDays();
   const horizon = new Date(anchor.getFullYear(), anchor.getMonth() + monthsAhead, anchor.getDate());
   const windows = [];
@@ -989,6 +1025,7 @@ function showScreen(name) {
   if (name === "care-profile") renderCareProfile();
   if (name === "moon-room") renderMoonRoom();
   if (name === "moon-garden") renderMoonGarden();
+  if (name === "moon-year") renderMoonYear();
 }
 
 
@@ -1093,9 +1130,7 @@ document.querySelectorAll("[data-quick-add]").forEach(button => {
     closeQuickAdd();
 
     if (action === "period") {
-      resetPeriodForm();
-      showScreen("cycle-history");
-      requestAnimationFrame(openPeriodCalendar);
+      openQuickPeriodEntry("single", todayKey());
       return;
     }
 
@@ -1124,6 +1159,7 @@ document.addEventListener("keydown", event => {
   if (event.key !== "Escape") return;
   closeAppDrawer();
   closeQuickAdd();
+  closeQuickPeriodEntry();
 });
 
 /* ============================================================
@@ -1857,6 +1893,378 @@ function renderCycleHistory() {
 
 
 
+
+/* ============================================================
+   BUILD 6.1 — FAST PERIOD ENTRY + BULK HISTORY
+   ============================================================ */
+
+let quickPeriodEntryMode = "single";
+let quickPeriodSingleAnchor = new Date();
+let quickPeriodSingleStart = "";
+let quickPeriodSingleEnd = "";
+let quickPeriodSingleEditingId = "";
+let bulkPeriodAnchor = new Date();
+let bulkPeriodDrafts = new Map();
+
+function sameMonth(dateA, dateB) {
+  return Boolean(dateA && dateB) &&
+    dateA.getFullYear() === dateB.getFullYear() &&
+    dateA.getMonth() === dateB.getMonth();
+}
+
+function monthKeyFromDate(date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function periodStartingInMonth(year, month) {
+  return data.periods.find(period => {
+    const start = parseDate(period.start);
+    return start && start.getFullYear() === year && start.getMonth() === month;
+  }) || null;
+}
+
+function quickPeriodSelectionError(start, end, ignoreId = "", extraPeriods = []) {
+  const basic = validatePeriodDates(start, end);
+  if (basic) return basic;
+
+  const startDate = parseDate(start);
+  const endDate = parseDate(end);
+  const candidates = [
+    ...data.periods.filter(period => period.id !== ignoreId),
+    ...extraPeriods
+  ];
+
+  const overlap = candidates.find(period => {
+    const existingStart = parseDate(period.start);
+    const existingEnd = parseDate(period.end || ensurePeriodEnd(period.start));
+    return existingStart && existingEnd && startDate <= existingEnd && endDate >= existingStart;
+  });
+
+  return overlap ? "Those dates overlap another saved period." : "";
+}
+
+function setQuickPeriodEntryMode(mode) {
+  quickPeriodEntryMode = mode === "bulk" ? "bulk" : "single";
+  document.querySelectorAll("[data-period-entry-mode]").forEach(button => {
+    button.classList.toggle("active", button.dataset.periodEntryMode === quickPeriodEntryMode);
+  });
+  document.getElementById("quickPeriodSinglePanel")?.classList.toggle("hidden", quickPeriodEntryMode !== "single");
+  document.getElementById("quickPeriodBulkPanel")?.classList.toggle("hidden", quickPeriodEntryMode !== "bulk");
+  document.getElementById("quickPeriodTitle").textContent = quickPeriodEntryMode === "bulk" ? "Add previous periods" : "Log your period";
+
+  if (quickPeriodEntryMode === "single") renderQuickPeriodSingle();
+  else renderBulkPeriodMonths();
+}
+
+function openQuickPeriodEntry(mode = "single", initialDate = "") {
+  const modal = document.getElementById("quickPeriodModal");
+  if (!modal) return;
+
+  const initial = parseDate(initialDate) || new Date(calendarDate.getFullYear(), calendarDate.getMonth(), 1);
+  quickPeriodSingleAnchor = new Date(initial.getFullYear(), initial.getMonth(), 1);
+  bulkPeriodAnchor = new Date(initial.getFullYear(), initial.getMonth(), 1);
+  if (bulkPeriodAnchor > new Date()) bulkPeriodAnchor = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+
+  quickPeriodSingleStart = "";
+  quickPeriodSingleEnd = "";
+  quickPeriodSingleEditingId = "";
+  bulkPeriodDrafts = new Map();
+
+  if (initialDate) {
+    const existing = periodForDate(initialDate);
+    if (existing) {
+      quickPeriodSingleEditingId = existing.id;
+      quickPeriodSingleStart = existing.start;
+      quickPeriodSingleEnd = existing.end || ensurePeriodEnd(existing.start);
+      const existingStart = parseDate(existing.start);
+      if (existingStart) quickPeriodSingleAnchor = new Date(existingStart.getFullYear(), existingStart.getMonth(), 1);
+    }
+  }
+
+  const length = configuredPeriodLength();
+  document.getElementById("quickPeriodDefaultBadge").textContent = `${length}-day default`;
+  document.getElementById("bulkPeriodDefaultBadge").textContent = `${length}-day default`;
+
+  setQuickPeriodEntryMode(mode);
+  modal.classList.remove("hidden");
+  document.body.classList.add("modal-open");
+}
+
+function closeQuickPeriodEntry() {
+  document.getElementById("quickPeriodModal")?.classList.add("hidden");
+  document.body.classList.remove("modal-open");
+}
+
+function renderQuickPeriodSingle() {
+  const title = document.getElementById("quickPeriodMonthTitle");
+  const grid = document.getElementById("quickPeriodSingleGrid");
+  const summary = document.getElementById("quickPeriodSingleSummary");
+  const saveButton = document.getElementById("quickPeriodSaveSingle");
+  if (!title || !grid || !summary || !saveButton) return;
+
+  const year = quickPeriodSingleAnchor.getFullYear();
+  const month = quickPeriodSingleAnchor.getMonth();
+  title.textContent = quickPeriodSingleAnchor.toLocaleDateString(undefined, { month: "long", year: "numeric" });
+
+  const firstDay = new Date(year, month, 1).getDay();
+  const days = new Date(year, month + 1, 0).getDate();
+  const blanks = Array.from({ length: firstDay }, () => "<span></span>").join("");
+  const selectedStart = parseDate(quickPeriodSingleStart);
+  const selectedEnd = parseDate(quickPeriodSingleEnd);
+  const today = parseDate(todayKey());
+
+  const buttons = Array.from({ length: days }, (_, index) => {
+    const date = new Date(year, month, index + 1);
+    const key = dateKey(date);
+    const existing = periodForDate(key);
+    const classes = ["period-picker-day", "quick-period-day"];
+    const isFuture = date > today;
+
+    if (key === todayKey()) classes.push("today");
+    if (existing) classes.push("saved-period");
+    if (selectedStart && selectedEnd && dateWithin(date, selectedStart, selectedEnd)) classes.push("draft-period");
+    if (key === quickPeriodSingleStart) classes.push("draft-start");
+    if (key === quickPeriodSingleEnd) classes.push("draft-end");
+
+    return `<button type="button" class="${classes.join(" ")}" data-quick-period-date="${key}" ${isFuture ? "disabled" : ""}>${index + 1}</button>`;
+  }).join("");
+
+  grid.innerHTML = blanks + buttons;
+  grid.querySelectorAll("[data-quick-period-date]").forEach(button => {
+    button.addEventListener("click", () => selectQuickPeriodSingleDate(button.dataset.quickPeriodDate));
+  });
+
+  summary.textContent = quickPeriodSingleStart
+    ? formatPeriodRange(quickPeriodSingleStart, quickPeriodSingleEnd)
+    : "Tap the first day of your period";
+  saveButton.disabled = !quickPeriodSingleStart;
+  saveButton.textContent = quickPeriodSingleEditingId ? "Update period" : "Save period";
+}
+
+function selectQuickPeriodSingleDate(key) {
+  const existing = periodForDate(key);
+  if (existing) {
+    quickPeriodSingleEditingId = existing.id;
+    quickPeriodSingleStart = existing.start;
+    quickPeriodSingleEnd = existing.end || ensurePeriodEnd(existing.start);
+  } else {
+    quickPeriodSingleEditingId = "";
+    quickPeriodSingleStart = key;
+    quickPeriodSingleEnd = ensurePeriodEnd(key);
+  }
+  renderQuickPeriodSingle();
+}
+
+function saveQuickPeriodSingle() {
+  if (!quickPeriodSingleStart) return;
+  const end = quickPeriodSingleEnd || ensurePeriodEnd(quickPeriodSingleStart);
+  const error = quickPeriodSelectionError(quickPeriodSingleStart, end, quickPeriodSingleEditingId);
+  if (error) {
+    showToast(error);
+    return;
+  }
+
+  if (quickPeriodSingleEditingId) {
+    const period = data.periods.find(item => item.id === quickPeriodSingleEditingId);
+    if (period) {
+      period.start = quickPeriodSingleStart;
+      period.end = end;
+    }
+  } else {
+    data.periods.push({
+      id: uid(),
+      start: quickPeriodSingleStart,
+      end,
+      context: "",
+      nextMoonNote: ""
+    });
+  }
+
+  saveData();
+  renderEverything();
+  closeQuickPeriodEntry();
+  showToast(quickPeriodSingleEditingId ? "Period updated 🌙" : "Period saved 🌸");
+}
+
+function bulkPeriodWindowMonths() {
+  const anchor = new Date(bulkPeriodAnchor.getFullYear(), bulkPeriodAnchor.getMonth(), 1);
+  return Array.from({ length: 12 }, (_, index) => new Date(anchor.getFullYear(), anchor.getMonth() - 11 + index, 1));
+}
+
+function bulkPeriodMonthHTML(monthDate) {
+  const year = monthDate.getFullYear();
+  const month = monthDate.getMonth();
+  const key = monthKeyFromDate(monthDate);
+  const existing = periodStartingInMonth(year, month);
+  const draftStart = bulkPeriodDrafts.get(key) || "";
+  const draftEnd = draftStart ? ensurePeriodEnd(draftStart) : "";
+  const firstDay = new Date(year, month, 1).getDay();
+  const days = new Date(year, month + 1, 0).getDate();
+  const today = parseDate(todayKey());
+  const blanks = Array.from({ length: firstDay }, () => "<span></span>").join("");
+  const selectedStart = parseDate(draftStart);
+  const selectedEnd = parseDate(draftEnd);
+
+  const dayButtons = Array.from({ length: days }, (_, index) => {
+    const date = new Date(year, month, index + 1);
+    const dateValue = dateKey(date);
+    const classes = ["period-picker-day", "bulk-period-day"];
+    if (date > today) classes.push("future");
+    if (existing && dateWithin(date, parseDate(existing.start), parseDate(existing.end || ensurePeriodEnd(existing.start)))) classes.push("saved-period");
+    if (!existing && selectedStart && selectedEnd && dateWithin(date, selectedStart, selectedEnd)) classes.push("draft-period");
+    if (dateValue === draftStart) classes.push("draft-start");
+    if (dateValue === draftEnd) classes.push("draft-end");
+    const disabled = date > today || Boolean(existing);
+    return `<button type="button" class="${classes.join(" ")}" data-bulk-period-date="${dateValue}" data-bulk-month="${key}" ${disabled ? "disabled" : ""}>${index + 1}</button>`;
+  }).join("");
+
+  const status = existing
+    ? `<span class="bulk-month-status saved">Saved · ${formatPeriodRange(existing.start, existing.end || ensurePeriodEnd(existing.start))}</span>`
+    : draftStart
+      ? `<span class="bulk-month-status selected">Selected · ${formatPeriodRange(draftStart, draftEnd)}</span>`
+      : `<span class="bulk-month-status">Tap the first day</span>`;
+
+  return `
+    <section class="bulk-period-month ${existing ? "has-saved-period" : ""}" data-bulk-period-month="${key}">
+      <div class="bulk-period-month-header">
+        <h4>${monthDate.toLocaleDateString(undefined, { month: "long", year: "numeric" })}</h4>
+        ${status}
+      </div>
+      <div class="period-picker-weekdays"><span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span></div>
+      <div class="period-picker-grid">${blanks}${dayButtons}</div>
+    </section>`;
+}
+
+function renderBulkPeriodMonths() {
+  const container = document.getElementById("bulkPeriodMonths");
+  const count = document.getElementById("bulkPeriodCount");
+  const saveButton = document.getElementById("bulkPeriodSave");
+  const range = document.getElementById("bulkPeriodRangeLabel");
+  const later = document.getElementById("bulkPeriodLater");
+  if (!container || !count || !saveButton || !range) return;
+
+  const months = bulkPeriodWindowMonths();
+  const first = months[0];
+  const last = months[months.length - 1];
+  range.textContent = `${first.toLocaleDateString(undefined, { month: "short", year: "numeric" })} – ${last.toLocaleDateString(undefined, { month: "short", year: "numeric" })}`;
+  container.innerHTML = months.map(bulkPeriodMonthHTML).join("");
+
+  container.querySelectorAll("[data-bulk-period-date]").forEach(button => {
+    button.addEventListener("click", () => {
+      bulkPeriodDrafts.set(button.dataset.bulkMonth, button.dataset.bulkPeriodDate);
+      renderBulkPeriodMonths();
+      requestAnimationFrame(() => {
+        container.querySelector(`[data-bulk-period-month="${button.dataset.bulkMonth}"]`)?.scrollIntoView({ block: "center" });
+      });
+    });
+  });
+
+  const selected = bulkPeriodDrafts.size;
+  count.textContent = `${selected} period${selected === 1 ? "" : "s"}`;
+  saveButton.disabled = selected === 0;
+  saveButton.textContent = selected ? `Save ${selected} period${selected === 1 ? "" : "s"}` : "Save selected periods";
+
+  const currentMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+  if (later) later.disabled = bulkPeriodAnchor >= currentMonth;
+}
+
+function saveBulkPeriods() {
+  if (!bulkPeriodDrafts.size) return;
+
+  const drafts = Array.from(bulkPeriodDrafts.values())
+    .map(start => ({
+      id: uid(),
+      start,
+      end: ensurePeriodEnd(start),
+      context: "",
+      nextMoonNote: ""
+    }))
+    .sort((a, b) => parseDate(a.start) - parseDate(b.start));
+
+  const accepted = [];
+  for (const period of drafts) {
+    const duplicateMonth = periodStartingInMonth(parseDate(period.start).getFullYear(), parseDate(period.start).getMonth());
+    if (duplicateMonth) {
+      showToast(`${formatDateLong(parseDate(period.start))}: that month already has a saved period.`);
+      return;
+    }
+    const error = quickPeriodSelectionError(period.start, period.end, "", accepted);
+    if (error) {
+      showToast(`${formatDateLong(parseDate(period.start))}: ${error}`);
+      return;
+    }
+    accepted.push(period);
+  }
+
+  data.periods.push(...accepted);
+  saveData();
+  renderEverything();
+  closeQuickPeriodEntry();
+  showToast(`${accepted.length} past period${accepted.length === 1 ? "" : "s"} saved 🌸`);
+}
+
+document.querySelectorAll("[data-period-entry-mode]").forEach(button => {
+  button.addEventListener("click", () => setQuickPeriodEntryMode(button.dataset.periodEntryMode));
+});
+
+document.getElementById("closeQuickPeriod")?.addEventListener("click", closeQuickPeriodEntry);
+document.getElementById("quickPeriodModal")?.addEventListener("click", event => {
+  if (event.target.id === "quickPeriodModal") closeQuickPeriodEntry();
+});
+
+document.getElementById("calendarLogPeriodButton")?.addEventListener("click", () => {
+  openQuickPeriodEntry("single", dateKey(new Date(calendarDate.getFullYear(), calendarDate.getMonth(), Math.min(new Date().getDate(), new Date(calendarDate.getFullYear(), calendarDate.getMonth() + 1, 0).getDate()))));
+});
+
+document.getElementById("calendarBulkPeriodButton")?.addEventListener("click", () => {
+  openQuickPeriodEntry("bulk", dateKey(new Date(calendarDate.getFullYear(), calendarDate.getMonth(), 1)));
+});
+
+document.getElementById("quickPeriodPreviousMonth")?.addEventListener("click", () => {
+  quickPeriodSingleAnchor.setMonth(quickPeriodSingleAnchor.getMonth() - 1);
+  renderQuickPeriodSingle();
+});
+
+document.getElementById("quickPeriodNextMonth")?.addEventListener("click", () => {
+  const next = new Date(quickPeriodSingleAnchor.getFullYear(), quickPeriodSingleAnchor.getMonth() + 1, 1);
+  const current = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+  if (next <= current) quickPeriodSingleAnchor = next;
+  renderQuickPeriodSingle();
+});
+
+document.getElementById("quickPeriodClearSingle")?.addEventListener("click", () => {
+  quickPeriodSingleStart = "";
+  quickPeriodSingleEnd = "";
+  quickPeriodSingleEditingId = "";
+  renderQuickPeriodSingle();
+});
+
+document.getElementById("quickPeriodSaveSingle")?.addEventListener("click", saveQuickPeriodSingle);
+
+document.getElementById("bulkPeriodEarlier")?.addEventListener("click", () => {
+  bulkPeriodAnchor.setMonth(bulkPeriodAnchor.getMonth() - 12);
+  renderBulkPeriodMonths();
+});
+
+document.getElementById("bulkPeriodLater")?.addEventListener("click", () => {
+  const current = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+  const candidate = new Date(bulkPeriodAnchor.getFullYear(), bulkPeriodAnchor.getMonth() + 12, 1);
+  bulkPeriodAnchor = candidate > current ? current : candidate;
+  renderBulkPeriodMonths();
+});
+
+document.getElementById("bulkPeriodClear")?.addEventListener("click", () => {
+  bulkPeriodDrafts = new Map();
+  renderBulkPeriodMonths();
+});
+
+document.getElementById("bulkPeriodSave")?.addEventListener("click", saveBulkPeriods);
+
+document.getElementById("quickPeriodManageHistory")?.addEventListener("click", () => {
+  closeQuickPeriodEntry();
+  showScreen("cycle-history");
+});
+
 /* ============================================================
    SCROLLABLE PERIOD CALENDAR
    ============================================================ */
@@ -2279,13 +2687,17 @@ function loadLogForm() {
   const phase = renderLogPhaseUI();
 
   [
-    "flow", "mood", "energy", "sleep",
+    "flow", "moodIntensity", "energy", "sleep",
     "focus", "motivation", "discharge", "libido", "ovulationDiscomfort",
     "stress", "appetite", "cravingIntensity"
   ].forEach(clearRadioGroup);
 
   setCheckedValue("flow", saved.flow);
-  setCheckedValue("mood", saved.mood);
+  document.querySelectorAll('input[name="moodChoice"]').forEach(input => {
+    const moods = Array.isArray(saved.moods) ? saved.moods : (saved.mood ? [saved.mood] : []);
+    input.checked = moods.includes(input.value);
+  });
+  setCheckedValue("moodIntensity", saved.moodIntensity);
   setCheckedValue("energy", saved.energy);
   setCheckedValue("sleep", saved.sleep);
   setCheckedValue("focus", saved.focus);
@@ -2297,18 +2709,82 @@ function loadLogForm() {
   setCheckedValue("appetite", saved.appetite);
   setCheckedValue("cravingIntensity", saved.cravingIntensity);
 
+  renderCustomSymptoms(saved.symptoms || []);
   document.querySelectorAll('input[name="symptom"]').forEach(input => {
     input.checked = saved.symptoms?.includes(input.value) || false;
   });
+  renderSymptomSeverityControls(saved.symptomSeverity || {});
 
   painLevel.value = saved.pain || 0;
   document.getElementById("painOutput").textContent = painLevel.value;
+  document.getElementById("sleepHours").value = saved.sleepHours ?? "";
   document.getElementById("tinyJoy").value = saved.tinyJoy || "";
   document.getElementById("dailyNotes").value = saved.notes || "";
+  document.getElementById("deleteDailyLog")?.classList.toggle("hidden", !data.logs[key]);
 
   return phase;
 }
 
+
+
+let lastDeletedLog = null;
+
+function renderCustomSymptoms(selected = []) {
+  const grid = document.getElementById("customSymptomGrid");
+  if (!grid) return;
+  grid.innerHTML = (data.customSymptoms || []).map(symptom => `
+    <label><input type="checkbox" name="symptom" value="${escapeHTML(symptom)}" ${selected.includes(symptom) ? "checked" : ""}><span>🌙 ${escapeHTML(symptom)}</span></label>
+  `).join("");
+  grid.querySelectorAll('input[name="symptom"]').forEach(input => input.addEventListener("change", () => renderSymptomSeverityControls(data.logs[logDate.value]?.symptomSeverity || {})));
+}
+
+function renderSymptomSeverityControls(saved = {}) {
+  const container = document.getElementById("symptomSeverityList");
+  if (!container) return;
+  const selected = getSymptoms();
+  container.innerHTML = selected.map(symptom => {
+    const value = saved[symptom] || "Mild";
+    return `<div class="symptom-severity-row"><strong>${escapeHTML(symptom)}</strong><div class="segmented compact-segmented">${["Mild","Medium","Strong"].map(level => `<label><input type="radio" name="severity-${escapeHTML(symptom)}" data-symptom-severity="${escapeHTML(symptom)}" value="${level}" ${value === level ? "checked" : ""}><span>${level}</span></label>`).join("")}</div></div>`;
+  }).join("");
+}
+
+function collectSymptomSeverity() {
+  const result = {};
+  document.querySelectorAll('[data-symptom-severity]:checked').forEach(input => { result[input.dataset.symptomSeverity] = input.value; });
+  return result;
+}
+
+document.getElementById("addCustomSymptom")?.addEventListener("click", () => {
+  const input = document.getElementById("customSymptomInput");
+  const value = input?.value.trim();
+  if (!value) return;
+  if (!(data.customSymptoms || []).some(item => item.toLowerCase() === value.toLowerCase())) data.customSymptoms.push(value);
+  saveData();
+  if (input) input.value = "";
+  const selected = [...new Set(getSymptoms().concat(value))];
+  renderCustomSymptoms(selected);
+  renderSymptomSeverityControls(data.logs[logDate.value]?.symptomSeverity || {});
+  showToast("Custom symptom added 🌸");
+});
+
+document.addEventListener("change", event => {
+  if (event.target?.matches?.('input[name="symptom"]')) renderSymptomSeverityControls(data.logs[logDate.value]?.symptomSeverity || {});
+});
+
+document.getElementById("deleteDailyLog")?.addEventListener("click", () => {
+  const key = logDate.value;
+  if (!data.logs[key] || !confirm(`Delete the check-in for ${formatDate(parseDate(key))}?`)) return;
+  lastDeletedLog = { key, value: clone(data.logs[key]) };
+  delete data.logs[key];
+  saveData();
+  renderEverything();
+  loadLogForm();
+  showUndoToast("Check-in deleted", () => {
+    if (!lastDeletedLog) return;
+    data.logs[lastDeletedLog.key] = lastDeletedLog.value;
+    saveData(); renderEverything(); loadLogForm(); lastDeletedLog = null;
+  });
+});
 
 document.getElementById("dailyLogForm").addEventListener("submit", event => {
   event.preventDefault();
@@ -2325,9 +2801,12 @@ document.getElementById("dailyLogForm").addEventListener("submit", event => {
     phaseAtLog: phase,
     flow: isPeriod ? (getCheckedValue("flow") || "None") : "",
     pain: isPeriod ? Number(painLevel.value) : 0,
-    mood: getCheckedValue("mood"),
+    moods: Array.from(document.querySelectorAll('input[name="moodChoice"]:checked')).map(input => input.value),
+    mood: Array.from(document.querySelectorAll('input[name="moodChoice"]:checked')).map(input => input.value)[0] || "",
+    moodIntensity: getCheckedValue("moodIntensity"),
     energy: getCheckedValue("energy"),
     sleep: getCheckedValue("sleep"),
+    sleepHours: document.getElementById("sleepHours").value === "" ? "" : Number(document.getElementById("sleepHours").value),
     focus: getCheckedValue("focus"),
     motivation: getCheckedValue("motivation"),
     discharge: getCheckedValue("discharge"),
@@ -2337,6 +2816,7 @@ document.getElementById("dailyLogForm").addEventListener("submit", event => {
     appetite: getCheckedValue("appetite"),
     cravingIntensity: getCheckedValue("cravingIntensity"),
     symptoms: getSymptoms(),
+    symptomSeverity: collectSymptomSeverity(),
     tinyJoy: document.getElementById("tinyJoy").value.trim(),
     notes: document.getElementById("dailyNotes").value.trim()
   };
@@ -2417,156 +2897,134 @@ function dateWithin(
 }
 
 
-function renderCalendar() {
-  const grid =
-    document.getElementById(
-      "calendarGrid"
-    );
+function projectedCycleStartForDate(dateValue) {
+  const period = latestPeriod();
+  const target = typeof dateValue === "string" ? parseDate(dateValue) : dateValue;
+  const anchor = period ? parseDate(period.start) : null;
+  if (!anchor || !target || target < anchor) return null;
+  const length = forecastCycleLength();
+  const elapsed = daysBetween(anchor, target);
+  const index = Math.max(0, Math.floor(elapsed / length));
+  return addDays(anchor, index * length);
+}
 
+function projectedPhaseForDate(dateValue) {
+  const key = typeof dateValue === "string" ? dateValue : dateKey(dateValue);
+  if (periodForDate(key)) return "Period";
+  const target = parseDate(key);
+  const start = projectedCycleStartForDate(target);
+  if (!target || !start) return phaseForDate(key);
+  const cycleLength = forecastCycleLength();
+  const periodLength = configuredPeriodLength();
+  const cycleDay = daysBetween(start, target) + 1;
+  if (cycleDay <= periodLength) return "Predicted period";
+  const ovulationDay = Math.max(periodLength + 2, cycleLength - 14 + 1);
+  if (cycleDay < ovulationDay - 1) return "Follicular phase";
+  if (cycleDay <= ovulationDay + 1) return "Estimated ovulation";
+  return "Luteal phase";
+}
+
+function projectedCycleDayForDate(dateValue) {
+  const target = typeof dateValue === "string" ? parseDate(dateValue) : dateValue;
+  const start = projectedCycleStartForDate(target);
+  if (!target || !start) return cycleDayForDate(dateValue);
+  return daysBetween(start, target) + 1;
+}
+
+function renderCalendar() {
+  const grid = document.getElementById("calendarGrid");
+  const weekdays = document.getElementById("calendarWeekdays");
+  if (!grid) return;
   grid.innerHTML = "";
 
-  const year =
-    calendarDate.getFullYear();
+  const year = calendarDate.getFullYear();
+  const month = calendarDate.getMonth();
+  document.getElementById("calendarMonthTitle").textContent = new Date(year, month, 1).toLocaleDateString(undefined, { month: "long", year: "numeric" });
 
-  const month =
-    calendarDate.getMonth();
+  const mondayFirst = data.settings.weekStart === "monday";
+  const labels = mondayFirst ? ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"] : ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+  if (weekdays) weekdays.innerHTML = labels.map(day => `<span>${day}</span>`).join("");
 
-  document
-    .getElementById(
-      "calendarMonthTitle"
-    )
-    .textContent =
-      new Date(
-        year,
-        month,
-        1
-      )
-      .toLocaleDateString(
-        undefined,
-        {
-          month: "long",
-          year: "numeric"
-        }
-      );
+  const nativeFirst = new Date(year, month, 1).getDay();
+  const firstDay = mondayFirst ? (nativeFirst + 6) % 7 : nativeFirst;
+  const numberOfDays = new Date(year, month + 1, 0).getDate();
+  for (let i = 0; i < firstDay; i++) grid.appendChild(document.createElement("div"));
 
-  const firstDay =
-    new Date(
-      year,
-      month,
-      1
-    )
-    .getDay();
+  const predictionWindows = calendarPredictionWindows(12);
+  for (let day = 1; day <= numberOfDays; day++) {
+    const date = new Date(year, month, day);
+    const key = dateKey(date);
+    const button = document.createElement("button");
+    button.className = "calendar-day";
+    button.textContent = day;
+    button.dataset.date = key;
 
-  const numberOfDays =
-    new Date(
-      year,
-      month + 1,
-      0
-    )
-    .getDate();
-
-  for (
-    let i = 0;
-    i < firstDay;
-    i++
-  ) {
-    grid.appendChild(
-      document.createElement(
-        "div"
-      )
-    );
-  }
-
-  const predictionWindows =
-    calendarPredictionWindows(12);
-
-  for (
-    let day = 1;
-    day <= numberOfDays;
-    day++
-  ) {
-    const date =
-      new Date(
-        year,
-        month,
-        day
-      );
-
-    const key =
-      dateKey(date);
-
-    const button =
-      document.createElement(
-        "button"
-      );
-
-    button.className =
-      "calendar-day";
-
-    button.textContent =
-      day;
-
-    if (
-      key === todayKey()
-    ) {
-      button.classList.add(
-        "today"
-      );
-    }
-
-    const matchingPeriod =
-      periodForDate(key);
+    if (key === todayKey()) button.classList.add("today");
+    const matchingPeriod = periodForDate(key);
+    const futureOrCurrent = date >= parseDate(latestPeriod()?.start || key);
 
     if (matchingPeriod) {
-      button.classList.add(
-        "period-range"
-      );
-
-      if (
-        matchingPeriod.start === key
-      ) {
-        button.classList.add(
-          "period-start"
-        );
-      }
-
-      if (!matchingPeriod.end) {
-        button.classList.add(
-          "open-period"
-        );
-      }
-    }
-    else if (
-      dateInAnyPredictionWindow(
-        date,
-        predictionWindows
-      )
-    ) {
-      button.classList.add(
-        "predicted"
-      );
+      button.classList.add("period-range");
+      if (matchingPeriod.start === key) button.classList.add("period-start");
+      if (!matchingPeriod.end) button.classList.add("open-period");
+    } else if (dateInAnyPredictionWindow(date, predictionWindows)) {
+      button.classList.add("predicted");
     }
 
-    if (data.logs[key]) {
-      button.classList.add(
-        "logged"
-      );
+    const phase = futureOrCurrent ? projectedPhaseForDate(key) : phaseForDate(key);
+    if (!matchingPeriod) {
+      if (phase === "Follicular phase") button.classList.add("phase-follicular");
+      if (phase === "Estimated ovulation") button.classList.add("phase-ovulation");
+      if (phase === "Luteal phase") button.classList.add("phase-luteal");
     }
 
-    button.addEventListener(
-      "click",
-      () => {
-        logDate.value = key;
-        loadLogForm();
-        showScreen("log");
-      }
-    );
-
-    grid.appendChild(
-      button
-    );
+    if (data.logs[key]) button.classList.add("logged");
+    button.addEventListener("click", () => openDayDetail(key));
+    grid.appendChild(button);
   }
 }
+
+let selectedDayDetailKey = todayKey();
+function openDayDetail(key) {
+  selectedDayDetailKey = key;
+  const date = parseDate(key);
+  const phase = date >= parseDate(latestPeriod()?.start || key) ? projectedPhaseForDate(key) : phaseForDate(key);
+  const cycleDay = date >= parseDate(latestPeriod()?.start || key) ? projectedCycleDayForDate(key) : cycleDayForDate(key);
+  const log = data.logs[key];
+  const period = periodForDate(key);
+  const predicted = dateInAnyPredictionWindow(date, calendarPredictionWindows(12));
+  document.getElementById("dayDetailTitle").textContent = formatDate(date);
+  document.getElementById("dayDetailContent").innerHTML = `
+    <div class="day-detail-summary"><span class="day-phase-icon">${phase === "Period" ? "🩸" : phase === "Estimated ovulation" ? "✨" : phase === "Follicular phase" ? "🌱" : "🌙"}</span><div><strong>${escapeHTML(phase)}</strong><small>${cycleDay ? `Cycle Day ${cycleDay}` : "No cycle anchor yet"}</small></div></div>
+    <div class="day-detail-chips">${period ? '<span>🩸 Saved period</span>' : ""}${predicted ? '<span>🌸 Estimated period window</span>' : ""}${log ? '<span>📝 Check-in saved</span>' : ""}</div>
+    ${log ? `<article class="day-log-preview"><p>${log.mood ? `💗 ${escapeHTML(log.mood)}` : ""} ${log.energy ? ` · ✨ ${escapeHTML(log.energy)} energy` : ""}</p>${log.symptoms?.length ? `<p>🌸 ${log.symptoms.map(escapeHTML).join(", ")}</p>` : ""}${log.notes ? `<p class="muted">“${escapeHTML(log.notes)}”</p>` : ""}</article>` : '<p class="muted small-text">No check-in saved for this day.</p>'}
+  `;
+  document.getElementById("dayDetailSheet")?.classList.add("open");
+  document.getElementById("dayDetailBackdrop")?.classList.remove("hidden");
+  document.body.classList.add("quick-sheet-open");
+}
+function closeDayDetail() { document.getElementById("dayDetailSheet")?.classList.remove("open"); document.getElementById("dayDetailBackdrop")?.classList.add("hidden"); document.body.classList.remove("quick-sheet-open"); }
+document.getElementById("closeDayDetail")?.addEventListener("click", closeDayDetail);
+document.getElementById("dayDetailBackdrop")?.addEventListener("click", closeDayDetail);
+document.getElementById("dayDetailLogButton")?.addEventListener("click", () => { closeDayDetail(); logDate.value = selectedDayDetailKey; loadLogForm(); showScreen("log"); });
+document.getElementById("dayDetailPeriodButton")?.addEventListener("click", () => {
+  closeDayDetail();
+  openQuickPeriodEntry("single", selectedDayDetailKey || todayKey());
+});
+
+function predictionInfoHTML() {
+  const intervals = cycleIntervals();
+  const mode = data.settings.predictionMode === "recentAverage" ? "recent-cycle average" : "Typical Cycle Length";
+  const length = forecastCycleLength();
+  const padding = predictionPaddingDays();
+  const variability = cycleVariability();
+  return `<article class="prediction-explain-card"><strong>Forecast: ${length} days</strong><p>Tsuki is currently using your <b>${mode}</b> and anchors future estimates to your latest logged period.</p><p>Estimated period window: ±${padding} day${padding === 1 ? "" : "s"}.${variability !== null ? ` Your logged cycle variability is about ±${variability.toFixed(1)} days.` : " More history will make the confidence explanation richer."}</p><p class="muted small-text">Predictions are estimates. Logging the actual start of a delayed or early period shifts future forecasts from that new real date.</p></article>`;
+}
+function openPredictionInfo() { document.getElementById("predictionInfoContent").innerHTML = predictionInfoHTML(); document.getElementById("predictionInfoModal").classList.remove("hidden"); document.body.classList.add("modal-open"); }
+function closePredictionInfo() { document.getElementById("predictionInfoModal").classList.add("hidden"); document.body.classList.remove("modal-open"); }
+document.getElementById("predictionConfidence")?.addEventListener("click", openPredictionInfo);
+document.getElementById("closePredictionInfo")?.addEventListener("click", closePredictionInfo);
+document.getElementById("predictionInfoDone")?.addEventListener("click", closePredictionInfo);
 
 
 /* ============================================================
@@ -4138,6 +4596,40 @@ function renderLivingStory() {
 }
 
 
+function sameMoonData() {
+  const day = currentCycleDay(); const cycles = completedCycles();
+  if (!day || !cycles.length) return null;
+  const last = cycles[cycles.length - 1];
+  const date = dateKey(addDays(parseDate(last.start), day - 1));
+  return { date, log: data.logs[date] || null, day };
+}
+function renderSameMoonInsight() {
+  const c=document.getElementById("sameMoonInsight"); if(!c)return;
+  const item=sameMoonData();
+  if(!item||!item.log){c.innerHTML='<p>Tsuki needs a check-in from roughly the same cycle day in a previous cycle.</p>';return;}
+  const l=item.log;c.innerHTML=`<p><strong>Last cycle · Day ${item.day}</strong></p><p>${l.mood?`💗 ${escapeHTML(l.mood)} `:""}${l.energy?`✨ ${escapeHTML(l.energy)} energy`:""}</p>${l.symptoms?.length?`<p>🌸 ${l.symptoms.map(escapeHTML).join(", ")}</p>`:""}${l.tinyJoy?`<small>🌷 ${escapeHTML(l.tinyJoy)}</small>`:""}`;
+}
+function renderFeelOffInsight() {
+  const c=document.getElementById("feelOffInsight"); if(!c)return;
+  const today=data.logs[todayKey()]; const day=currentCycleDay(); if(!today||!day){c.innerHTML='<p>Check in today and Tsuki can compare it with similar cycle days.</p>';return;}
+  const history=historicalLogsNearCycleDay(day,1).filter(l=>l.date!==todayKey()); if(history.length<2){c.innerHTML='<p>Still learning your personal baseline for this point in the cycle.</p>';return;}
+  const usualEnergy=frequency(history.map(l=>l.energy)); const usualMood=frequency(history.map(l=>l.mood)); const differences=[];
+  if(today.energy&&usualEnergy&&today.energy!==usualEnergy[0]) differences.push(`Energy is ${today.energy.toLowerCase()} vs your usual ${usualEnergy[0].toLowerCase()}.`);
+  if(today.mood&&usualMood&&today.mood!==usualMood[0]) differences.push(`Mood differs from your most common “${usualMood[0]}” around here.`);
+  c.innerHTML=differences.length?`<p>${differences.map(escapeHTML).join(" ")}</p><small>Different is not bad — this only compares your own logs.</small>`:'<p>Today looks fairly similar to your previous nearby cycle days.</p>';
+}
+function allSymptomsList(){return [...new Set(allLogs().flatMap(l=>l.symptoms||[]).concat(data.customSymptoms||[]))].sort();}
+function renderMoonLensOptions(){const s=document.getElementById("moonLensSymptom");if(!s)return;const current=s.value;const symptoms=allSymptomsList();s.innerHTML=symptoms.length?symptoms.map(v=>`<option value="${escapeHTML(v)}">${escapeHTML(v)}</option>`).join(""):'<option value="">No symptoms yet</option>';if(symptoms.includes(current))s.value=current;renderMoonLens();}
+function renderMoonLens(){const s=document.getElementById("moonLensSymptom");const c=document.getElementById("moonLensResult");if(!s||!c)return;const symptom=s.value;if(!symptom){c.innerHTML='<p>Log symptoms first to use Moon Lens.</p>';return;}const occurrences=allLogs().filter(l=>(l.symptoms||[]).includes(symptom));const nearby=[];occurrences.forEach(o=>{const d=parseDate(o.date);[-1,1].forEach(offset=>{const log=data.logs[dateKey(addDays(d,offset))];if(log)nearby.push({offset,log});});});const before=frequency(nearby.filter(x=>x.offset<0).flatMap(x=>x.log.symptoms||[]).filter(x=>x!==symptom));const after=frequency(nearby.filter(x=>x.offset>0).flatMap(x=>x.log.symptoms||[]).filter(x=>x!==symptom));c.innerHTML=`<p><strong>${escapeHTML(symptom)}</strong> appears in ${occurrences.length} check-in${occurrences.length===1?"":"s"}.</p><p>${before?`Before: ${escapeHTML(before[0])}. `:""}${after?`After: ${escapeHTML(after[0])}.`:""}</p><small>Nearby observations only — not causes.</small>`;}
+document.getElementById("moonLensSymptom")?.addEventListener("change",renderMoonLens);
+function renderSymptomChainsAdvanced(){const c=document.getElementById("symptomChains");if(!c)return;const logs=allLogs().sort((a,b)=>parseDate(a.date)-parseDate(b.date));const chains=new Map();for(let i=0;i<logs.length;i++){for(let j=i+1;j<logs.length;j++){const gap=daysBetween(parseDate(logs[i].date),parseDate(logs[j].date));if(gap<1)continue;if(gap>2)break;for(const a of logs[i].symptoms||[])for(const b of logs[j].symptoms||[]){if(a===b)continue;const k=`${a} → ${b}`;chains.set(k,(chains.get(k)||0)+1);}}}const top=[...chains.entries()].sort((a,b)=>b[1]-a[1]).slice(0,3).filter(x=>x[1]>=2);c.innerHTML=top.length?top.map(([k,n])=>`<p><strong>${escapeHTML(k)}</strong><br><small>${n} repeated sequences within 2 days</small></p>`).join(""):'<p>No repeated symptom sequences yet.</p>';}
+function renderCycleForkOptions(){const s=document.getElementById("cycleForkContext");if(!s)return;const contexts=[...new Set(completedCycles().map(c=>c.context).filter(Boolean))];s.innerHTML=contexts.length?contexts.map(v=>`<option value="${escapeHTML(v)}">${escapeHTML(v)} vs other cycles</option>`).join(""):'<option value="">No cycle contexts yet</option>';renderCycleFork();}
+function renderCycleFork(){const s=document.getElementById("cycleForkContext");const c=document.getElementById("cycleForkResult");if(!s||!c)return;const ctx=s.value;if(!ctx){c.innerHTML='<p>Add cycle context labels such as Travel or High Stress first.</p>';return;}const cycles=completedCycles();const a=cycles.filter(x=>x.context===ctx),b=cycles.filter(x=>x.context!==ctx);if(!a.length||!b.length){c.innerHTML='<p>Tsuki needs both labeled and comparison cycles.</p>';return;}const aa=Math.round(average(a.map(x=>x.cycleLength))),bb=Math.round(average(b.map(x=>x.cycleLength)));c.innerHTML=`<p><strong>${escapeHTML(ctx)}:</strong> ${aa}-day average<br><strong>Other cycles:</strong> ${bb}-day average</p><small>This compares your own labeled cycle history.</small>`;}
+document.getElementById("cycleForkContext")?.addEventListener("change",renderCycleFork);
+function renderEnergyCompass(){const c=document.getElementById("energyCompass");if(!c)return;const phases=["Period","Follicular phase","Estimated ovulation","Luteal phase"];const score={Low:1,Medium:2,High:3};const rows=phases.map(p=>{const logs=allLogs().filter(l=>(l.phaseAtLog||phaseForDate(l.date))===p&&score[l.energy]);const avg=logs.length?average(logs.map(l=>score[l.energy])):0;return{p,avg,n:logs.length};});const best=rows.filter(r=>r.n).sort((a,b)=>b.avg-a.avg)[0];c.innerHTML=rows.some(r=>r.n)?`<div class="energy-compass-bars">${rows.map(r=>`<div><span>${escapeHTML(r.p.replace(" phase",""))}</span><i style="--energy:${Math.round((r.avg/3)*100)}%"></i><small>${r.n} logs</small></div>`).join("")}</div>${best?`<p class="muted small-text">Your historically higher-energy window so far is <strong>${escapeHTML(best.p)}</strong>.</p>`:""}`:'<p>Log energy across your cycle to build your Energy Compass.</p>';}
+function renderPhaseHeatmap(){const c=document.getElementById("phaseHeatmap");if(!c)return;const phases=["Period","Follicular phase","Estimated ovulation","Luteal phase"];c.innerHTML=`<div class="phase-heatmap-grid">${phases.map(p=>{const logs=allLogs().filter(l=>(l.phaseAtLog||phaseForDate(l.date))===p);const symptomCount=logs.reduce((s,l)=>s+(l.symptoms?.length||0),0);const mood=frequency(logs.map(l=>l.mood));return`<div><strong>${escapeHTML(p.replace(" phase",""))}</strong><span>${logs.length} logs</span><small>${symptomCount} symptom entries${mood?` · ${escapeHTML(mood[0])}`:""}</small></div>`;}).join("")}</div>`;}
+function renderAdvancedInsights(){renderSameMoonInsight();renderFeelOffInsight();renderMoonLensOptions();renderSymptomChainsAdvanced();renderCycleForkOptions();renderEnergyCompass();renderPhaseHeatmap();}
+
 function renderInsights() {
   const allInsights =
     buildInsights();
@@ -4300,6 +4792,7 @@ function renderInsights() {
   renderSymptomConstellations();
   renderTinyJoyPattern();
   renderPhasePatternGrid();
+  renderAdvancedInsights();
   renderLivingStory();
   renderTsukiStory();
 }
@@ -5230,7 +5723,9 @@ function renderKit() {
 document
   .getElementById("saveTrip")
   ?.addEventListener("click", () => {
-    const name = document.getElementById("tripName").value.trim() || "Trip / event";
+    const type = document.getElementById("tripType")?.value || "Other";
+    const name = document.getElementById("tripName").value.trim() || type;
+    const notes = document.getElementById("tripNotes")?.value.trim() || "";
     const start = document.getElementById("tripStart").value;
     const end = document.getElementById("tripEnd").value || start;
     if (!start) {
@@ -5241,22 +5736,21 @@ document
       showToast("Trip end cannot be before its start.");
       return;
     }
-    data.trips.unshift({ id: uid(), name, start, end });
+    data.trips.unshift({ id: uid(), type, name, notes, start, end });
     saveData();
     document.getElementById("tripName").value = "";
     document.getElementById("tripStart").value = "";
     document.getElementById("tripEnd").value = "";
+    if (document.getElementById("tripNotes")) document.getElementById("tripNotes").value = "";
     renderTripOverlay();
     showToast("Trip added to your cycle overlay ✈️");
   });
 
 function tripPeriodOverlap(trip) {
-  const estimate = estimatedWindow();
-  if (!estimate) return false;
-  const start = parseDate(trip.start);
-  const end = parseDate(trip.end);
-  return start <= estimate.end && end >= estimate.start;
+  const start = parseDate(trip.start); const end = parseDate(trip.end);
+  return calendarPredictionWindows(12).find(window => start <= window.end && end >= window.start) || null;
 }
+function tripTypeIcon(type){return {Trip:"✈️",Wedding:"💍",Exam:"📚",Presentation:"💼",Date:"💗",Concert:"🎵",Vacation:"🌸",Other:"✨"}[type]||"✨";}
 
 function renderTripOverlay() {
   const container = document.getElementById("tripOverlay");
@@ -5267,7 +5761,7 @@ function renderTripOverlay() {
   }
   container.innerHTML = data.trips.slice(0, 8).map(trip => {
     const overlap = tripPeriodOverlap(trip);
-    return `<article class="trip-overlay-card ${overlap ? "overlap" : "clear"}"><div><strong>${escapeHTML(trip.name)}</strong><small>${formatDate(parseDate(trip.start))}${trip.end !== trip.start ? `–${formatDate(parseDate(trip.end))}` : ""}</small><p>${overlap ? "🌙 This overlaps your current estimated period window. Consider your Moon Bag and saved comfort actions." : "✨ No overlap with your current estimated period window."}</p></div><button type="button" data-delete-trip="${trip.id}">×</button></article>`;
+    return `<article class="trip-overlay-card ${overlap ? "overlap" : "clear"}"><div><strong>${tripTypeIcon(trip.type)} ${escapeHTML(trip.name)}</strong><small>${formatDate(parseDate(trip.start))}${trip.end !== trip.start ? `–${formatDate(parseDate(trip.end))}` : ""}</small><p>${overlap ? `🌙 Likely overlap with an estimated period window around ${formatDate(overlap.center)}. Prepare your Moon Bag if useful.` : "✨ No overlap with Tsuki’s current 12-month period forecast."}</p>${trip.notes ? `<small>${escapeHTML(trip.notes)}</small>` : ""}</div><button type="button" data-delete-trip="${trip.id}">×</button></article>`;
   }).join("");
   document.querySelectorAll("[data-delete-trip]").forEach(button => button.addEventListener("click", () => {
     data.trips = data.trips.filter(item => item.id !== button.dataset.deleteTrip);
@@ -5596,10 +6090,8 @@ function applyWallpaperClasses() {
 
   document.body.classList.remove("wallpaper-light", "wallpaper-medium", "wallpaper-strong");
   document.body.classList.add(`wallpaper-${overlay}`);
-  document.body.classList.toggle(
-    "wallpaper-enabled",
-    Boolean(data.settings.wallpaperEnabled && wallpaperAvailable && wallpaperObjectUrl)
-  );
+  document.body.classList.toggle("wallpaper-enabled", Boolean(data.settings.wallpaperEnabled && wallpaperAvailable && wallpaperObjectUrl));
+  document.documentElement.style.setProperty("--wallpaper-position", data.settings.wallpaperPosition || "center");
 }
 
 
@@ -5659,9 +6151,10 @@ function renderAppearanceUI() {
   const status = document.getElementById("wallpaperStatus");
   if (status) status.textContent = data.settings.wallpaperEnabled && wallpaperAvailable ? "On" : "Off";
 
-  document.querySelectorAll("[data-overlay]").forEach(button => {
-    button.classList.toggle("active", button.dataset.overlay === data.settings.wallpaperOverlay);
-  });
+  document.querySelectorAll("[data-overlay]").forEach(button => button.classList.toggle("active", button.dataset.overlay === data.settings.wallpaperOverlay));
+  document.querySelectorAll("[data-wallpaper-position]").forEach(button => button.classList.toggle("active", button.dataset.wallpaperPosition === (data.settings.wallpaperPosition || "center")));
+  const accent = document.getElementById("customAccentColor"); if (accent) accent.value = data.settings.customAccent || "#d95788";
+  const seasonal = document.getElementById("seasonalRoomToggle"); if (seasonal) seasonal.checked = data.settings.seasonalRoom !== false;
 }
 
 
@@ -5745,10 +6238,17 @@ document.querySelectorAll("[data-overlay]").forEach(button => {
   });
 });
 
+document.querySelectorAll("[data-wallpaper-position]").forEach(button => button.addEventListener("click", () => { data.settings.wallpaperPosition = button.dataset.wallpaperPosition; saveData(); applyWallpaperClasses(); renderAppearanceUI(); }));
+document.getElementById("customAccentColor")?.addEventListener("input", event => { data.settings.customAccent = event.target.value; saveData(); applySettings(); });
+document.getElementById("seasonalRoomToggle")?.addEventListener("change", event => { data.settings.seasonalRoom = event.target.checked; saveData(); renderMoonRoom(); });
+
 document.getElementById("resetAppearance")?.addEventListener("click", async () => {
   data.settings.theme = "sakura";
   data.settings.wallpaperEnabled = false;
   data.settings.wallpaperOverlay = "medium";
+  data.settings.wallpaperPosition = "center";
+  data.settings.customAccent = "";
+  data.settings.seasonalRoom = true;
   saveData();
 
   try {
@@ -5777,12 +6277,8 @@ function loadSettingsUI() {
     .value =
       data.settings.cycleLength;
 
-  document
-    .getElementById(
-      "settingsPeriodLength"
-    )
-    .value =
-      data.settings.periodLength;
+  document.getElementById("settingsPeriodLength").value = data.settings.periodLength;
+  if (document.getElementById("predictionMode")) document.getElementById("predictionMode").value = data.settings.predictionMode || "typical";
 
   document
     .getElementById(
@@ -5840,6 +6336,9 @@ document
             )
             .value
         ) || 5;
+
+      data.settings.predictionMode =
+        document.getElementById("predictionMode")?.value || "typical";
 
       saveData();
       renderEverything();
@@ -5917,6 +6416,15 @@ document
 function applySettings() {
   const theme = THEME_NAMES[data.settings.theme] ? data.settings.theme : "sakura";
   document.body.dataset.theme = theme;
+  document.body.dataset.textSize = data.settings.textSize || "normal";
+  document.body.dataset.density = data.settings.density || "comfortable";
+  if (data.settings.customAccent) {
+    document.documentElement.style.setProperty("--pink-500", data.settings.customAccent);
+    document.documentElement.style.setProperty("--pink-600", data.settings.customAccent);
+  } else {
+    document.documentElement.style.removeProperty("--pink-500");
+    document.documentElement.style.removeProperty("--pink-600");
+  }
   document.querySelector('meta[name="theme-color"]')?.setAttribute("content", THEME_COLORS[theme]);
   applyWallpaperClasses();
 
@@ -6155,6 +6663,8 @@ document.getElementById("unlockPinInput")?.addEventListener("keydown", event => 
   if (event.key === "Enter") tryUnlockApp();
 });
 
+document.getElementById("resetAppLockButton")?.addEventListener("click",()=>{if(!confirm("Turn off App Lock and remove this device’s Tsuki PIN?"))return;appLockSettings={enabled:false,pinHash:"",pinSalt:"",lockOnBackground:true};saveAppLockSettings();renderAppLockSettings();showToast("App Lock turned off");});
+
 document.addEventListener("visibilitychange", () => {
   if (
     document.visibilityState === "hidden" &&
@@ -6187,7 +6697,7 @@ document
 
       const exportData = {
         app: "Tsuki",
-        version: 4,
+        version: 6,
         exportedAt:
           new Date()
             .toISOString(),
@@ -6231,11 +6741,20 @@ document
         url
       );
 
-      showToast(
-        "Private backup created 🌙"
-      );
+      data.meta = { ...(data.meta || {}), lastBackupAt: new Date().toISOString() };
+      saveData(); renderBackupStatus();
+      showToast("Private backup created 🌙");
     }
   );
+
+let pendingRestoreData = null;
+function renderBackupStatus(){const el=document.getElementById("lastBackupText");if(!el)return;const stamp=data.meta?.lastBackupAt;el.textContent=stamp?`Last backup created on this device: ${new Date(stamp).toLocaleString()}`:"No backup created on this device yet.";document.getElementById("recoveryNotice")?.classList.toggle("hidden",localStorage.getItem("tsuki-recovery-needed")!=="1");}
+function validateTsukiBackup(parsed){if(!parsed||parsed.app!=="Tsuki"||!parsed.data||typeof parsed.data!=="object")throw new Error("This is not a valid Tsuki backup.");const normalized=normalizeData(parsed.data);return{normalized,version:parsed.version||"unknown",exportedAt:parsed.exportedAt||"",counts:{periods:normalized.periods.length,logs:Object.keys(normalized.logs).length,journal:normalized.journal.length,relief:normalized.relief.length,events:normalized.trips.length}};}
+document.getElementById("restoreData")?.addEventListener("click",()=>document.getElementById("restoreDataInput")?.click());
+document.getElementById("restoreDataInput")?.addEventListener("change",async event=>{const file=event.target.files?.[0];if(!file)return;try{const parsed=JSON.parse(await file.text());const check=validateTsukiBackup(parsed);pendingRestoreData=check.normalized;document.getElementById("restorePreviewContent").innerHTML=`<article class="restore-preview-card"><p><strong>Backup version:</strong> ${escapeHTML(String(check.version))}</p>${check.exportedAt?`<p><strong>Exported:</strong> ${escapeHTML(new Date(check.exportedAt).toLocaleString())}</p>`:""}<div class="restore-count-grid"><span>${check.counts.periods}<small>Periods</small></span><span>${check.counts.logs}<small>Check-ins</small></span><span>${check.counts.journal}<small>Journal</small></span><span>${check.counts.events}<small>Events</small></span></div><p class="muted small-text">Restoring replaces Tsuki’s current tracking data. Your device-specific App Lock PIN and wallpaper file stay on this device.</p></article>`;document.getElementById("restorePreviewModal").classList.remove("hidden");document.body.classList.add("modal-open");}catch(error){showToast(error.message||"Tsuki could not read that backup.");}event.target.value="";});
+function closeRestorePreview(){document.getElementById("restorePreviewModal")?.classList.add("hidden");document.body.classList.remove("modal-open");pendingRestoreData=null;}
+document.getElementById("closeRestorePreview")?.addEventListener("click",closeRestorePreview);document.getElementById("cancelRestore")?.addEventListener("click",closeRestorePreview);
+document.getElementById("confirmRestore")?.addEventListener("click",()=>{if(!pendingRestoreData)return;const currentLock={...appLockSettings};data=normalizeData(pendingRestoreData);saveData();appLockSettings=currentLock;saveAppLockSettings();localStorage.removeItem("tsuki-recovery-needed");pendingRestoreData=null;document.getElementById("restorePreviewModal")?.classList.add("hidden");document.body.classList.remove("modal-open");loadSettingsUI();applySettings();renderEverything();showToast("Backup restored 🌙");});
 
 
 /* ============================================================
@@ -6334,6 +6853,21 @@ function showToast(message) {
     );
 }
 
+function showUndoToast(message, undoAction) {
+  const toast = document.getElementById("toast");
+  clearTimeout(toastTimer);
+  toast.innerHTML = `<span>${escapeHTML(message)}</span><button type="button" class="toast-undo">Undo</button>`;
+  toast.classList.add("show", "has-action");
+  toast.querySelector(".toast-undo")?.addEventListener("click", () => {
+    toast.classList.remove("show", "has-action");
+    toast.textContent = "";
+    undoAction?.();
+    showToast("Restored 🌙");
+  }, { once: true });
+  toastTimer = setTimeout(() => { toast.classList.remove("show", "has-action"); toast.textContent = ""; }, 5500);
+}
+
+
 
 /* ============================================================
    GREETING
@@ -6362,7 +6896,7 @@ function renderGreeting() {
       "greetingText"
     )
     .textContent =
-      `${greeting} 🌸`;
+      data.settings.customGreeting?.trim() || `${greeting} 🌸`;
 }
 
 
@@ -6502,6 +7036,15 @@ if (
 }
 
 
+const TODAY_SECTIONS={checkin:{id:"todayCheckinSection",label:"Your Check-in",icon:"📝"},forecast:{id:"todayForecastSection",label:"Tsuki Forecast",icon:"🌙"},insights:{id:"todayInsightsSection",label:"Tsuki Noticed",icon:"✨"},companion:{id:"todayCompanionSection",label:"Moon Room",icon:"🐇"}};
+function normalizedTodayOrder(){const saved=Array.isArray(data.settings.todayOrder)?data.settings.todayOrder:[];return [...saved.filter(k=>TODAY_SECTIONS[k]),...Object.keys(TODAY_SECTIONS).filter(k=>!saved.includes(k))];}
+function renderTodayLayout(){const today=document.querySelector('[data-screen="today"]');if(!today)return;const hint=today.querySelector('.today-menu-hint');const hidden=new Set(data.settings.todayHidden||[]);normalizedTodayOrder().forEach(key=>{const el=document.getElementById(TODAY_SECTIONS[key].id);if(el){el.classList.toggle("hidden",hidden.has(key));if(hint)today.insertBefore(el,hint);}});}
+function renderTodayCustomize(){const c=document.getElementById("todaySectionSettings");if(!c)return;const order=normalizedTodayOrder(),hidden=new Set(data.settings.todayHidden||[]);c.innerHTML=order.map((key,index)=>{const item=TODAY_SECTIONS[key];return`<div class="today-setting-row" data-today-key="${key}"><label><input type="checkbox" data-today-visible="${key}" ${hidden.has(key)?"":"checked"}><span>${item.icon} ${item.label}</span></label><div><button type="button" data-today-move="up" ${index===0?"disabled":""}>↑</button><button type="button" data-today-move="down" ${index===order.length-1?"disabled":""}>↓</button></div></div>`;}).join("");c.querySelectorAll('[data-today-move]').forEach(btn=>btn.addEventListener("click",()=>{const row=btn.closest('[data-today-key]');const key=row.dataset.todayKey;const order=normalizedTodayOrder();const i=order.indexOf(key),j=btn.dataset.todayMove==="up"?i-1:i+1;if(j<0||j>=order.length)return;[order[i],order[j]]=[order[j],order[i]];data.settings.todayOrder=order;renderTodayCustomize();}));}
+function openTodayCustomize(){document.getElementById("customGreetingInput").value=data.settings.customGreeting||"";document.getElementById("weekStartSelect").value=data.settings.weekStart||"sunday";document.getElementById("textSizeSelect").value=data.settings.textSize||"normal";document.getElementById("densitySelect").value=data.settings.density||"comfortable";renderTodayCustomize();document.getElementById("todayCustomizeModal").classList.remove("hidden");document.body.classList.add("modal-open");}
+function closeTodayCustomize(){document.getElementById("todayCustomizeModal")?.classList.add("hidden");document.body.classList.remove("modal-open");}
+document.getElementById("openTodayCustomize")?.addEventListener("click",openTodayCustomize);document.getElementById("closeTodayCustomize")?.addEventListener("click",closeTodayCustomize);
+document.getElementById("saveTodayCustomize")?.addEventListener("click",()=>{data.settings.customGreeting=document.getElementById("customGreetingInput").value.trim();data.settings.weekStart=document.getElementById("weekStartSelect").value;data.settings.textSize=document.getElementById("textSizeSelect").value;data.settings.density=document.getElementById("densitySelect").value;data.settings.todayHidden=Array.from(document.querySelectorAll('[data-today-visible]')).filter(x=>!x.checked).map(x=>x.dataset.todayVisible);saveData();applySettings();renderEverything();closeTodayCustomize();showToast("Today personalized 🌸");});
+
 /* ============================================================
    RENDER EVERYTHING
    ============================================================ */
@@ -6521,9 +7064,12 @@ function renderEverything() {
   renderPastMoons();
   renderReports();
   renderCareProfile();
+  renderBackupStatus();
   renderCompanionHome();
   renderMoonRoom();
   renderMoonGarden();
+  renderMoonYear();
+  renderTodayLayout();
   renderAppLockSettings();
 }
 
@@ -6657,9 +7203,12 @@ function renderMoonRoom() {
   const unlockList = document.getElementById("companionUnlockList");
   if (!stage || !speech || !phaseBadge || !gardenBadge || !decorBadge || !decorList || !unlockList) return;
 
-  stage.classList.remove("phase-period", "phase-follicular", "phase-midcycle", "phase-luteal", "phase-neutral");
+  stage.classList.remove("phase-period", "phase-follicular", "phase-midcycle", "phase-luteal", "phase-neutral", "season-1", "season-2", "season-3", "season-4");
   const phaseState = companionPhaseState();
   stage.classList.add(`phase-${phaseState}`);
+  if (data.settings.seasonalRoom !== false) stage.classList.add(`season-${Math.floor(new Date().getMonth()/3)+1}`);
+  document.getElementById("companionRibbon")?.classList.toggle("hidden", data.journal.length < 3);
+  document.getElementById("companionStarCharm")?.classList.toggle("hidden", allLogs().length < 10);
 
   const phase = phaseForDate(todayKey());
   const completed = completedCycles().length;
@@ -6729,6 +7278,12 @@ function moonGardenDetailHTML(cycle, index) {
   `;
 }
 
+function unplantedCycles(){const planted=new Set(data.gardenState?.plantedCycleIds||[]);return completedCycles().filter(c=>!planted.has(c.id));}
+function renderMoonSeed(){const card=document.getElementById("moonSeedCard");if(!card)return;const seeds=unplantedCycles();card.classList.toggle("hidden",!seeds.length);if(seeds.length)card.querySelector("small").textContent=`${seeds.length} completed cycle${seeds.length===1?" is":"s are"} ready for a little garden celebration.`;}
+document.getElementById("plantMoonSeed")?.addEventListener("click",()=>{const seed=unplantedCycles().slice(-1)[0];if(!seed)return;data.gardenState=data.gardenState||{plantedCycleIds:[]};data.gardenState.plantedCycleIds.push(seed.id);saveData();renderMoonGarden();showToast("Your Moon Seed bloomed 🌸");document.querySelector(`[data-garden-cycle-id="${CSS.escape(seed.id)}"]`)?.classList.add("just-bloomed");});
+function renderMoonYear(){const select=document.getElementById("moonYearSelect"),grid=document.getElementById("moonYearGrid"),summary=document.getElementById("moonYearSummary");if(!select||!grid||!summary)return;const cycles=completedCycles();const years=[...new Set(cycles.map(c=>parseDate(c.start).getFullYear()))].sort((a,b)=>b-a);const current=Number(select.value)||years[0]||new Date().getFullYear();select.innerHTML=(years.length?years:[current]).map(y=>`<option value="${y}">${y}</option>`).join("");select.value=String(current);const list=cycles.filter(c=>parseDate(c.start).getFullYear()===current);summary.innerHTML=`<article class="moon-year-hero"><span>🌕</span><div><strong>${list.length} completed moon${list.length===1?"":"s"}</strong><small>${current} · every cycle is remembered without judging it as good or bad.</small></div></article>`;grid.innerHTML=list.length?list.map((c,i)=>`<button type="button" class="moon-year-item" data-year-cycle="${c.id}"><span>${GARDEN_FLOWERS[i%GARDEN_FLOWERS.length]}</span><strong>${formatDate(parseDate(c.start))}</strong><small>${c.cycleLength} days</small></button>`).join(""):'<article class="garden-empty-state"><span>🌱</span><h3>No completed moons yet</h3><p>Your year fills as cycles are completed.</p></article>';grid.querySelectorAll("[data-year-cycle]").forEach(btn=>btn.addEventListener("click",()=>{selectedGardenCycleId=btn.dataset.yearCycle;showScreen("moon-garden");renderMoonGarden();}));}
+document.getElementById("moonYearSelect")?.addEventListener("change",renderMoonYear);
+
 function renderMoonGarden() {
   const grid = document.getElementById("moonGardenGrid");
   const detail = document.getElementById("moonGardenDetail");
@@ -6736,6 +7291,7 @@ function renderMoonGarden() {
   if (!grid || !detail || !summary) return;
 
   const cycles = completedCycles().slice().reverse();
+  renderMoonSeed();
   summary.textContent = cycles.length
     ? `Each completed cycle becomes one flower. You currently have ${cycles.length} bloom${cycles.length === 1 ? "" : "s"} in your Moon Garden.`
     : "Your garden begins after your first completed cycle. Log the start of your next period and your first flower will bloom here.";
