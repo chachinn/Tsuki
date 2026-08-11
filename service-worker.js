@@ -1,9 +1,9 @@
 /* ============================================================
-   TSUKI SERVICE WORKER — BUILD 5.2
-   Cycle-aware phases + optional App Lock
+   TSUKI SERVICE WORKER — BUILD 5.2.1
+   Typical-cycle forecasts + 12-month calendar
    ============================================================ */
 
-const CACHE_NAME = "tsuki-cache-v5-2";
+const CACHE_NAME = "tsuki-cache-v5-2-1";
 
 const APP_SHELL = [
   "./",

@@ -1,6 +1,6 @@
 /* ============================================================
-   TSUKI 🌙 — BUILD 5.2
-   CYCLE-AWARE PHASES + OPTIONAL APP LOCK
+   TSUKI 🌙 — BUILD 5.2.1
+   TYPICAL-CYCLE FORECASTS + 12-MONTH CALENDAR
    ============================================================ */
 
 const STORAGE_KEY = "tsuki-data-v4";
@@ -580,6 +580,17 @@ function averageCycleLength() {
 }
 
 
+function typicalCycleLength() {
+  const configured = Number(data.settings.cycleLength);
+
+  if (Number.isFinite(configured) && configured >= 15 && configured <= 60) {
+    return Math.round(configured);
+  }
+
+  return 28;
+}
+
+
 function cycleVariability() {
   const intervals =
     cycleIntervals();
@@ -726,7 +737,7 @@ function cycleTimingForDate(dateValue) {
   const nextSaved = periods[anchorIndex + 1];
   const nextStart = nextSaved
     ? parseDate(nextSaved.start)
-    : addDays(start, averageCycleLength());
+    : addDays(start, typicalCycleLength());
 
   if (!start || !nextStart) return null;
 
@@ -784,7 +795,7 @@ function periodCountdownText() {
   if (difference === 0) return "Period expected today";
 
   const lateBy = Math.abs(difference);
-  return `Average date passed ${lateBy} day${lateBy === 1 ? "" : "s"} ago`;
+  return `Expected date passed ${lateBy} day${lateBy === 1 ? "" : "s"} ago`;
 }
 
 
@@ -799,7 +810,7 @@ function nextEstimatedPeriodDate() {
 
   return addDays(
     start,
-    averageCycleLength()
+    typicalCycleLength()
   );
 }
 
@@ -827,6 +838,45 @@ function estimatedWindow() {
       ),
     padding
   };
+}
+
+
+function calendarPredictionWindows(monthsAhead = 12) {
+  const period = latestPeriod();
+  if (!period) return [];
+
+  const anchor = parseDate(period.start);
+  if (!anchor) return [];
+
+  const cycleLength = typicalCycleLength();
+  const padding = predictionPaddingDays();
+  const horizon = new Date(anchor.getFullYear(), anchor.getMonth() + monthsAhead, anchor.getDate());
+  const windows = [];
+
+  // Every future estimate is anchored to the latest ACTUAL period start.
+  // If a period arrives late and the user logs that later start date,
+  // latestPeriod() changes and the entire forecast automatically shifts.
+  let center = addDays(anchor, cycleLength);
+  let guard = 0;
+
+  while (center <= horizon && guard < 24) {
+    windows.push({
+      center,
+      start: addDays(center, -padding),
+      end: addDays(center, padding),
+      padding
+    });
+
+    center = addDays(center, cycleLength);
+    guard += 1;
+  }
+
+  return windows;
+}
+
+
+function dateInAnyPredictionWindow(date, windows) {
+  return windows.some(window => dateWithin(date, window.start, window.end));
 }
 
 
@@ -2427,8 +2477,8 @@ function renderCalendar() {
     );
   }
 
-  const prediction =
-    estimatedWindow();
+  const predictionWindows =
+    calendarPredictionWindows(12);
 
   for (
     let day = 1;
@@ -2487,11 +2537,9 @@ function renderCalendar() {
       }
     }
     else if (
-      prediction &&
-      dateWithin(
+      dateInAnyPredictionWindow(
         date,
-        prediction.start,
-        prediction.end
+        predictionWindows
       )
     ) {
       button.classList.add(
