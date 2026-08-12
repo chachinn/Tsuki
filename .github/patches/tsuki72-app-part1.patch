@@ -1,0 +1,180 @@
+--- a/app.js
++++ b/app.js
+@@ -1,6 +1,6 @@
+ /* ============================================================
+-   TSUKI 🌙 — BUILD 7.1
+-   PREGNANCY COMPLETE+ + PERFORMANCE
++   TSUKI 🌙 — BUILD 7.2
++   STABILITY + POLISH + GUIDED TUTORIAL
+    ============================================================ */
+ 
+ const STORAGE_KEY = "tsuki-data-v4";
+@@ -8,6 +8,20 @@
+ const BUILD2_STORAGE_KEY = "tsuki-data-v2";
+ const LEGACY_STORAGE_KEY = "tsuki-data-v1";
+ const APP_LOCK_STORAGE_KEY = "tsuki-app-lock-v1";
++const APP_VERSION = "7.2.0";
++const APP_CACHE_NAME = "tsuki-cache-v7-2";
++const TUTORIAL_STORAGE_KEY = "tsuki-tutorial-complete-v1";
++const WHATS_NEW_STORAGE_KEY = "tsuki-whats-new-seen-v1";
++const RECOVERY_ASSET_KEY = "tsuki-last-good-data-v1";
++
++const RELEASE_NOTES = [
++  { icon: "🛡️", title: "Stability & recovery", text: "Safer local saves, a rolling recovery snapshot, stronger route guards, and repair tools for unusual local-data states." },
++  { icon: "🌙", title: "Tsuki Tutorial", text: "A quick guided tour for first-time users, plus a replay button in the menu and Settings." },
++  { icon: "✨", title: "What's New", text: "After each Tsuki version update, a one-time popup explains what changed. You can reopen it anytime." },
++  { icon: "🛠️", title: "Diagnostics", text: "Check app version, local storage, offline cache, life mode, and runtime health without sending any data anywhere." },
++  { icon: "🫧", title: "Smoother navigation", text: "Invalid routes now recover safely, background reminder work is throttled, and returning to Tsuki refreshes UI state without a full redraw." },
++  { icon: "📱", title: "iPhone polish", text: "Tutorial and update sheets respect small screens, safe areas, reduced motion, and large tap targets." }
++];
+ 
+ 
+ /* ============================================================
+@@ -141,7 +155,7 @@
+ 
+ const defaultData = {
+ 
+-  schemaVersion: 7.1,
++  schemaVersion: 7.2,
+ 
+   mode: "cycle",
+ 
+@@ -319,7 +333,7 @@
+   return {
+     ...clone(defaultData),
+     ...(parsed || {}),
+-    schemaVersion: 7.1,
++    schemaVersion: 7.2,
+     mode: ["cycle", "pregnancy", "postpartum"].includes(parsed?.mode) ? parsed.mode : "cycle",
+     settings: {
+       ...defaultData.settings,
+@@ -427,7 +441,7 @@
+   const migrated = {
+     ...clone(defaultData),
+     ...oldData,
+-    schemaVersion: 7.1,
++    schemaVersion: 7.2,
+     settings: {
+       ...defaultData.settings,
+       ...(oldData.settings || {})
+@@ -563,13 +577,32 @@
+ 
+ 
+ let lastSavedSnapshot = "";
++let recoverySnapshotTimer = null;
++let lastRecoverySnapshotAt = 0;
++
++function scheduleRecoverySnapshot(serialized) {
++  const now = Date.now();
++  if (now - lastRecoverySnapshotAt < 120000) return;
++  clearTimeout(recoverySnapshotTimer);
++  recoverySnapshotTimer = setTimeout(async () => {
++    try {
++      await appearanceAssetSet(RECOVERY_ASSET_KEY, serialized);
++      lastRecoverySnapshotAt = Date.now();
++    }
++    catch (_) {
++      // Recovery snapshots are best-effort and must never block a normal save.
++    }
++  }, 900);
++}
++
+ function saveData() {
+-  data.schemaVersion = 7.1;
++  data.schemaVersion = 7.2;
+   try {
+     const serialized = JSON.stringify(data);
+     if (serialized === lastSavedSnapshot) return true;
+     localStorage.setItem(STORAGE_KEY, serialized);
+     lastSavedSnapshot = serialized;
++    scheduleRecoverySnapshot(serialized);
+     return true;
+   }
+   catch (error) {
+@@ -1147,11 +1180,18 @@
+   if (typeof closeAppDrawer === "function") closeAppDrawer();
+   if (typeof closeQuickAdd === "function") closeQuickAdd();
+ 
+-  const resolvedName = resolveModeScreen(name);
++  let resolvedName = resolveModeScreen(name);
++  const allScreens = Array.from(document.querySelectorAll(".screen"));
++  if (!allScreens.some(screen => screen.dataset.screen === resolvedName)) {
++    console.warn(`Tsuki ignored unknown screen: ${resolvedName}`);
++    resolvedName = data.mode === "pregnancy" && data.pregnancy?.active
++      ? "pregnancy-today"
++      : data.mode === "postpartum" && data.postpartum?.active
++        ? "postpartum-today"
++        : "today";
++  }
+ 
+-  document
+-    .querySelectorAll(".screen")
+-    .forEach(screen => {
++  allScreens.forEach(screen => {
+       screen.classList.toggle(
+         "active",
+         screen.dataset.screen === resolvedName
+@@ -6816,7 +6856,15 @@
+ let appLockSettings = loadAppLockSettings();
+ 
+ function saveAppLockSettings() {
+-  localStorage.setItem(APP_LOCK_STORAGE_KEY, JSON.stringify(appLockSettings));
++  try {
++    localStorage.setItem(APP_LOCK_STORAGE_KEY, JSON.stringify(appLockSettings));
++    return true;
++  }
++  catch (error) {
++    console.error("Could not save App Lock settings:", error);
++    showToast("Tsuki couldn't save App Lock settings on this device.");
++    return false;
++  }
+ }
+ 
+ function randomLockSalt() {
+@@ -6880,6 +6928,7 @@
+   document.getElementById("appLockOverlay")?.classList.add("hidden");
+   document.body.classList.remove("app-locked");
+   document.getElementById("unlockPinError")?.classList.add("hidden");
++  setTimeout(runLaunchOverlays, 180);
+ }
+ 
+ async function tryUnlockApp() {
+@@ -7133,6 +7182,8 @@
+       "toast"
+     );
+ 
++  if (!toast) return;
++
+   toast.textContent =
+     message;
+ 
+@@ -8286,7 +8337,28 @@
+ function renderPregReminders(){const c=document.getElementById("pregReminderList");if(!c)return;const list=[...(pregnancyRecord().reminders||[])].sort((a,b)=>new Date(a.date)-new Date(b.date));c.innerHTML=list.length?list.map(r=>`<article class="mini-record ${r.done?"done":""}"><span>🔔</span><div><strong>${escapeHTML(r.text)}</strong><small>${formatPregDateTime(r.date)}</small></div><button type="button" data-toggle-reminder="${r.id}">${r.done?"↺":"✓"}</button><button type="button" data-delete-reminder="${r.id}">×</button></article>`).join(""):'<p class="muted small-text">No reminders added.</p>';c.querySelectorAll("[data-toggle-reminder]").forEach(b=>b.onclick=()=>{const r=data.pregnancy.reminders.find(x=>x.id===b.dataset.toggleReminder);if(r){r.done=!r.done;saveData();renderPregReminders();}});c.querySelectorAll("[data-delete-reminder]").forEach(b=>b.onclick=()=>{data.pregnancy.reminders=data.pregnancy.reminders.filter(x=>x.id!==b.dataset.deleteReminder);saveData();renderPregReminders();});}
+ document.getElementById("addPregReminder")?.addEventListener("click",()=>{const text=document.getElementById("pregReminderText").value.trim(),date=document.getElementById("pregReminderDate").value;if(!text||!date){showToast("Add the reminder and date/time first.");return;}const list=safePregnancyArray("reminders");list.push({id:uid(),text,date,done:false,notifiedAt:""});capPregnancyList(list,250);document.getElementById("pregReminderText").value="";saveData();renderPregReminders();});
+ document.getElementById("enablePregNotifications")?.addEventListener("click",async()=>{if(!("Notification" in window)){showToast("Browser notifications aren't available on this device.");return;}const result=await Notification.requestPermission();showToast(result==="granted"?"Notifications enabled. Tsuki can alert you when the app is active/opened.":"Notifications were not enabled.");});
+-async function notifyDuePregnancyReminders(){if(!("Notification" in window)||Notification.permission!=="granted")return;const now=new Date();for(const r of pregnancyRecord().reminders||[]){const d=new Date(r.date);if(!r.done&&!r.notifiedAt&&!Number.isNaN(d.getTime())&&d<=now){try{const reg=await navigator.serviceWorker?.ready;reg?.showNotification?.("Tsuki 🌙",{body:r.text,icon:"./icons/icon-192.png"});r.notifiedAt=new Date().toISOString();}catch{} } } }
++let lastPregnancyReminderCheckAt = 0;
++async function notifyDuePregnancyReminders(){
++  const nowMs = Date.now();
++  if (nowMs - lastPregnancyReminderCheckAt < 60000) return;
++  lastPregnancyReminderCheckAt = nowMs;
++  if (!("Notification" in window) || Notification.permission !== "granted") return;
++  const now = new Date();
++  let changed = false;
++  for (const r of pregnancyRecord().reminders || []) {
++    const d = new Date(r.date);
++    if (!r.done && !r.notifiedAt && !Number.isNaN(d.getTime()) && d <= now) {
++      try {
++        const reg = await navigator.serviceWorker?.ready;
++        await reg?.showNotification?.("Tsuki 🌙", { body: r.text, icon: "./icons/icon-192.png" });
++        r.notifiedAt = new Date().toISOString();
++        changed = true;
++      }
++      catch (_) {}
++    }
++  }
++  if (changed) saveData();
++}
+ 
+ function renderPrenatalTracker(){const c=document.getElementById("prenatalTrackerList");if(!c)return;const tests=pregnancyRecord().tests||[];c.innerHTML=tests.length?tests.slice().sort((a,b)=>parseDate(a.date||"1900-01-01")-parseDate(b.date||"1900-01-01")).map(t=>`<article class="mini-record"><span>🧪</span><div><strong>${escapeHTML(t.name)}</strong><small>${escapeHTML(t.status||"Completed")} · ${t.date?formatDateLong(parseDate(t.date)):"No date"}${t.result?` · ${escapeHTML(t.result)}`:""}</small></div></article>`).join(""):'<p class="muted small-text">No prenatal tests or scans tracked.</p>';}
+ document.getElementById("addPrenatalTracker")?.addEventListener("click",()=>{const preset=document.getElementById("pregPrenatalPreset").value,custom=document.getElementById("pregPrenatalCustomName").value.trim(),name=custom||preset;if(!name){showToast("Choose or enter a test / scan.");return;}data.pregnancy.tests.push({id:uid(),name,date:document.getElementById("pregPrenatalDate").value||todayKey(),result:document.getElementById("pregPrenatalNotes").value.trim(),status:document.getElementById("pregPrenatalStatus").value});document.getElementById("pregPrenatalCustomName").value="";document.getElementById("pregPrenatalNotes").value="";saveData();renderPrenatalTracker();});
