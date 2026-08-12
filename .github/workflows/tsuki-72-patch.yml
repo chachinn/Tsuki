@@ -1,0 +1,84 @@
+name: Tsuki 7.2 Stability Update
+
+on:
+  push:
+    paths:
+      - .github/workflows/tsuki-72-patch.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch-tsuki:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Check out main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Apply Tsuki 7.2 patches
+        shell: bash
+        run: |
+          set -euo pipefail
+          git apply .github/patches/tsuki72-index.patch
+          git apply .github/patches/tsuki72-style.patch
+          git apply .github/patches/tsuki72-app-part1.patch
+          git apply .github/patches/tsuki72-app-part2.patch
+          git apply .github/patches/tsuki72-sw.patch
+
+      - name: Validate build
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check app.js
+          node --check service-worker.js
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          from collections import Counter
+          html = Path("index.html").read_text()
+          js = Path("app.js").read_text()
+          sw = Path("service-worker.js").read_text()
+          ids = re.findall(r'id="([^"]+)"', html)
+          duplicates = [x for x,c in Counter(ids).items() if c > 1]
+          if duplicates:
+              raise SystemExit(f"Duplicate IDs: {duplicates}")
+          screens = set(re.findall(r'data-screen="([^"]+)"', html))
+          targets = set(re.findall(r'data-(?:open-screen|screen-target)="([^"]+)"', html))
+          missing_targets = sorted(targets - screens)
+          if missing_targets:
+              raise SystemExit(f"Missing screen targets: {missing_targets}")
+          required = [
+              "tutorialModal", "whatsNewModal", "diagnosticsCard",
+              "pregGlucoseUnit", "pregnancyDashboardInsights",
+              "drawerTutorialButton", "drawerWhatsNewButton"
+          ]
+          missing_ids = [x for x in required if x not in ids]
+          if missing_ids:
+              raise SystemExit(f"Missing required IDs: {missing_ids}")
+          if 'const APP_VERSION = "7.2.0";' not in js:
+              raise SystemExit("APP_VERSION is not 7.2.0")
+          if 'tsuki-cache-v7-2' not in sw:
+              raise SystemExit("Service-worker cache is not v7-2")
+          print("Tsuki 7.2 validation passed")
+          PY
+
+      - name: Commit Tsuki 7.2 to main
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f \
+            .github/patches/tsuki72-index.patch \
+            .github/patches/tsuki72-style.patch \
+            .github/patches/tsuki72-app-part1.patch \
+            .github/patches/tsuki72-app-part2.patch \
+            .github/patches/tsuki72-sw.patch \
+            .github/workflows/tsuki-72-patch.yml
+          git config user.name "Tsuki Update Bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          git commit -m "Tsuki 7.2 stability, tutorial and what's new"
+          git push origin HEAD:main
