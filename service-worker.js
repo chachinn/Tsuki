@@ -1,9 +1,9 @@
 /* ============================================================
-   TSUKI SERVICE WORKER — BUILD 7.1.2
+   TSUKI SERVICE WORKER — BUILD 7.1.3
    Cycle + Pregnancy life modes
    ============================================================ */
 
-const CACHE_NAME = "tsuki-cache-v7-1-2";
+const CACHE_NAME = "tsuki-cache-v7-1-3";
 
 const APP_SHELL = [
   "./",
@@ -36,9 +36,20 @@ self.addEventListener("install", event => {
       .then(cache => cache.addAll(APP_SHELL))
   );
 
-  self.skipWaiting();
 });
 
+
+
+
+/* ============================================================
+   UPDATE CONTROL
+   ============================================================ */
+
+self.addEventListener("message", event => {
+  if (event.data?.type === "SKIP_WAITING") {
+    self.skipWaiting();
+  }
+});
 
 /* ============================================================
    ACTIVATE

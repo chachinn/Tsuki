@@ -7318,23 +7318,83 @@ if (
   "serviceWorker"
   in navigator
 ) {
-  window.addEventListener(
-    "load",
-    () => {
-      navigator.serviceWorker
-        .register(
-          "./service-worker.js"
-        )
-        .catch(
-          error => {
-            console.error(
-              "Service worker registration failed:",
-              error
-            );
-          }
-        );
+  let waitingServiceWorker = null;
+  let updateReloading = false;
+
+  function showUpdateBanner(worker) {
+    if (!worker || !navigator.serviceWorker.controller) return;
+    waitingServiceWorker = worker;
+    const banner = document.getElementById("updateBanner");
+    const button = document.getElementById("updateAppButton");
+    banner?.classList.remove("hidden");
+    if (button) {
+      button.disabled = false;
+      button.textContent = "Update";
     }
-  );
+  }
+
+  function watchServiceWorker(registration) {
+    if (registration.waiting) {
+      showUpdateBanner(registration.waiting);
+    }
+
+    registration.addEventListener("updatefound", () => {
+      const installing = registration.installing;
+      if (!installing) return;
+
+      installing.addEventListener("statechange", () => {
+        if (
+          installing.state === "installed" &&
+          navigator.serviceWorker.controller
+        ) {
+          showUpdateBanner(registration.waiting || installing);
+        }
+      });
+    });
+  }
+
+  window.addEventListener("load", async () => {
+    try {
+      const registration = await navigator.serviceWorker.register(
+        "./service-worker.js"
+      );
+
+      watchServiceWorker(registration);
+
+      // Ask for a fresh service-worker check whenever Tsuki is opened online.
+      if (navigator.onLine) {
+        registration.update().catch(() => {});
+      }
+    }
+    catch (error) {
+      console.error(
+        "Service worker registration failed:",
+        error
+      );
+    }
+  });
+
+  document.getElementById("updateAppButton")?.addEventListener("click", () => {
+    const button = document.getElementById("updateAppButton");
+
+    if (!waitingServiceWorker) {
+      window.location.reload();
+      return;
+    }
+
+    if (button) {
+      button.disabled = true;
+      button.textContent = "Updating…";
+    }
+
+    waitingServiceWorker.postMessage({ type: "SKIP_WAITING" });
+  });
+
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    if (updateReloading) return;
+    updateReloading = true;
+    window.location.reload();
+  });
 }
 
 
