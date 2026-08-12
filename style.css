@@ -5805,3 +5805,82 @@ body.hide-sensitive .pregnancy-room-props {
     padding-inline: 13px;
   }
 }
+
+
+/* ============================================================
+   BUILD 7.1.4 — ABOUT TSUKI MOVED TO DRAWER
+   ============================================================ */
+.drawer-about-tsuki {
+  position: relative;
+  overflow: hidden;
+  margin: 2px 0 16px;
+  padding: 14px 15px 13px;
+  border: 1px solid rgba(226, 183, 203, 0.72);
+  border-radius: 18px;
+  background: linear-gradient(145deg, rgba(255,255,255,0.96), rgba(255,244,249,0.94));
+  box-shadow: 0 8px 22px rgba(99, 63, 79, 0.06);
+}
+
+.drawer-about-tsuki::after {
+  content: "月";
+  position: absolute;
+  right: 8px;
+  bottom: -16px;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 68px;
+  color: rgba(220, 91, 142, 0.055);
+  pointer-events: none;
+}
+
+.drawer-about-tsuki-title {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.drawer-about-tsuki-title .eyebrow {
+  margin: 0 0 2px;
+}
+
+.drawer-about-tsuki-title strong {
+  color: var(--text);
+  font-size: 15px;
+}
+
+.drawer-about-tsuki-moon {
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #fff1bd;
+  font-size: 19px;
+  box-shadow: 0 6px 14px rgba(228, 183, 87, 0.12);
+}
+
+.drawer-about-tsuki p {
+  position: relative;
+  z-index: 1;
+  margin: 0;
+  color: var(--muted);
+  font-size: 11.5px;
+  line-height: 1.55;
+}
+
+.drawer-about-tsuki-version {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  margin-top: 9px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(232, 91, 145, 0.08);
+  color: var(--accent-strong);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
