@@ -1,0 +1,337 @@
+--- a/app.js
++++ b/app.js
+@@ -8689,6 +8761,299 @@
+ 
+ 
+ /* ============================================================
++   BUILD 7.2 — STABILITY, TUTORIAL, WHAT'S NEW & DIAGNOSTICS
++   ============================================================ */
++
++let tutorialStepIndex = 0;
++let launchOverlayHandled = false;
++let runtimeErrorCount = 0;
++
++const TUTORIAL_STEPS = [
++  {
++    icon: "🌙",
++    eyebrow: "WELCOME TO TSUKI",
++    title: "Your body has a rhythm",
++    text: "Tsuki is a private, local-first space for following your cycle, body patterns, and—only if you choose it—your pregnancy journey.",
++    tip: "Your entries stay on this device unless you export a backup yourself."
++  },
++  {
++    icon: "🏠",
++    eyebrow: "TODAY",
++    title: "Start with what matters today",
++    text: "Today keeps your current cycle or pregnancy information light and useful. Use the check-in when you want to log how you feel; you never have to fill everything in.",
++    tip: "You can customize which Today cards appear from Me → Customize Today."
++  },
++  {
++    icon: "📅",
++    eyebrow: "LOG & CALENDAR",
++    title: "Build your own timeline",
++    text: "Use the pink + button for quick actions. Calendar lets you log periods, previous months, symptoms, appointments, and memories without digging through menus.",
++    tip: "Actual period dates anchor future cycle predictions. Estimates never replace the dates you save."
++  },
++  {
++    icon: "✨",
++    eyebrow: "TSUKI LEARNS",
++    title: "Patterns, not diagnoses",
++    text: "Insights such as My Normal, Same Moon, and Before It Hits look for patterns in your own logs. Tsuki describes what tends to happen without diagnosing a condition.",
++    tip: "Tap the lock in the header anytime you want to hide sensitive cycle or pregnancy details on screen."
++  },
++  {
++    icon: "🤰",
++    eyebrow: "LIFE MODES",
++    title: "Pregnancy Mode is always your choice",
++    text: "Switch between Cycle and Pregnancy Mode from Me. Tsuki never assumes pregnancy because a period is late, and your cycle history stays saved when modes change.",
++    tip: "Pregnancy health modules are optional, so you can turn on only the trackers that apply to you."
++  },
++  {
++    icon: "📦",
++    eyebrow: "KEEP TSUKI SAFE",
++    title: "Back up, update, and make it yours",
++    text: "Export backups from Me, personalize your theme, use optional App Lock, and watch for the update banner when a newer Tsuki build is ready.",
++    tip: "After every version update, What's New appears once. You can replay this tutorial anytime from the ☰ menu."
++  }
++];
++
++function hasMeaningfulTsukiData() {
++  return Boolean(
++    data.periods?.length ||
++    Object.keys(data.logs || {}).length ||
++    data.journal?.length ||
++    data.relief?.length ||
++    data.trips?.length ||
++    data.pregnancy?.active ||
++    data.pregnancyHistory?.length ||
++    data.postpartum?.active
++  );
++}
++
++function setModalOpenState() {
++  const anyModal = Array.from(document.querySelectorAll(".app-modal-backdrop"))
++    .some(modal => !modal.classList.contains("hidden"));
++  document.body.classList.toggle("modal-open", anyModal);
++}
++
++function renderTutorialStep() {
++  const step = TUTORIAL_STEPS[tutorialStepIndex] || TUTORIAL_STEPS[0];
++  const icon = document.getElementById("tutorialIcon");
++  const eyebrow = document.getElementById("tutorialEyebrow");
++  const title = document.getElementById("tutorialTitle");
++  const text = document.getElementById("tutorialText");
++  const tip = document.getElementById("tutorialTip");
++  const label = document.getElementById("tutorialStepLabel");
++  const dots = document.getElementById("tutorialDots");
++  const back = document.getElementById("tutorialBackButton");
++  const next = document.getElementById("tutorialNextButton");
++  if (!icon || !eyebrow || !title || !text || !tip || !label || !dots || !back || !next) return;
++
++  icon.textContent = step.icon;
++  eyebrow.textContent = step.eyebrow;
++  title.textContent = step.title;
++  text.textContent = step.text;
++  tip.textContent = step.tip;
++  label.textContent = `${tutorialStepIndex + 1} of ${TUTORIAL_STEPS.length}`;
++  dots.innerHTML = TUTORIAL_STEPS.map((_, index) => `<span class="tutorial-dot ${index === tutorialStepIndex ? "active" : ""}"></span>`).join("");
++  back.disabled = tutorialStepIndex === 0;
++  next.textContent = tutorialStepIndex === TUTORIAL_STEPS.length - 1 ? "Finish" : "Next";
++}
++
++function openTutorial({ fromWhatsNew = false } = {}) {
++  if (fromWhatsNew) closeWhatsNew({ markSeen: true });
++  tutorialStepIndex = 0;
++  renderTutorialStep();
++  document.getElementById("tutorialModal")?.classList.remove("hidden");
++  setModalOpenState();
++}
++
++function finishTutorial() {
++  try {
++    localStorage.setItem(TUTORIAL_STORAGE_KEY, "1");
++    if (!hasMeaningfulTsukiData()) localStorage.setItem(WHATS_NEW_STORAGE_KEY, APP_VERSION);
++  } catch (_) {}
++  document.getElementById("tutorialModal")?.classList.add("hidden");
++  setModalOpenState();
++}
++
++function renderWhatsNew() {
++  const title = document.getElementById("whatsNewTitle");
++  const list = document.getElementById("whatsNewList");
++  if (title) title.textContent = `Tsuki ${APP_VERSION.replace(/\.0$/, "")}`;
++  if (list) {
++    list.innerHTML = RELEASE_NOTES.map(note => `
++      <article class="whats-new-item">
++        <span aria-hidden="true">${note.icon}</span>
++        <div><strong>${escapeHTML(note.title)}</strong><small>${escapeHTML(note.text)}</small></div>
++      </article>
++    `).join("");
++  }
++}
++
++function openWhatsNew() {
++  renderWhatsNew();
++  document.getElementById("whatsNewModal")?.classList.remove("hidden");
++  setModalOpenState();
++}
++
++function closeWhatsNew({ markSeen = true } = {}) {
++  if (markSeen) {
++    try { localStorage.setItem(WHATS_NEW_STORAGE_KEY, APP_VERSION); } catch (_) {}
++  }
++  document.getElementById("whatsNewModal")?.classList.add("hidden");
++  setModalOpenState();
++}
++
++function runLaunchOverlays() {
++  if (launchOverlayHandled) return;
++  if (!document.getElementById("appLockOverlay")?.classList.contains("hidden")) return;
++  launchOverlayHandled = true;
++
++  let tutorialComplete = false;
++  let seenVersion = "";
++  try {
++    tutorialComplete = localStorage.getItem(TUTORIAL_STORAGE_KEY) === "1";
++    seenVersion = localStorage.getItem(WHATS_NEW_STORAGE_KEY) || "";
++  } catch (_) {}
++
++  if (!hasMeaningfulTsukiData() && !tutorialComplete) {
++    openTutorial();
++    return;
++  }
++
++  if (seenVersion !== APP_VERSION) openWhatsNew();
++}
++
++async function tryRecoverLastGoodSnapshot() {
++  let needsRecovery = false;
++  try { needsRecovery = localStorage.getItem("tsuki-recovery-needed") === "1"; } catch (_) {}
++  if (!needsRecovery) return false;
++  try {
++    const raw = await appearanceAssetGet(RECOVERY_ASSET_KEY);
++    if (typeof raw !== "string" || !raw.trim()) return false;
++    const parsed = JSON.parse(raw);
++    const recovered = normalizeData(parsed);
++    data = recovered;
++    const serialized = JSON.stringify(recovered);
++    localStorage.setItem(STORAGE_KEY, serialized);
++    lastSavedSnapshot = serialized;
++    localStorage.removeItem("tsuki-recovery-needed");
++    showToast("Tsuki restored the last healthy local snapshot 🌙");
++    return true;
++  }
++  catch (error) {
++    console.error("Tsuki recovery snapshot could not be restored:", error);
++    return false;
++  }
++}
++
++function formatBytes(bytes) {
++  const value = Number(bytes || 0);
++  if (!value) return "0 KB";
++  if (value < 1024 * 1024) return `${Math.max(1, Math.round(value / 1024))} KB`;
++  return `${(value / (1024 * 1024)).toFixed(1)} MB`;
++}
++
++async function renderDiagnostics() {
++  const version = document.getElementById("diagAppVersion");
++  const mode = document.getElementById("diagLifeMode");
++  const local = document.getElementById("diagLocalData");
++  const storage = document.getElementById("diagStorage");
++  const cache = document.getElementById("diagCache");
++  const runtime = document.getElementById("diagRuntime");
++  const detail = document.getElementById("diagDetail");
++  if (!version || !mode || !local || !storage || !cache || !runtime || !detail) return;
++
++  version.textContent = APP_VERSION;
++  mode.textContent = data.mode === "pregnancy" ? "Pregnancy" : data.mode === "postpartum" ? "Postpartum" : "Cycle";
++  runtime.textContent = runtimeErrorCount ? `${runtimeErrorCount} issue${runtimeErrorCount === 1 ? "" : "s"} this session` : "Healthy";
++
++  try {
++    const raw = localStorage.getItem(STORAGE_KEY) || "";
++    JSON.parse(raw || "{}");
++    local.textContent = `${formatBytes(new Blob([raw]).size)} · Healthy`;
++  }
++  catch (_) {
++    local.textContent = "Needs repair";
++  }
++
++  try {
++    const estimate = await navigator.storage?.estimate?.();
++    if (estimate?.quota) storage.textContent = `${formatBytes(estimate.usage)} / ${formatBytes(estimate.quota)}`;
++    else storage.textContent = "Available";
++  }
++  catch (_) { storage.textContent = "Unavailable"; }
++
++  try {
++    const keys = "caches" in window ? await caches.keys() : [];
++    const current = keys.includes(APP_CACHE_NAME);
++    cache.textContent = current ? "Current" : keys.length ? "Refreshing" : "Not cached yet";
++  }
++  catch (_) { cache.textContent = "Unavailable"; }
++
++  const photoCount = pregnancyRecord()?.photos?.length || 0;
++  const docCount = pregnancyRecord()?.documents?.length || 0;
++  const backup = data.meta?.lastBackupAt ? new Date(data.meta.lastBackupAt).toLocaleDateString() : "none yet";
++  detail.textContent = `Local media index: ${photoCount} photo${photoCount === 1 ? "" : "s"}, ${docCount} document${docCount === 1 ? "" : "s"}. Last backup: ${backup}. No diagnostic data is uploaded.`;
++}
++
++function repairLocalData() {
++  try {
++    data = normalizeData(data);
++    const saved = saveData();
++    if (!saved) throw new Error("save failed");
++    localStorage.removeItem("tsuki-recovery-needed");
++    loadSettingsUI();
++    applySettings();
++    renderEverything();
++    renderDiagnostics();
++    showToast("Local Tsuki data normalized and repaired 🌙");
++  }
++  catch (error) {
++    console.error("Tsuki repair failed:", error);
++    showToast("Tsuki couldn't complete the repair. Export a backup before making more changes.");
++  }
++}
++
++window.addEventListener("error", () => { runtimeErrorCount += 1; });
++window.addEventListener("unhandledrejection", () => { runtimeErrorCount += 1; });
++window.addEventListener("pageshow", () => {
++  updateOnlineStatus();
++  renderLifeModeUI();
++});
++
++document.addEventListener("visibilitychange", () => {
++  if (!document.hidden) {
++    updateOnlineStatus();
++    renderLifeModeUI();
++  }
++});
++
++document.getElementById("tutorialNextButton")?.addEventListener("click", () => {
++  if (tutorialStepIndex >= TUTORIAL_STEPS.length - 1) { finishTutorial(); return; }
++  tutorialStepIndex += 1;
++  renderTutorialStep();
++});
++document.getElementById("tutorialBackButton")?.addEventListener("click", () => {
++  tutorialStepIndex = Math.max(0, tutorialStepIndex - 1);
++  renderTutorialStep();
++});
++document.getElementById("skipTutorialButton")?.addEventListener("click", finishTutorial);
++document.getElementById("dismissWhatsNewButton")?.addEventListener("click", () => closeWhatsNew());
++document.getElementById("closeWhatsNewButton")?.addEventListener("click", () => closeWhatsNew());
++document.getElementById("whatsNewTutorialButton")?.addEventListener("click", () => openTutorial({ fromWhatsNew: true }));
++document.getElementById("openTutorialButton")?.addEventListener("click", () => openTutorial());
++document.getElementById("openWhatsNewButton")?.addEventListener("click", openWhatsNew);
++document.getElementById("drawerTutorialButton")?.addEventListener("click", () => { closeAppDrawer(); openTutorial(); });
++document.getElementById("drawerWhatsNewButton")?.addEventListener("click", () => { closeAppDrawer(); openWhatsNew(); });
++document.getElementById("refreshDiagnostics")?.addEventListener("click", renderDiagnostics);
++document.getElementById("repairLocalData")?.addEventListener("click", repairLocalData);
++document.getElementById("diagnosticsCard")?.addEventListener("toggle", event => { if (event.currentTarget.open) renderDiagnostics(); });
++
++document.addEventListener("keydown", event => {
++  if (event.key !== "Escape") return;
++  if (!document.getElementById("tutorialModal")?.classList.contains("hidden")) finishTutorial();
++  else if (!document.getElementById("whatsNewModal")?.classList.contains("hidden")) closeWhatsNew();
++});
++
++/* ============================================================
+    BUILD 7.1.2 — COMPANION IMAGE ASSET GUARD
+    ============================================================ */
+ function installCompanionImageGuard() {
+@@ -8713,20 +9078,29 @@
+    INIT
+    ============================================================ */
+ 
+-function init() {
++async function init() {
+   installCompanionImageGuard();
+   installNativeTouchGuards();
++  await tryRecoverLastGoodSnapshot();
+   loadSettingsUI();
+   applySettings();
+   loadLogForm();
+   renderEverything();
+-  refreshWallpaperAsset();
+   updateOnlineStatus();
+   renderAppLockSettings();
+   if (data.mode === "pregnancy" && data.pregnancy?.active) showScreen("pregnancy-today");
+   else if (data.mode === "postpartum" && data.postpartum?.active) showScreen("postpartum-today");
++
++  const defer = window.requestIdleCallback || (callback => setTimeout(callback, 120));
++  defer(() => refreshWallpaperAsset());
++
+   if (appLockSettings.enabled && appLockSettings.pinHash) lockApp();
++  else setTimeout(runLaunchOverlays, 280);
+ }
+ 
+ 
+-init();
+\ No newline at end of file
++init().catch(error => {
++  console.error("Tsuki initialization failed:", error);
++  runtimeErrorCount += 1;
++  try { showToast("Tsuki hit a startup issue. Your saved data has not been deleted."); } catch (_) {}
++});
+\ No newline at end of file
