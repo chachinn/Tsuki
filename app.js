@@ -1,6 +1,6 @@
 /* ============================================================
-   TSUKI 🌙 — BUILD 7.1
-   PREGNANCY COMPLETE+ + PERFORMANCE
+   TSUKI 🌙 — BUILD 7.2
+   STABILITY + POLISH + GUIDED TUTORIAL
    ============================================================ */
 
 const STORAGE_KEY = "tsuki-data-v4";
@@ -8,6 +8,20 @@ const BUILD3_STORAGE_KEY = "tsuki-data-v3";
 const BUILD2_STORAGE_KEY = "tsuki-data-v2";
 const LEGACY_STORAGE_KEY = "tsuki-data-v1";
 const APP_LOCK_STORAGE_KEY = "tsuki-app-lock-v1";
+const APP_VERSION = "7.2.0";
+const APP_CACHE_NAME = "tsuki-cache-v7-2";
+const TUTORIAL_STORAGE_KEY = "tsuki-tutorial-complete-v1";
+const WHATS_NEW_STORAGE_KEY = "tsuki-whats-new-seen-v1";
+const RECOVERY_ASSET_KEY = "tsuki-last-good-data-v1";
+
+const RELEASE_NOTES = [
+  { icon: "🛡️", title: "Stability & recovery", text: "Safer local saves, a rolling recovery snapshot, stronger route guards, and repair tools for unusual local-data states." },
+  { icon: "🌙", title: "Tsuki Tutorial", text: "A quick guided tour for first-time users, plus a replay button in the menu and Settings." },
+  { icon: "✨", title: "What's New", text: "After each Tsuki version update, a one-time popup explains what changed. You can reopen it anytime." },
+  { icon: "🛠️", title: "Diagnostics", text: "Check app version, local storage, offline cache, life mode, and runtime health without sending any data anywhere." },
+  { icon: "🫧", title: "Smoother navigation", text: "Invalid routes now recover safely, background reminder work is throttled, and returning to Tsuki refreshes UI state without a full redraw." },
+  { icon: "📱", title: "iPhone polish", text: "Tutorial and update sheets respect small screens, safe areas, reduced motion, and large tap targets." }
+];
 
 
 /* ============================================================
@@ -141,7 +155,7 @@ function standardDeviation(numbers) {
 
 const defaultData = {
 
-  schemaVersion: 7.1,
+  schemaVersion: 7.2,
 
   mode: "cycle",
 
@@ -319,7 +333,7 @@ function normalizeData(parsed) {
   return {
     ...clone(defaultData),
     ...(parsed || {}),
-    schemaVersion: 7.1,
+    schemaVersion: 7.2,
     mode: ["cycle", "pregnancy", "postpartum"].includes(parsed?.mode) ? parsed.mode : "cycle",
     settings: {
       ...defaultData.settings,
@@ -427,7 +441,7 @@ function migrateBuild1(oldData) {
   const migrated = {
     ...clone(defaultData),
     ...oldData,
-    schemaVersion: 7.1,
+    schemaVersion: 7.2,
     settings: {
       ...defaultData.settings,
       ...(oldData.settings || {})
@@ -563,13 +577,32 @@ function loadData() {
 
 
 let lastSavedSnapshot = "";
+let recoverySnapshotTimer = null;
+let lastRecoverySnapshotAt = 0;
+
+function scheduleRecoverySnapshot(serialized) {
+  const now = Date.now();
+  if (now - lastRecoverySnapshotAt < 120000) return;
+  clearTimeout(recoverySnapshotTimer);
+  recoverySnapshotTimer = setTimeout(async () => {
+    try {
+      await appearanceAssetSet(RECOVERY_ASSET_KEY, serialized);
+      lastRecoverySnapshotAt = Date.now();
+    }
+    catch (_) {
+      // Recovery snapshots are best-effort and must never block a normal save.
+    }
+  }, 900);
+}
+
 function saveData() {
-  data.schemaVersion = 7.1;
+  data.schemaVersion = 7.2;
   try {
     const serialized = JSON.stringify(data);
     if (serialized === lastSavedSnapshot) return true;
     localStorage.setItem(STORAGE_KEY, serialized);
     lastSavedSnapshot = serialized;
+    scheduleRecoverySnapshot(serialized);
     return true;
   }
   catch (error) {
@@ -1147,11 +1180,18 @@ function showScreen(name) {
   if (typeof closeAppDrawer === "function") closeAppDrawer();
   if (typeof closeQuickAdd === "function") closeQuickAdd();
 
-  const resolvedName = resolveModeScreen(name);
+  let resolvedName = resolveModeScreen(name);
+  const allScreens = Array.from(document.querySelectorAll(".screen"));
+  if (!allScreens.some(screen => screen.dataset.screen === resolvedName)) {
+    console.warn(`Tsuki ignored unknown screen: ${resolvedName}`);
+    resolvedName = data.mode === "pregnancy" && data.pregnancy?.active
+      ? "pregnancy-today"
+      : data.mode === "postpartum" && data.postpartum?.active
+        ? "postpartum-today"
+        : "today";
+  }
 
-  document
-    .querySelectorAll(".screen")
-    .forEach(screen => {
+  allScreens.forEach(screen => {
       screen.classList.toggle(
         "active",
         screen.dataset.screen === resolvedName
@@ -6816,7 +6856,15 @@ function loadAppLockSettings() {
 let appLockSettings = loadAppLockSettings();
 
 function saveAppLockSettings() {
-  localStorage.setItem(APP_LOCK_STORAGE_KEY, JSON.stringify(appLockSettings));
+  try {
+    localStorage.setItem(APP_LOCK_STORAGE_KEY, JSON.stringify(appLockSettings));
+    return true;
+  }
+  catch (error) {
+    console.error("Could not save App Lock settings:", error);
+    showToast("Tsuki couldn't save App Lock settings on this device.");
+    return false;
+  }
 }
 
 function randomLockSalt() {
@@ -6880,6 +6928,7 @@ function unlockAppView() {
   document.getElementById("appLockOverlay")?.classList.add("hidden");
   document.body.classList.remove("app-locked");
   document.getElementById("unlockPinError")?.classList.add("hidden");
+  setTimeout(runLaunchOverlays, 180);
 }
 
 async function tryUnlockApp() {
@@ -7132,6 +7181,8 @@ function showToast(message) {
     document.getElementById(
       "toast"
     );
+
+  if (!toast) return;
 
   toast.textContent =
     message;
@@ -8286,7 +8337,28 @@ document.getElementById("saveAppointmentRecap")?.addEventListener("click",()=>{c
 function renderPregReminders(){const c=document.getElementById("pregReminderList");if(!c)return;const list=[...(pregnancyRecord().reminders||[])].sort((a,b)=>new Date(a.date)-new Date(b.date));c.innerHTML=list.length?list.map(r=>`<article class="mini-record ${r.done?"done":""}"><span>🔔</span><div><strong>${escapeHTML(r.text)}</strong><small>${formatPregDateTime(r.date)}</small></div><button type="button" data-toggle-reminder="${r.id}">${r.done?"↺":"✓"}</button><button type="button" data-delete-reminder="${r.id}">×</button></article>`).join(""):'<p class="muted small-text">No reminders added.</p>';c.querySelectorAll("[data-toggle-reminder]").forEach(b=>b.onclick=()=>{const r=data.pregnancy.reminders.find(x=>x.id===b.dataset.toggleReminder);if(r){r.done=!r.done;saveData();renderPregReminders();}});c.querySelectorAll("[data-delete-reminder]").forEach(b=>b.onclick=()=>{data.pregnancy.reminders=data.pregnancy.reminders.filter(x=>x.id!==b.dataset.deleteReminder);saveData();renderPregReminders();});}
 document.getElementById("addPregReminder")?.addEventListener("click",()=>{const text=document.getElementById("pregReminderText").value.trim(),date=document.getElementById("pregReminderDate").value;if(!text||!date){showToast("Add the reminder and date/time first.");return;}const list=safePregnancyArray("reminders");list.push({id:uid(),text,date,done:false,notifiedAt:""});capPregnancyList(list,250);document.getElementById("pregReminderText").value="";saveData();renderPregReminders();});
 document.getElementById("enablePregNotifications")?.addEventListener("click",async()=>{if(!("Notification" in window)){showToast("Browser notifications aren't available on this device.");return;}const result=await Notification.requestPermission();showToast(result==="granted"?"Notifications enabled. Tsuki can alert you when the app is active/opened.":"Notifications were not enabled.");});
-async function notifyDuePregnancyReminders(){if(!("Notification" in window)||Notification.permission!=="granted")return;const now=new Date();for(const r of pregnancyRecord().reminders||[]){const d=new Date(r.date);if(!r.done&&!r.notifiedAt&&!Number.isNaN(d.getTime())&&d<=now){try{const reg=await navigator.serviceWorker?.ready;reg?.showNotification?.("Tsuki 🌙",{body:r.text,icon:"./icons/icon-192.png"});r.notifiedAt=new Date().toISOString();}catch{} } } }
+let lastPregnancyReminderCheckAt = 0;
+async function notifyDuePregnancyReminders(){
+  const nowMs = Date.now();
+  if (nowMs - lastPregnancyReminderCheckAt < 60000) return;
+  lastPregnancyReminderCheckAt = nowMs;
+  if (!("Notification" in window) || Notification.permission !== "granted") return;
+  const now = new Date();
+  let changed = false;
+  for (const r of pregnancyRecord().reminders || []) {
+    const d = new Date(r.date);
+    if (!r.done && !r.notifiedAt && !Number.isNaN(d.getTime()) && d <= now) {
+      try {
+        const reg = await navigator.serviceWorker?.ready;
+        await reg?.showNotification?.("Tsuki 🌙", { body: r.text, icon: "./icons/icon-192.png" });
+        r.notifiedAt = new Date().toISOString();
+        changed = true;
+      }
+      catch (_) {}
+    }
+  }
+  if (changed) saveData();
+}
 
 function renderPrenatalTracker(){const c=document.getElementById("prenatalTrackerList");if(!c)return;const tests=pregnancyRecord().tests||[];c.innerHTML=tests.length?tests.slice().sort((a,b)=>parseDate(a.date||"1900-01-01")-parseDate(b.date||"1900-01-01")).map(t=>`<article class="mini-record"><span>🧪</span><div><strong>${escapeHTML(t.name)}</strong><small>${escapeHTML(t.status||"Completed")} · ${t.date?formatDateLong(parseDate(t.date)):"No date"}${t.result?` · ${escapeHTML(t.result)}`:""}</small></div></article>`).join(""):'<p class="muted small-text">No prenatal tests or scans tracked.</p>';}
 document.getElementById("addPrenatalTracker")?.addEventListener("click",()=>{const preset=document.getElementById("pregPrenatalPreset").value,custom=document.getElementById("pregPrenatalCustomName").value.trim(),name=custom||preset;if(!name){showToast("Choose or enter a test / scan.");return;}data.pregnancy.tests.push({id:uid(),name,date:document.getElementById("pregPrenatalDate").value||todayKey(),result:document.getElementById("pregPrenatalNotes").value.trim(),status:document.getElementById("pregPrenatalStatus").value});document.getElementById("pregPrenatalCustomName").value="";document.getElementById("pregPrenatalNotes").value="";saveData();renderPrenatalTracker();});
@@ -8689,6 +8761,299 @@ document.getElementById("petCompanionButton")?.addEventListener("click", () => {
 
 
 /* ============================================================
+   BUILD 7.2 — STABILITY, TUTORIAL, WHAT'S NEW & DIAGNOSTICS
+   ============================================================ */
+
+let tutorialStepIndex = 0;
+let launchOverlayHandled = false;
+let runtimeErrorCount = 0;
+
+const TUTORIAL_STEPS = [
+  {
+    icon: "🌙",
+    eyebrow: "WELCOME TO TSUKI",
+    title: "Your body has a rhythm",
+    text: "Tsuki is a private, local-first space for following your cycle, body patterns, and—only if you choose it—your pregnancy journey.",
+    tip: "Your entries stay on this device unless you export a backup yourself."
+  },
+  {
+    icon: "🏠",
+    eyebrow: "TODAY",
+    title: "Start with what matters today",
+    text: "Today keeps your current cycle or pregnancy information light and useful. Use the check-in when you want to log how you feel; you never have to fill everything in.",
+    tip: "You can customize which Today cards appear from Me → Customize Today."
+  },
+  {
+    icon: "📅",
+    eyebrow: "LOG & CALENDAR",
+    title: "Build your own timeline",
+    text: "Use the pink + button for quick actions. Calendar lets you log periods, previous months, symptoms, appointments, and memories without digging through menus.",
+    tip: "Actual period dates anchor future cycle predictions. Estimates never replace the dates you save."
+  },
+  {
+    icon: "✨",
+    eyebrow: "TSUKI LEARNS",
+    title: "Patterns, not diagnoses",
+    text: "Insights such as My Normal, Same Moon, and Before It Hits look for patterns in your own logs. Tsuki describes what tends to happen without diagnosing a condition.",
+    tip: "Tap the lock in the header anytime you want to hide sensitive cycle or pregnancy details on screen."
+  },
+  {
+    icon: "🤰",
+    eyebrow: "LIFE MODES",
+    title: "Pregnancy Mode is always your choice",
+    text: "Switch between Cycle and Pregnancy Mode from Me. Tsuki never assumes pregnancy because a period is late, and your cycle history stays saved when modes change.",
+    tip: "Pregnancy health modules are optional, so you can turn on only the trackers that apply to you."
+  },
+  {
+    icon: "📦",
+    eyebrow: "KEEP TSUKI SAFE",
+    title: "Back up, update, and make it yours",
+    text: "Export backups from Me, personalize your theme, use optional App Lock, and watch for the update banner when a newer Tsuki build is ready.",
+    tip: "After every version update, What's New appears once. You can replay this tutorial anytime from the ☰ menu."
+  }
+];
+
+function hasMeaningfulTsukiData() {
+  return Boolean(
+    data.periods?.length ||
+    Object.keys(data.logs || {}).length ||
+    data.journal?.length ||
+    data.relief?.length ||
+    data.trips?.length ||
+    data.pregnancy?.active ||
+    data.pregnancyHistory?.length ||
+    data.postpartum?.active
+  );
+}
+
+function setModalOpenState() {
+  const anyModal = Array.from(document.querySelectorAll(".app-modal-backdrop"))
+    .some(modal => !modal.classList.contains("hidden"));
+  document.body.classList.toggle("modal-open", anyModal);
+}
+
+function renderTutorialStep() {
+  const step = TUTORIAL_STEPS[tutorialStepIndex] || TUTORIAL_STEPS[0];
+  const icon = document.getElementById("tutorialIcon");
+  const eyebrow = document.getElementById("tutorialEyebrow");
+  const title = document.getElementById("tutorialTitle");
+  const text = document.getElementById("tutorialText");
+  const tip = document.getElementById("tutorialTip");
+  const label = document.getElementById("tutorialStepLabel");
+  const dots = document.getElementById("tutorialDots");
+  const back = document.getElementById("tutorialBackButton");
+  const next = document.getElementById("tutorialNextButton");
+  if (!icon || !eyebrow || !title || !text || !tip || !label || !dots || !back || !next) return;
+
+  icon.textContent = step.icon;
+  eyebrow.textContent = step.eyebrow;
+  title.textContent = step.title;
+  text.textContent = step.text;
+  tip.textContent = step.tip;
+  label.textContent = `${tutorialStepIndex + 1} of ${TUTORIAL_STEPS.length}`;
+  dots.innerHTML = TUTORIAL_STEPS.map((_, index) => `<span class="tutorial-dot ${index === tutorialStepIndex ? "active" : ""}"></span>`).join("");
+  back.disabled = tutorialStepIndex === 0;
+  next.textContent = tutorialStepIndex === TUTORIAL_STEPS.length - 1 ? "Finish" : "Next";
+}
+
+function openTutorial({ fromWhatsNew = false } = {}) {
+  if (fromWhatsNew) closeWhatsNew({ markSeen: true });
+  tutorialStepIndex = 0;
+  renderTutorialStep();
+  document.getElementById("tutorialModal")?.classList.remove("hidden");
+  setModalOpenState();
+}
+
+function finishTutorial() {
+  try {
+    localStorage.setItem(TUTORIAL_STORAGE_KEY, "1");
+    if (!hasMeaningfulTsukiData()) localStorage.setItem(WHATS_NEW_STORAGE_KEY, APP_VERSION);
+  } catch (_) {}
+  document.getElementById("tutorialModal")?.classList.add("hidden");
+  setModalOpenState();
+}
+
+function renderWhatsNew() {
+  const title = document.getElementById("whatsNewTitle");
+  const list = document.getElementById("whatsNewList");
+  if (title) title.textContent = `Tsuki ${APP_VERSION.replace(/\.0$/, "")}`;
+  if (list) {
+    list.innerHTML = RELEASE_NOTES.map(note => `
+      <article class="whats-new-item">
+        <span aria-hidden="true">${note.icon}</span>
+        <div><strong>${escapeHTML(note.title)}</strong><small>${escapeHTML(note.text)}</small></div>
+      </article>
+    `).join("");
+  }
+}
+
+function openWhatsNew() {
+  renderWhatsNew();
+  document.getElementById("whatsNewModal")?.classList.remove("hidden");
+  setModalOpenState();
+}
+
+function closeWhatsNew({ markSeen = true } = {}) {
+  if (markSeen) {
+    try { localStorage.setItem(WHATS_NEW_STORAGE_KEY, APP_VERSION); } catch (_) {}
+  }
+  document.getElementById("whatsNewModal")?.classList.add("hidden");
+  setModalOpenState();
+}
+
+function runLaunchOverlays() {
+  if (launchOverlayHandled) return;
+  if (!document.getElementById("appLockOverlay")?.classList.contains("hidden")) return;
+  launchOverlayHandled = true;
+
+  let tutorialComplete = false;
+  let seenVersion = "";
+  try {
+    tutorialComplete = localStorage.getItem(TUTORIAL_STORAGE_KEY) === "1";
+    seenVersion = localStorage.getItem(WHATS_NEW_STORAGE_KEY) || "";
+  } catch (_) {}
+
+  if (!hasMeaningfulTsukiData() && !tutorialComplete) {
+    openTutorial();
+    return;
+  }
+
+  if (seenVersion !== APP_VERSION) openWhatsNew();
+}
+
+async function tryRecoverLastGoodSnapshot() {
+  let needsRecovery = false;
+  try { needsRecovery = localStorage.getItem("tsuki-recovery-needed") === "1"; } catch (_) {}
+  if (!needsRecovery) return false;
+  try {
+    const raw = await appearanceAssetGet(RECOVERY_ASSET_KEY);
+    if (typeof raw !== "string" || !raw.trim()) return false;
+    const parsed = JSON.parse(raw);
+    const recovered = normalizeData(parsed);
+    data = recovered;
+    const serialized = JSON.stringify(recovered);
+    localStorage.setItem(STORAGE_KEY, serialized);
+    lastSavedSnapshot = serialized;
+    localStorage.removeItem("tsuki-recovery-needed");
+    showToast("Tsuki restored the last healthy local snapshot 🌙");
+    return true;
+  }
+  catch (error) {
+    console.error("Tsuki recovery snapshot could not be restored:", error);
+    return false;
+  }
+}
+
+function formatBytes(bytes) {
+  const value = Number(bytes || 0);
+  if (!value) return "0 KB";
+  if (value < 1024 * 1024) return `${Math.max(1, Math.round(value / 1024))} KB`;
+  return `${(value / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+async function renderDiagnostics() {
+  const version = document.getElementById("diagAppVersion");
+  const mode = document.getElementById("diagLifeMode");
+  const local = document.getElementById("diagLocalData");
+  const storage = document.getElementById("diagStorage");
+  const cache = document.getElementById("diagCache");
+  const runtime = document.getElementById("diagRuntime");
+  const detail = document.getElementById("diagDetail");
+  if (!version || !mode || !local || !storage || !cache || !runtime || !detail) return;
+
+  version.textContent = APP_VERSION;
+  mode.textContent = data.mode === "pregnancy" ? "Pregnancy" : data.mode === "postpartum" ? "Postpartum" : "Cycle";
+  runtime.textContent = runtimeErrorCount ? `${runtimeErrorCount} issue${runtimeErrorCount === 1 ? "" : "s"} this session` : "Healthy";
+
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY) || "";
+    JSON.parse(raw || "{}");
+    local.textContent = `${formatBytes(new Blob([raw]).size)} · Healthy`;
+  }
+  catch (_) {
+    local.textContent = "Needs repair";
+  }
+
+  try {
+    const estimate = await navigator.storage?.estimate?.();
+    if (estimate?.quota) storage.textContent = `${formatBytes(estimate.usage)} / ${formatBytes(estimate.quota)}`;
+    else storage.textContent = "Available";
+  }
+  catch (_) { storage.textContent = "Unavailable"; }
+
+  try {
+    const keys = "caches" in window ? await caches.keys() : [];
+    const current = keys.includes(APP_CACHE_NAME);
+    cache.textContent = current ? "Current" : keys.length ? "Refreshing" : "Not cached yet";
+  }
+  catch (_) { cache.textContent = "Unavailable"; }
+
+  const photoCount = pregnancyRecord()?.photos?.length || 0;
+  const docCount = pregnancyRecord()?.documents?.length || 0;
+  const backup = data.meta?.lastBackupAt ? new Date(data.meta.lastBackupAt).toLocaleDateString() : "none yet";
+  detail.textContent = `Local media index: ${photoCount} photo${photoCount === 1 ? "" : "s"}, ${docCount} document${docCount === 1 ? "" : "s"}. Last backup: ${backup}. No diagnostic data is uploaded.`;
+}
+
+function repairLocalData() {
+  try {
+    data = normalizeData(data);
+    const saved = saveData();
+    if (!saved) throw new Error("save failed");
+    localStorage.removeItem("tsuki-recovery-needed");
+    loadSettingsUI();
+    applySettings();
+    renderEverything();
+    renderDiagnostics();
+    showToast("Local Tsuki data normalized and repaired 🌙");
+  }
+  catch (error) {
+    console.error("Tsuki repair failed:", error);
+    showToast("Tsuki couldn't complete the repair. Export a backup before making more changes.");
+  }
+}
+
+window.addEventListener("error", () => { runtimeErrorCount += 1; });
+window.addEventListener("unhandledrejection", () => { runtimeErrorCount += 1; });
+window.addEventListener("pageshow", () => {
+  updateOnlineStatus();
+  renderLifeModeUI();
+});
+
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) {
+    updateOnlineStatus();
+    renderLifeModeUI();
+  }
+});
+
+document.getElementById("tutorialNextButton")?.addEventListener("click", () => {
+  if (tutorialStepIndex >= TUTORIAL_STEPS.length - 1) { finishTutorial(); return; }
+  tutorialStepIndex += 1;
+  renderTutorialStep();
+});
+document.getElementById("tutorialBackButton")?.addEventListener("click", () => {
+  tutorialStepIndex = Math.max(0, tutorialStepIndex - 1);
+  renderTutorialStep();
+});
+document.getElementById("skipTutorialButton")?.addEventListener("click", finishTutorial);
+document.getElementById("dismissWhatsNewButton")?.addEventListener("click", () => closeWhatsNew());
+document.getElementById("closeWhatsNewButton")?.addEventListener("click", () => closeWhatsNew());
+document.getElementById("whatsNewTutorialButton")?.addEventListener("click", () => openTutorial({ fromWhatsNew: true }));
+document.getElementById("openTutorialButton")?.addEventListener("click", () => openTutorial());
+document.getElementById("openWhatsNewButton")?.addEventListener("click", openWhatsNew);
+document.getElementById("drawerTutorialButton")?.addEventListener("click", () => { closeAppDrawer(); openTutorial(); });
+document.getElementById("drawerWhatsNewButton")?.addEventListener("click", () => { closeAppDrawer(); openWhatsNew(); });
+document.getElementById("refreshDiagnostics")?.addEventListener("click", renderDiagnostics);
+document.getElementById("repairLocalData")?.addEventListener("click", repairLocalData);
+document.getElementById("diagnosticsCard")?.addEventListener("toggle", event => { if (event.currentTarget.open) renderDiagnostics(); });
+
+document.addEventListener("keydown", event => {
+  if (event.key !== "Escape") return;
+  if (!document.getElementById("tutorialModal")?.classList.contains("hidden")) finishTutorial();
+  else if (!document.getElementById("whatsNewModal")?.classList.contains("hidden")) closeWhatsNew();
+});
+
+/* ============================================================
    BUILD 7.1.2 — COMPANION IMAGE ASSET GUARD
    ============================================================ */
 function installCompanionImageGuard() {
@@ -8713,20 +9078,29 @@ function installCompanionImageGuard() {
    INIT
    ============================================================ */
 
-function init() {
+async function init() {
   installCompanionImageGuard();
   installNativeTouchGuards();
+  await tryRecoverLastGoodSnapshot();
   loadSettingsUI();
   applySettings();
   loadLogForm();
   renderEverything();
-  refreshWallpaperAsset();
   updateOnlineStatus();
   renderAppLockSettings();
   if (data.mode === "pregnancy" && data.pregnancy?.active) showScreen("pregnancy-today");
   else if (data.mode === "postpartum" && data.postpartum?.active) showScreen("postpartum-today");
+
+  const defer = window.requestIdleCallback || (callback => setTimeout(callback, 120));
+  defer(() => refreshWallpaperAsset());
+
   if (appLockSettings.enabled && appLockSettings.pinHash) lockApp();
+  else setTimeout(runLaunchOverlays, 280);
 }
 
 
-init();
+init().catch(error => {
+  console.error("Tsuki initialization failed:", error);
+  runtimeErrorCount += 1;
+  try { showToast("Tsuki hit a startup issue. Your saved data has not been deleted."); } catch (_) {}
+});

@@ -84,7 +84,7 @@
           </div>
         </div>
         <p><strong>Tsuki (月)</strong> means “moon” or “month.” With its connection to monthly rhythms and cycles, it became a natural name for an app that helps you understand and follow your own cycle.</p>
-        <span class="drawer-about-tsuki-version">Tsuki 7.1.4</span>
+        <span class="drawer-about-tsuki-version">Tsuki 7.2.0</span>
       </section>
 
       <div id="pregnancyDrawerMenu" class="pregnancy-drawer-menu hidden">
@@ -148,6 +148,8 @@
       <section class="drawer-group">
         <p class="drawer-group-title">PERSONALIZE & PRIVATE</p>
         <button class="drawer-row" id="drawerAppearance"><span class="drawer-row-icon">🎨</span><span><strong>Appearance</strong><small>Theme and wallpaper</small></span><b>›</b></button>
+        <button class="drawer-row" id="drawerTutorialButton"><span class="drawer-row-icon">🌙</span><span><strong>Tsuki Tutorial</strong><small>Take the quick guided tour</small></span><b>›</b></button>
+        <button class="drawer-row" id="drawerWhatsNewButton"><span class="drawer-row-icon">✨</span><span><strong>What's New</strong><small>See the latest Tsuki update</small></span><b>›</b></button>
         <button class="drawer-row" data-open-screen="privacy"><span class="drawer-row-icon">🔒</span><span><strong>Privacy</strong><small>Private display controls</small></span><b>›</b></button>
         <button class="drawer-row" data-open-screen="me"><span class="drawer-row-icon">⚙️</span><span><strong>Settings & Data</strong><small>Defaults, backup and app settings</small></span><b>›</b></button>
       </section>
@@ -1733,6 +1735,7 @@
       <div id="pregnancyDashboardHero" class="pregnancy-dashboard-hero pregnancy-sensitive"></div>
       <div id="pregnancyDashboardGrid" class="pregnancy-dashboard-grid"></div>
       <section class="section-block"><div class="section-heading"><div><p class="eyebrow">UP NEXT</p><h3>Care & reminders</h3></div><button class="text-button" data-open-screen="pregnancy-planner">Planner</button></div><div id="pregnancyDashboardUpcoming"></div></section>
+      <section class="section-block"><div class="section-heading"><div><p class="eyebrow">TSUKI NOTICED</p><h3>Recent pregnancy patterns</h3></div></div><div id="pregnancyDashboardInsights" class="pregnancy-insight-stack"></div></section>
       <section class="section-block"><div class="section-heading"><div><p class="eyebrow">BIRTH READINESS</p><h3>Your preparation</h3></div></div><div id="pregnancyBirthReadiness"></div></section>
       <button type="button" id="exportPregnancySummary" class="secondary-button full-width">📄 Export pregnancy summary</button>
     </section>
@@ -1751,7 +1754,7 @@
 
       <article id="pregBloodPressureModule" class="card pregnancy-optional-module"><h3>🩸 Blood Pressure Log</h3><p class="muted small-text">Use this only if you want to record readings. Follow targets and actions given by your clinician.</p><div class="tracker-inline"><input id="pregBPSystolic" class="input" type="number" inputmode="numeric" placeholder="Systolic"><span>/</span><input id="pregBPDiastolic" class="input" type="number" inputmode="numeric" placeholder="Diastolic"><input id="pregBPDate" class="input" type="datetime-local"></div><input id="pregBPNotes" class="input" placeholder="Optional note"><button type="button" id="addPregBP" class="secondary-button small">Save reading</button><div id="pregBPList" class="compact-list"></div></article>
 
-      <article id="pregGlucoseModule" class="card pregnancy-optional-module"><h3>🍬 Glucose Log</h3><p class="muted small-text">Optional for people asked to monitor glucose. Tsuki does not set treatment targets.</p><div class="pregnancy-two-column"><input id="pregGlucoseValue" class="input" type="number" step="0.1" inputmode="decimal" placeholder="Reading"><select id="pregGlucoseContext" class="input"><option>Fasting</option><option>Before meal</option><option>1 hour after meal</option><option>2 hours after meal</option><option>Other</option></select></div><input id="pregGlucoseDate" class="input" type="datetime-local"><input id="pregGlucoseNotes" class="input" placeholder="Optional note"><button type="button" id="addPregGlucose" class="secondary-button small">Save reading</button><div id="pregGlucoseList" class="compact-list"></div></article>
+      <article id="pregGlucoseModule" class="card pregnancy-optional-module"><h3>🍬 Glucose Log</h3><p class="muted small-text">Optional for people asked to monitor glucose. Tsuki does not set treatment targets.</p><div class="pregnancy-two-column"><input id="pregGlucoseValue" class="input" type="number" step="0.1" inputmode="decimal" placeholder="Reading"><select id="pregGlucoseUnit" class="input" aria-label="Glucose unit"><option value="mg/dL">mg/dL</option><option value="mmol/L">mmol/L</option></select></div><select id="pregGlucoseContext" class="input"><option>Fasting</option><option>Before meal</option><option>1 hour after meal</option><option>2 hours after meal</option><option>Other</option></select><input id="pregGlucoseDate" class="input" type="datetime-local"><input id="pregGlucoseNotes" class="input" placeholder="Optional note"><button type="button" id="addPregGlucose" class="secondary-button small">Save reading</button><div id="pregGlucoseList" class="compact-list"></div></article>
 
       <article id="pregWellbeingModule" class="card pregnancy-optional-module"><h3>🧠 Mental Wellbeing</h3><p class="muted small-text">A gentle personal check-in, not a clinical mental-health screening or diagnosis.</p><div class="wellbeing-scale"><button type="button" data-wellbeing="Very low">😞 Very low</button><button type="button" data-wellbeing="Low">😔 Low</button><button type="button" data-wellbeing="Okay">🙂 Okay</button><button type="button" data-wellbeing="Good">😊 Good</button></div><textarea id="pregWellbeingNote" class="textarea" placeholder="Anything you want to remember or discuss with your provider..."></textarea><button type="button" id="savePregWellbeing" class="secondary-button small">Save wellbeing check-in</button><div id="pregWellbeingList" class="compact-list"></div></article>
 
@@ -1995,6 +1998,12 @@
         <button class="settings-row" id="openTodayCustomize">
           <span>🏠 Customize Today</span><span>›</span>
         </button>
+        <button class="settings-row" id="openTutorialButton">
+          <span>🌙 Tsuki Tutorial</span><span>›</span>
+        </button>
+        <button class="settings-row" id="openWhatsNewButton">
+          <span>✨ What's New</span><span>›</span>
+        </button>
 
       </article>
 
@@ -2034,6 +2043,30 @@
         </button>
 
       </article>
+
+
+      <details class="card diagnostics-card" id="diagnosticsCard">
+        <summary>
+          <span><strong>🛠️ Tsuki Diagnostics</strong><small>Advanced local app health tools</small></span>
+          <span class="diagnostics-chevron">⌄</span>
+        </summary>
+        <div class="diagnostics-body">
+          <p class="muted small-text">Everything here stays on this device. Diagnostics never sends your cycle, pregnancy, journal, or health data anywhere.</p>
+          <div class="diagnostics-grid">
+            <div><small>App version</small><strong id="diagAppVersion">7.2.0</strong></div>
+            <div><small>Life mode</small><strong id="diagLifeMode">—</strong></div>
+            <div><small>Local data</small><strong id="diagLocalData">Checking…</strong></div>
+            <div><small>Device storage</small><strong id="diagStorage">Checking…</strong></div>
+            <div><small>Offline cache</small><strong id="diagCache">Checking…</strong></div>
+            <div><small>Runtime health</small><strong id="diagRuntime">Healthy</strong></div>
+          </div>
+          <div class="diagnostics-actions">
+            <button type="button" id="refreshDiagnostics" class="secondary-button">Refresh diagnostics</button>
+            <button type="button" id="repairLocalData" class="secondary-button">Repair local data</button>
+          </div>
+          <p id="diagDetail" class="muted small-text">Open this panel whenever Tsuki feels unusual. Repair normalizes saved data without deleting valid entries.</p>
+        </div>
+      </details>
 
 
       <article class="soft-note">
@@ -2456,6 +2489,44 @@
     </section>
   </div>
 
+
+  <!-- TSUKI TUTORIAL -->
+  <div id="tutorialModal" class="app-modal-backdrop tutorial-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="tutorialTitle">
+    <section class="app-modal tutorial-modal">
+      <div class="modal-grabber"></div>
+      <div class="tutorial-progress-row">
+        <span id="tutorialStepLabel">1 of 6</span>
+        <button type="button" id="skipTutorialButton" class="tutorial-skip">Skip</button>
+      </div>
+      <div class="tutorial-visual" id="tutorialIcon" aria-hidden="true">🌙</div>
+      <p class="eyebrow" id="tutorialEyebrow">WELCOME TO TSUKI</p>
+      <h2 id="tutorialTitle">Your body has a rhythm</h2>
+      <p id="tutorialText" class="tutorial-copy"></p>
+      <div id="tutorialTip" class="tutorial-tip"></div>
+      <div id="tutorialDots" class="tutorial-dots" aria-hidden="true"></div>
+      <div class="tutorial-actions">
+        <button type="button" id="tutorialBackButton" class="secondary-button">Back</button>
+        <button type="button" id="tutorialNextButton" class="primary-button">Next</button>
+      </div>
+    </section>
+  </div>
+
+  <!-- WHAT'S NEW -->
+  <div id="whatsNewModal" class="app-modal-backdrop whats-new-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="whatsNewTitle">
+    <section class="app-modal whats-new-modal">
+      <div class="modal-grabber"></div>
+      <div class="app-modal-header">
+        <div><p class="eyebrow">NEW IN TSUKI</p><h2 id="whatsNewTitle">Tsuki 7.2</h2></div>
+        <button type="button" id="closeWhatsNewButton" class="modal-close" aria-label="Close what's new">×</button>
+      </div>
+      <div class="whats-new-hero"><span>🌙</span><div><strong>Smoother, safer, easier to learn</strong><small>Stability + polish update</small></div></div>
+      <div id="whatsNewList" class="whats-new-list"></div>
+      <div class="whats-new-actions">
+        <button type="button" id="whatsNewTutorialButton" class="secondary-button">Take the tutorial</button>
+        <button type="button" id="dismissWhatsNewButton" class="primary-button">Got it</button>
+      </div>
+    </section>
+  </div>
 
   <div id="updateBanner" class="update-banner hidden" role="status" aria-live="polite">
     <span class="update-banner-copy">An update is available. Refresh to update.</span>
