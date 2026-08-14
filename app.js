@@ -1,5 +1,5 @@
 /* ============================================================
-   TSUKI 🌙 — BUILD 7.4
+   TSUKI 🌙 — BUILD 7.5
    OPTIONAL FIREBASE ACCOUNT + LOCAL-FIRST IDENTITY
    ============================================================ */
 
@@ -8,19 +8,19 @@ const BUILD3_STORAGE_KEY = "tsuki-data-v3";
 const BUILD2_STORAGE_KEY = "tsuki-data-v2";
 const LEGACY_STORAGE_KEY = "tsuki-data-v1";
 const APP_LOCK_STORAGE_KEY = "tsuki-app-lock-v1";
-const APP_VERSION = "7.4.0";
-const APP_CACHE_NAME = "tsuki-cache-v7-4";
+const APP_VERSION = "7.5.0";
+const APP_CACHE_NAME = "tsuki-cache-v7-5";
 const TUTORIAL_STORAGE_KEY = "tsuki-tutorial-complete-v1";
 const WHATS_NEW_STORAGE_KEY = "tsuki-whats-new-seen-v1";
 const RECOVERY_ASSET_KEY = "tsuki-last-good-data-v1";
 
 const RELEASE_NOTES = [
-  { icon: "👤", title: "Optional Tsuki account", text: "Sign in with email and password or Google, or keep using Tsuki without an account. Your local tracker remains available either way." },
-  { icon: "🔐", title: "Firebase Authentication", text: "Account identity is handled by Firebase Authentication with persistent sign-in, password reset and email verification support." },
-  { icon: "🌙", title: "Local health data stays local", text: "Signing in does not upload cycle, pregnancy, Between Moons, journal, photo or other health entries in this release." },
-  { icon: "📱", title: "Mobile-safe Google sign-in", text: "Google sign-in uses a user-initiated popup flow so GitHub Pages does not depend on a cross-site redirect helper that modern browsers can block." },
-  { icon: "🫧", title: "Graceful offline behavior", text: "If Firebase is unavailable or you are offline, Tsuki still opens and all existing local tracking continues to work." },
-  { icon: "🛡️", title: "Stability first", text: "The authentication layer is isolated from Tsuki's local data engine, with regular-cycle, irregular-cycle and Pregnancy Mode regressions covered before release." }
+  { icon: "☁️", title: "Optional Cloud Backup", text: "Signed-in users can explicitly enable private Firebase cloud backups without turning Tsuki into live sync." },
+  { icon: "🕗", title: "Daily backup due at 8:00 AM", text: "When enabled, Tsuki creates one backup per day at 8:00 AM local device time while the app is available; if it was closed, the backup runs the next time Tsuki opens or resumes after 8:00 AM." },
+  { icon: "💾", title: "Back up now + restore preview", text: "Create a manual cloud backup anytime, review the latest seven snapshots, preview a restore, and keep a local recovery snapshot before replacement." },
+  { icon: "📷", title: "Local media included", text: "Wallpaper, pregnancy photos and saved pregnancy documents are backed up when available. Unchanged media is de-duplicated so daily snapshots do not repeatedly copy the same file." },
+  { icon: "🔐", title: "Private by account", text: "Google and email/password sign-ins use the same Firebase UID-scoped backup system. Signing in alone still uploads nothing; Cloud Backup requires explicit consent." },
+  { icon: "🫧", title: "Local-first fallback", text: "If Firestore, Firebase or the internet is unavailable, Tsuki keeps working locally and retries a due backup later instead of blocking the app." }
 ];
 
 
@@ -8774,7 +8774,7 @@ const TUTORIAL_STEPS = [
     eyebrow: "WELCOME TO TSUKI",
     title: "Your body has a rhythm",
     text: "Tsuki is a private, local-first space for following your cycle, body patterns, and—only if you choose it—your pregnancy journey.",
-    tip: "Your entries stay on this device unless you export a backup yourself."
+    tip: "Your entries stay on this device unless you explicitly enable Cloud Backup or export a backup yourself."
   },
   {
     icon: "🏠",
@@ -8808,7 +8808,7 @@ const TUTORIAL_STEPS = [
     icon: "📦",
     eyebrow: "KEEP TSUKI SAFE",
     title: "Back up, update, and make it yours",
-    text: "Export backups from Me, personalize your theme, use optional App Lock, and watch for the update banner when a newer Tsuki build is ready.",
+    text: "Use local export or optional signed-in Cloud Backup from Me, personalize your theme, use optional App Lock, and watch for the update banner when a newer Tsuki build is ready.",
     tip: "After every version update, What's New appears once. You can replay this tutorial anytime from the ☰ menu."
   }
 ];
@@ -8991,7 +8991,7 @@ async function renderDiagnostics() {
   const photoCount = pregnancyRecord()?.photos?.length || 0;
   const docCount = pregnancyRecord()?.documents?.length || 0;
   const backup = data.meta?.lastBackupAt ? new Date(data.meta.lastBackupAt).toLocaleDateString() : "none yet";
-  detail.textContent = `Local media index: ${photoCount} photo${photoCount === 1 ? "" : "s"}, ${docCount} document${docCount === 1 ? "" : "s"}. Last backup: ${backup}. No diagnostic data is uploaded.`;
+  detail.textContent = `Local media index: ${photoCount} photo${photoCount === 1 ? "" : "s"}, ${docCount} document${docCount === 1 ? "" : "s"}. Last backup: ${backup}. Diagnostics do not upload data by themselves; optional Cloud Backup is controlled separately from Account.`;
 }
 
 function repairLocalData() {

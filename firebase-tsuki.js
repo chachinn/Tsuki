@@ -1,6 +1,6 @@
 /* ============================================================
-   TSUKI 7.4 — OPTIONAL FIREBASE AUTHENTICATION
-   Identity only. Health data remains local in this release.
+   TSUKI 7.5 — OPTIONAL FIREBASE AUTHENTICATION
+   Identity stays separate from optional Tsuki Cloud Backup.
    ============================================================ */
 
 const FIREBASE_SDK_VERSION = "12.16.0";
@@ -14,6 +14,7 @@ const FIREBASE_CONFIG = {
 };
 
 const authState = {
+  app: null,
   auth: null,
   modules: null,
   user: null,
@@ -133,7 +134,7 @@ function renderAuthUI() {
     const user = authState.user;
     const display = user.displayName || user.email || "Tsuki account";
     if (cardTitle) cardTitle.textContent = display;
-    if (cardText) cardText.textContent = `${user.email || "Signed in"} · Your health entries are still stored locally on this device.`;
+    if (cardText) cardText.textContent = `${user.email || "Signed in"} · Your tracker stays local unless you explicitly enable Cloud Backup below.`;
     if (pill) pill.textContent = "Signed in";
     if (cardButton) cardButton.textContent = "Manage account";
     if (drawerStatus) drawerStatus.textContent = user.email || "Signed in";
@@ -145,7 +146,7 @@ function renderAuthUI() {
   } else {
     if (cardTitle) cardTitle.textContent = authState.serviceAvailable ? "Optional Tsuki account" : "Optional Tsuki account";
     if (cardText) cardText.textContent = authState.serviceAvailable
-      ? "Sign in if you want an account identity. Your cycle, pregnancy, journal and other health entries stay on this device in this release."
+      ? "Sign in if you want an account identity. Your tracker stays local unless you explicitly enable Cloud Backup after signing in."
       : "Tsuki is still fully usable locally. Account services need an internet connection when you want to sign in.";
     if (pill) pill.textContent = authState.serviceAvailable ? "Local only" : "Local only";
     if (cardButton) cardButton.textContent = authState.serviceAvailable ? "Sign in or create account" : "Account options";
@@ -186,6 +187,7 @@ async function loadFirebaseAuth() {
       }
     }
 
+    authState.app = firebaseApp;
     authState.auth = auth;
     authState.modules = authModule;
     authState.sdkReady = true;
@@ -331,6 +333,7 @@ function bindAuthUI() {
 }
 
 window.TsukiAuth = {
+  get app() { return authState.app; },
   get sdkReady() { return authState.sdkReady; },
   get serviceAvailable() { return authState.serviceAvailable; },
   get user() { return authState.user; },

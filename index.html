@@ -84,7 +84,7 @@
           </div>
         </div>
         <p><strong>Tsuki (月)</strong> means “moon” or “month.” With its connection to monthly rhythms and cycles, it became a natural name for an app that helps you understand and follow your own cycle.</p>
-        <span class="drawer-about-tsuki-version">Tsuki 7.4.0</span>
+        <span class="drawer-about-tsuki-version">Tsuki 7.5.0</span>
       </section>
 
       <div id="pregnancyDrawerMenu" class="pregnancy-drawer-menu hidden">
@@ -2783,8 +2783,38 @@
         </div>
         <div class="firebase-account-facts">
           <div><small>Email status</small><strong id="firebaseEmailStatus">—</strong></div>
-          <div><small>Health data sync</small><strong>Off · local only</strong></div>
+          <div><small>Cloud backup</small><strong id="firebaseCloudBackupFact">Off</strong></div>
         </div>
+        <section id="firebaseCloudBackupPanel" class="firebase-cloud-backup-panel hidden" aria-label="Cloud Backup">
+          <div class="cloud-backup-heading">
+            <div><p class="eyebrow">CLOUD BACKUP</p><h3>Keep your Tsuki safe</h3></div>
+            <span id="cloudBackupStatusPill" class="cloud-backup-status">Off</span>
+          </div>
+          <p class="muted small-text">Cloud Backup is optional and separate from live sync. Signing in alone never uploads your tracker. When you enable it, backups are stored under your Firebase account.</p>
+          <label class="cloud-backup-toggle-row">
+            <span><strong>Daily automatic backup</strong><small>One backup per day, due at 8:00 AM</small></span>
+            <input type="checkbox" id="cloudBackupEnabled" aria-label="Enable daily cloud backup at 8 AM">
+          </label>
+          <div class="cloud-backup-schedule">
+            <span aria-hidden="true">🕗</span>
+            <div><strong>8:00 AM daily</strong><small id="cloudBackupScheduleNote">Turn this on to create one backup per day, due at 8:00 AM local device time.</small></div>
+          </div>
+          <button type="button" id="cloudBackupNow" class="primary-button full-width">Back up now</button>
+          <label class="cloud-backup-history-label" for="cloudBackupHistorySelect">Backup history</label>
+          <select id="cloudBackupHistorySelect" class="cloud-backup-history-select"><option value="">No cloud backups yet</option></select>
+          <button type="button" id="cloudRestorePreviewButton" class="secondary-button full-width" disabled>Preview selected restore</button>
+          <div id="cloudRestorePreview" class="cloud-restore-preview hidden">
+            <div id="cloudRestorePreviewContent"></div>
+            <div class="cloud-restore-actions">
+              <button type="button" id="cloudRestoreCancel" class="secondary-button">Cancel</button>
+              <button type="button" id="cloudRestoreConfirm" class="primary-button">Restore safely</button>
+            </div>
+          </div>
+          <p id="cloudBackupLastText" class="muted small-text">No cloud backup has been created yet.</p>
+          <p class="cloud-backup-privacy-note">🔐 Protected by Firebase Authentication and private per-user Firestore rules. Cloud backups are not end-to-end encrypted. Tsuki keeps the latest 7 snapshots. Individual local media files over 25 MB remain on the device.</p>
+          <div id="cloudBackupMessage" class="firebase-auth-message hidden"></div>
+          <button type="button" id="cloudDeleteBackups" class="cloud-delete-backups" disabled>Delete cloud backups</button>
+        </section>
         <p id="firebaseSignedInNote" class="muted small-text">Your sign-in can persist on this browser. Signing out does not erase any local Tsuki entries.</p>
         <button type="button" id="firebaseSignOut" class="secondary-button full-width">Sign out</button>
         <button type="button" id="firebaseDeleteAccount" class="text-button danger-text full-width">Delete sign-in account</button>
@@ -2811,6 +2841,7 @@
 
 <script src="./app.js"></script>
 <script type="module" src="./firebase-tsuki.js"></script>
+<script type="module" src="./firebase-backup.js"></script>
 
 </body>
 </html>
