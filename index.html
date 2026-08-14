@@ -84,7 +84,7 @@
           </div>
         </div>
         <p><strong>Tsuki (月)</strong> means “moon” or “month.” With its connection to monthly rhythms and cycles, it became a natural name for an app that helps you understand and follow your own cycle.</p>
-        <span class="drawer-about-tsuki-version">Tsuki 7.3.0</span>
+        <span class="drawer-about-tsuki-version">Tsuki 7.3.1</span>
       </section>
 
       <div id="pregnancyDrawerMenu" class="pregnancy-drawer-menu hidden">
@@ -131,6 +131,7 @@
       <section class="drawer-group">
         <p class="drawer-group-title">YOUR CYCLE</p>
         <button class="drawer-row" data-open-screen="cycle-history"><span class="drawer-row-icon">🌙</span><span><strong>Cycle History</strong><small>Periods and cycle context</small></span><b>›</b></button>
+        <button id="betweenMoonsDrawerRow" class="drawer-row hidden" data-open-screen="between-moons"><span class="drawer-row-icon">🌘</span><span><strong>Between Moons</strong><small>Your body story between infrequent periods</small></span><b>›</b></button>
         <button class="drawer-row" data-open-screen="past-moons"><span class="drawer-row-icon">🌕</span><span><strong>Past Moons</strong><small>Your completed cycle stories</small></span><b>›</b></button>
         <button class="drawer-row" data-open-screen="reports"><span class="drawer-row-icon">📊</span><span><strong>Reports</strong><small>Cycle summaries and trends</small></span><b>›</b></button>
         <button class="drawer-row" data-open-screen="moon-garden"><span class="drawer-row-icon">🌸</span><span><strong>Moon Garden</strong><small>One flower for each completed cycle</small></span><b>›</b></button>
@@ -212,6 +213,16 @@
           🌙 Your estimated window has passed. Cycles can shift, so this is only an estimate.
         </div>
 
+      </article>
+
+      <article id="betweenMoonsTodayCard" class="between-moons-today hidden">
+        <div class="between-moons-today-icon" aria-hidden="true">🌘</div>
+        <div class="between-moons-today-copy">
+          <p class="eyebrow">BETWEEN MOONS</p>
+          <h3 id="betweenMoonsTodayTitle">Your body still has a story</h3>
+          <p id="betweenMoonsTodayText">Tsuki can follow what changes between periods without guessing an exact next date.</p>
+          <button type="button" class="text-button" data-open-screen="between-moons">See my Between Moons view →</button>
+        </div>
       </article>
 
       <div class="mini-grid">
@@ -1911,6 +1922,53 @@
     </section>
 
 
+    <!-- BETWEEN MOONS -->
+    <section class="screen" data-screen="between-moons">
+      <div class="page-title">
+        <div>
+          <p class="eyebrow">BETWEEN MOONS</p>
+          <h2>Your body still has a story</h2>
+        </div>
+        <span>🌘</span>
+      </div>
+
+      <article id="betweenMoonsIntro" class="card between-moons-intro">
+        <p>When periods are months apart, Tsuki stops making the next bleed the whole point. Your check-ins can still show what your body, mood, energy and sleep have been doing between actual periods.</p>
+      </article>
+
+      <div id="betweenMoonsStats" class="between-moons-stats"></div>
+
+      <article class="card">
+        <div class="section-heading compact-heading">
+          <div><p class="eyebrow">RECENT BODY STORY</p><h3>What you’ve been logging</h3></div>
+          <span>✨</span>
+        </div>
+        <div id="betweenMoonsSignals" class="between-moons-signals"></div>
+        <button type="button" class="secondary-button full-width" data-open-screen="log">Check in today</button>
+      </article>
+
+      <article class="card">
+        <div class="section-heading compact-heading">
+          <div><p class="eyebrow">TSUKI NOTICED</p><h3>Patterns that don’t need a monthly cycle</h3></div>
+          <span>🌙</span>
+        </div>
+        <div id="betweenMoonsInsights" class="between-moons-insights"></div>
+      </article>
+
+      <article id="betweenMoonsCareCard" class="card between-moons-care-card"></article>
+
+      <article class="card">
+        <div class="section-heading compact-heading">
+          <div><p class="eyebrow">FOR APPOINTMENTS</p><h3>A factual snapshot</h3></div>
+          <span>📋</span>
+        </div>
+        <p class="muted">A concise summary of what you recorded. It does not diagnose PCOS, confirm ovulation, or explain why a period has not happened.</p>
+        <pre id="betweenMoonsSummaryPreview" class="between-moons-summary-preview"></pre>
+        <button type="button" id="copyBetweenMoonsSummary" class="secondary-button full-width">Copy summary</button>
+      </article>
+    </section>
+
+
     <!-- ME -->
     <section class="screen" data-screen="me">
 
@@ -1980,6 +2038,15 @@
         </p>
 
         <div id="irregularCycleOptions" class="irregular-cycle-options hidden">
+          <label class="field-label" for="irregularCycleShape">What does that usually look like for you?</label>
+          <select id="irregularCycleShape" class="input">
+            <option value="variable">My periods still happen fairly often, but timing varies</option>
+            <option value="infrequent">I may go several months without a period</option>
+            <option value="unpredictable">It changes too much to describe</option>
+            <option value="unsure">I’m not sure</option>
+          </select>
+          <p id="irregularCycleShapeHelp" class="muted small-text">This changes how Tsuki helps between periods. It does not diagnose why your timing varies.</p>
+
           <label class="settings-row">
             <span>🌸 Show estimated next-period window<small>Uses your actual recent period starts when a useful range exists.</small></span>
             <input id="showIrregularPredictionWindow" type="checkbox" checked>

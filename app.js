@@ -1,6 +1,6 @@
 /* ============================================================
-   TSUKI 🌙 — BUILD 7.3
-   PERSONAL RHYTHMS + IRREGULAR CYCLE SUPPORT
+   TSUKI 🌙 — BUILD 7.3.1
+   BETWEEN MOONS + VERY INFREQUENT CYCLE SUPPORT
    ============================================================ */
 
 const STORAGE_KEY = "tsuki-data-v4";
@@ -8,20 +8,19 @@ const BUILD3_STORAGE_KEY = "tsuki-data-v3";
 const BUILD2_STORAGE_KEY = "tsuki-data-v2";
 const LEGACY_STORAGE_KEY = "tsuki-data-v1";
 const APP_LOCK_STORAGE_KEY = "tsuki-app-lock-v1";
-const APP_VERSION = "7.3.0";
-const APP_CACHE_NAME = "tsuki-cache-v7-3";
+const APP_VERSION = "7.3.1";
+const APP_CACHE_NAME = "tsuki-cache-v7-3-1";
 const TUTORIAL_STORAGE_KEY = "tsuki-tutorial-complete-v1";
 const WHATS_NEW_STORAGE_KEY = "tsuki-whats-new-seen-v1";
 const RECOVERY_ASSET_KEY = "tsuki-last-good-data-v1";
 
 const RELEASE_NOTES = [
-  { icon: "🌙", title: "Personal Rhythms", text: "Choose whether your cycle is usually predictable, varies a lot, or is still unclear. Tsuki adapts its forecasting style without changing saved history." },
-  { icon: "🌸", title: "Irregular-cycle windows", text: "Variable cycles use one uncertainty-aware next-period window instead of repeated exact future dates. If the data is too variable, Tsuki simply says timing is uncertain." },
-  { icon: "🧭", title: "No forced phase guesses", text: "For variable timing, future ovulation and phase coloring stays quiet until another actual period is recorded." },
-  { icon: "📊", title: "Long-cycle history", text: "Long real intervals stay visible in Cycle History and Reports, with range, middle value, variability and confidence summaries." },
-  { icon: "🫧", title: "Missing-history controls", text: "Think you forgot to log a period between two dates? Exclude only that interval from prediction learning without deleting either saved period." },
-  { icon: "✨", title: "Event-based insights", text: "Variable-cycle insights focus on patterns around actual recorded periods instead of assuming every cycle follows the same phase schedule." },
-  { icon: "🛡️", title: "Stability first", text: "Regular-cycle behavior remains the default for existing users, data storage stays compatible, and new irregular-cycle logic is isolated behind the Cycle Pattern setting." }
+  { icon: "🌙", title: "Between Moons", text: "Very infrequent cycles now get a body-first home for the months between periods, so Tsuki stays useful even when a next-period date is not." },
+  { icon: "🫧", title: "Several-month gaps", text: "If your periods may be months apart, Tsuki can intentionally stop forecasting the next date instead of turning a huge range into a misleading prediction." },
+  { icon: "✨", title: "Your body still has a story", text: "Recent symptoms, moods, energy and sleep can be summarized from your check-ins even when there has not been a recent period." },
+  { icon: "📊", title: "Factual care summary", text: "Between Moons can summarize your last recorded period, periods in the past 12 months, recorded intervals and recent body signals without diagnosing a cause." },
+  { icon: "🤍", title: "Gentle long-gap context", text: "After a long unexplained gap, Tsuki can offer one calm care note. You can mark long gaps as expected for you or already covered by a care plan so it does not nag." },
+  { icon: "🛡️", title: "Stable by default", text: "Regular and existing irregular-cycle behavior stays unchanged unless you explicitly choose the several-month-gap pattern." }
 ];
 
 
@@ -9964,6 +9963,503 @@ if (Array.isArray(TUTORIAL_STEPS) && !TUTORIAL_STEPS.some(step => step.title ===
     eyebrow: "PERSONAL RHYTHMS",
     title: "Your rhythm can vary",
     text: "In Me → Cycle defaults, choose whether your timing is usually predictable, varies a lot, or is still unclear. Tsuki can switch from exact countdowns to wider, uncertainty-aware windows without changing your saved history."
+  });
+}
+
+
+
+/* ============================================================
+   BUILD 7.3.1 — BETWEEN MOONS + VERY INFREQUENT CYCLES
+   Makes Tsuki useful between sparse periods instead of forcing a forecast.
+   ============================================================ */
+
+const TSUKI731_IRREGULAR_SHAPES = new Set(["variable", "infrequent", "unpredictable", "unsure"]);
+const TSUKI731_LONG_GAP_CONTEXTS = new Set(["unknown", "expected", "care-plan"]);
+const TSUKI731_LONG_GAP_DAYS = 90;
+
+function ensureBetweenMoonsSettings() {
+  ensureCycleProfileSettings();
+  if (!TSUKI731_IRREGULAR_SHAPES.has(data.settings.irregularCycleShape)) {
+    data.settings.irregularCycleShape = cyclePatternValue() === "irregular" ? "variable" : "unsure";
+  }
+  if (!TSUKI731_LONG_GAP_CONTEXTS.has(data.settings.longGapContext)) {
+    data.settings.longGapContext = "unknown";
+  }
+}
+
+function irregularCycleShapeValue() {
+  ensureBetweenMoonsSettings();
+  return data.settings.irregularCycleShape;
+}
+
+function usesVeryInfrequentCycle() {
+  return cyclePatternValue() === "irregular" && irregularCycleShapeValue() === "infrequent";
+}
+
+function validDateFromKey(key) {
+  const value = parseDate(key);
+  return value && !Number.isNaN(value.getTime()) ? value : null;
+}
+
+function daysSinceLastRecordedPeriod() {
+  const latest = latestPeriod();
+  const start = latest ? parseDate(latest.start) : null;
+  return start ? Math.max(0, daysBetween(start, new Date())) : null;
+}
+
+function periodsRecordedInLastDays(days = 365) {
+  const end = new Date();
+  const start = addDays(end, -Math.max(1, days));
+  return validPeriods().filter(period => {
+    const date = parseDate(period.start);
+    return date && date >= start && date <= end;
+  });
+}
+
+function recentBodyLogs(days = 60) {
+  const cutoff = addDays(new Date(), -Math.max(1, days - 1));
+  cutoff.setHours(0, 0, 0, 0);
+  const end = new Date();
+  end.setHours(23, 59, 59, 999);
+
+  return Object.entries(data.logs || {})
+    .map(([key, log]) => ({ key, date: validDateFromKey(key), log: log || {} }))
+    .filter(item => item.date && item.date >= cutoff && item.date <= end)
+    .sort((a, b) => a.date - b.date);
+}
+
+function topLoggedItem(values) {
+  const counts = new Map();
+  values.filter(Boolean).forEach(value => {
+    const label = String(value).trim();
+    if (!label) return;
+    counts.set(label, (counts.get(label) || 0) + 1);
+  });
+  if (!counts.size) return null;
+  return Array.from(counts.entries())
+    .map(([value, count]) => ({ value, count }))
+    .sort((a, b) => b.count - a.count || a.value.localeCompare(b.value))[0];
+}
+
+function betweenMoonsSnapshot() {
+  ensureBetweenMoonsSettings();
+  const logs30 = recentBodyLogs(30);
+  const logs60 = recentBodyLogs(60);
+  const symptoms = [];
+  const moods = [];
+  const energies = [];
+  const sleeps = [];
+
+  logs60.forEach(({ log }) => {
+    (Array.isArray(log.symptoms) ? log.symptoms : []).forEach(value => symptoms.push(value));
+    const logMoods = Array.isArray(log.moods) ? log.moods : (log.mood ? [log.mood] : []);
+    logMoods.forEach(value => moods.push(value));
+    if (log.energy) energies.push(log.energy);
+    if (log.sleep) sleeps.push(log.sleep);
+  });
+
+  const records = cycleIntervalRecords();
+  const intervalValues = records.map(record => record.days).filter(Number.isFinite);
+  const latest = latestPeriod();
+  const lastStart = latest ? parseDate(latest.start) : null;
+
+  return {
+    lastPeriod: lastStart,
+    daysSince: daysSinceLastRecordedPeriod(),
+    periods12m: periodsRecordedInLastDays(365).length,
+    checkins30: logs30.length,
+    checkins60: logs60.length,
+    topSymptom: topLoggedItem(symptoms),
+    topMood: topLoggedItem(moods),
+    topEnergy: topLoggedItem(energies),
+    topSleep: topLoggedItem(sleeps),
+    intervalValues,
+    intervalLow: intervalValues.length ? Math.min(...intervalValues) : null,
+    intervalHigh: intervalValues.length ? Math.max(...intervalValues) : null
+  };
+}
+
+const tsuki73IrregularForecastWindow = irregularForecastWindow;
+irregularForecastWindow = function irregularForecastWindow731() {
+  if (usesVeryInfrequentCycle()) {
+    const values = irregularLearningIntervals().map(record => record.days);
+    return {
+      useful: false,
+      reason: "very-infrequent",
+      sampleCount: values.length,
+      values,
+      low: values.length ? Math.min(...values) : null,
+      high: values.length ? Math.max(...values) : null,
+      median: values.length ? medianNumber(values) : null
+    };
+  }
+  return tsuki73IrregularForecastWindow();
+};
+
+const tsuki73IrregularPredictionConfidence = irregularPredictionConfidence;
+irregularPredictionConfidence = function irregularPredictionConfidence731() {
+  if (usesVeryInfrequentCycle()) {
+    return {
+      level: "Not used",
+      className: "confidence-low",
+      reason: "Tsuki is intentionally not forecasting a next period for this pattern"
+    };
+  }
+  return tsuki73IrregularPredictionConfidence();
+};
+
+const tsuki73PeriodCountdownText = periodCountdownText;
+periodCountdownText = function periodCountdownText731() {
+  if (!usesVeryInfrequentCycle()) return tsuki73PeriodCountdownText();
+  if (!latestPeriod()) return "Log a period when it happens";
+  return "Tsuki isn’t guessing your next period";
+};
+
+function betweenMoonsCareHTML(snapshot) {
+  if (!snapshot.lastPeriod || snapshot.daysSince == null || snapshot.daysSince < TSUKI731_LONG_GAP_DAYS) {
+    return `<div class="between-moons-care-calm"><span>🤍</span><div><p class="eyebrow">CARE CONTEXT</p><h3>No long-gap note right now</h3><p>Tsuki keeps this area quiet unless a recorded gap becomes long enough that a gentle check-in may be useful.</p></div></div>`;
+  }
+
+  const context = data.settings.longGapContext || "unknown";
+  if (context === "expected") {
+    return `<div class="between-moons-care-calm"><span>🌙</span><div><p class="eyebrow">CARE CONTEXT</p><h3>Long gaps are expected for you</h3><p>You marked this pattern as expected. Tsuki will keep recording your body story without repeatedly flagging the gap.</p><button type="button" class="text-button" data-long-gap-context="unknown">Change this</button></div></div>`;
+  }
+  if (context === "care-plan") {
+    return `<div class="between-moons-care-calm"><span>🤍</span><div><p class="eyebrow">CARE CONTEXT</p><h3>You’re already following a care plan</h3><p>Tsuki will stay in record-keeping mode and won’t repeatedly warn you about the same expected long-gap pattern.</p><button type="button" class="text-button" data-long-gap-context="unknown">Change this</button></div></div>`;
+  }
+
+  return `<div class="between-moons-care-note"><span>🫧</span><div><p class="eyebrow">A GENTLE NOTE</p><h3>It’s been over 3 months since your last recorded period</h3><p>If this isn’t expected for you or already part of a plan with a healthcare professional, consider checking in with them. There are many possible reasons for long gaps, and Tsuki can’t tell why a period hasn’t happened.</p><div class="between-moons-care-actions"><button type="button" class="secondary-button small" data-long-gap-context="expected">This is expected for me</button><button type="button" class="secondary-button small" data-long-gap-context="care-plan">I’m following a care plan</button></div></div></div>`;
+}
+
+function betweenMoonsSummaryText() {
+  const snapshot = betweenMoonsSnapshot();
+  const lines = [
+    "Tsuki — Between Moons factual summary",
+    `Last recorded period: ${snapshot.lastPeriod ? formatDateLong(snapshot.lastPeriod) : "None recorded"}`,
+    `Days since last recorded period: ${snapshot.daysSince == null ? "—" : snapshot.daysSince}`,
+    `Periods recorded in the past 12 months: ${snapshot.periods12m}`,
+    `Recorded cycle intervals: ${snapshot.intervalValues.length ? snapshot.intervalValues.join(", ") + " days" : "Not enough recorded starts"}`,
+    `Daily check-ins in the past 30 days: ${snapshot.checkins30}`,
+    `Most logged symptom in the past 60 days: ${snapshot.topSymptom ? `${snapshot.topSymptom.value} (${snapshot.topSymptom.count} check-ins)` : "None"}`,
+    `Most logged mood in the past 60 days: ${snapshot.topMood ? `${snapshot.topMood.value} (${snapshot.topMood.count} check-ins)` : "None"}`,
+    `Most logged energy in the past 60 days: ${snapshot.topEnergy ? `${snapshot.topEnergy.value} (${snapshot.topEnergy.count} check-ins)` : "None"}`,
+    "",
+    "This is a factual summary of entries recorded in Tsuki. It does not diagnose a condition, confirm ovulation, or explain why periods are infrequent."
+  ];
+  return lines.join("\n");
+}
+
+function betweenMoonsInsightHTML() {
+  const snapshot = betweenMoonsSnapshot();
+  const items = [];
+
+  if (snapshot.checkins60 >= 3 && snapshot.topSymptom) {
+    items.push(`<article class="between-moons-insight"><span>🌸</span><div><strong>${escapeHTML(snapshot.topSymptom.value)} is one of your most logged recent body signals</strong><p>You recorded it on ${snapshot.topSymptom.count} of your last 60 days of check-ins. That is an observation from your entries, not a diagnosis.</p></div></article>`);
+  }
+  if (snapshot.checkins60 >= 3 && snapshot.topMood) {
+    items.push(`<article class="between-moons-insight"><span>💗</span><div><strong>${escapeHTML(snapshot.topMood.value)} is your most logged recent mood</strong><p>It appeared in ${snapshot.topMood.count} recent check-in${snapshot.topMood.count === 1 ? "" : "s"}. Tsuki can follow this even when no period is nearby.</p></div></article>`);
+  }
+  if (snapshot.checkins60 >= 3 && snapshot.topEnergy) {
+    items.push(`<article class="between-moons-insight"><span>✨</span><div><strong>${escapeHTML(snapshot.topEnergy.value)} energy appears most often recently</strong><p>You logged it in ${snapshot.topEnergy.count} recent check-in${snapshot.topEnergy.count === 1 ? "" : "s"}.</p></div></article>`);
+  }
+
+  if (!items.length) {
+    items.push(`<article class="between-moons-empty"><span>🌱</span><div><strong>Your between-period story starts with ordinary days</strong><p>Check in when something feels worth remembering. Tsuki can build useful body patterns without waiting for another period.</p></div></article>`);
+  }
+  return items.join("");
+}
+
+function renderBetweenMoonsTodayCard() {
+  ensureBetweenMoonsSettings();
+  const active = data.mode === "cycle" && usesVeryInfrequentCycle();
+  const card = document.getElementById("betweenMoonsTodayCard");
+  const drawerRow = document.getElementById("betweenMoonsDrawerRow");
+  card?.classList.toggle("hidden", !active);
+  drawerRow?.classList.toggle("hidden", !active);
+  if (!active) {
+    document.getElementById("predictionConfidence")?.classList.remove("hidden");
+    return;
+  }
+  if (!card) return;
+
+  const snapshot = betweenMoonsSnapshot();
+  const title = document.getElementById("betweenMoonsTodayTitle");
+  const text = document.getElementById("betweenMoonsTodayText");
+  if (title) title.textContent = "Your body still has a story";
+  if (text) {
+    const day = currentCycleDay();
+    const periodWord = snapshot.periods12m === 1 ? "period" : "periods";
+    const dayText = day ? `Cycle Day ${day}. ` : "";
+    text.textContent = `${dayText}${snapshot.periods12m} recorded ${periodWord} in the past 12 months. Tsuki is following your check-ins between periods instead of guessing one exact next date.`;
+  }
+
+  const nextText = document.getElementById("nextPeriodText");
+  const countdown = document.getElementById("periodCountdownText");
+  const confidence = document.getElementById("predictionConfidence");
+  const late = document.getElementById("latePeriodNotice");
+  if (nextText) nextText.textContent = "Not predicting a date";
+  if (countdown) countdown.textContent = "Your between-period observations still count";
+  confidence?.classList.add("hidden");
+  late?.classList.add("hidden");
+}
+
+function renderBetweenMoons() {
+  ensureBetweenMoonsSettings();
+  const stats = document.getElementById("betweenMoonsStats");
+  if (!stats) return;
+
+  const active = data.mode === "cycle" && usesVeryInfrequentCycle();
+  const intro = document.getElementById("betweenMoonsIntro");
+  if (!active) {
+    stats.innerHTML = `<article class="card between-moons-setup"><span>🌘</span><div><h3>Between Moons is ready when you need it</h3><p>Choose <strong>Varies a lot</strong> and then <strong>I may go several months without a period</strong> in Me → Cycle defaults.</p><button type="button" class="secondary-button" data-open-screen="me">Open Cycle defaults</button></div></article>`;
+    if (intro) intro.classList.add("hidden");
+    document.getElementById("betweenMoonsSignals").innerHTML = "";
+    document.getElementById("betweenMoonsInsights").innerHTML = "";
+    document.getElementById("betweenMoonsCareCard").innerHTML = "";
+    document.getElementById("betweenMoonsSummaryPreview").textContent = "";
+    stats.querySelector('[data-open-screen="me"]')?.addEventListener("click", () => showScreen("me"));
+    return;
+  }
+  if (intro) intro.classList.remove("hidden");
+
+  const snapshot = betweenMoonsSnapshot();
+  const periodWord = snapshot.periods12m === 1 ? "period" : "periods";
+  stats.innerHTML = `
+    <article class="between-moons-stat"><span>🌙</span><small>Last recorded period</small><strong>${snapshot.lastPeriod ? escapeHTML(formatDateLong(snapshot.lastPeriod)) : "None yet"}</strong></article>
+    <article class="between-moons-stat"><span>🗓️</span><small>Days since</small><strong>${snapshot.daysSince == null ? "—" : snapshot.daysSince}</strong></article>
+    <article class="between-moons-stat"><span>🩸</span><small>Past 12 months</small><strong>${snapshot.periods12m} ${periodWord}</strong></article>
+    <article class="between-moons-stat"><span>📝</span><small>Last 30 days</small><strong>${snapshot.checkins30} check-in${snapshot.checkins30 === 1 ? "" : "s"}</strong></article>
+  `;
+
+  const signals = document.getElementById("betweenMoonsSignals");
+  const signalRows = [];
+  if (snapshot.topSymptom) signalRows.push(`<div class="between-moons-signal-row"><span>🌸 Body signal</span><strong>${escapeHTML(snapshot.topSymptom.value)} · ${snapshot.topSymptom.count}×</strong></div>`);
+  if (snapshot.topMood) signalRows.push(`<div class="between-moons-signal-row"><span>💗 Mood</span><strong>${escapeHTML(snapshot.topMood.value)} · ${snapshot.topMood.count}×</strong></div>`);
+  if (snapshot.topEnergy) signalRows.push(`<div class="between-moons-signal-row"><span>✨ Energy</span><strong>${escapeHTML(snapshot.topEnergy.value)} · ${snapshot.topEnergy.count}×</strong></div>`);
+  if (snapshot.topSleep) signalRows.push(`<div class="between-moons-signal-row"><span>🌙 Sleep</span><strong>${escapeHTML(snapshot.topSleep.value)} · ${snapshot.topSleep.count}×</strong></div>`);
+  signals.innerHTML = signalRows.length
+    ? signalRows.join("")
+    : `<div class="between-moons-empty"><span>🌱</span><div><strong>No recent check-ins yet</strong><p>You do not have to wait for a period. Ordinary-day logs are what make this view useful.</p></div></div>`;
+
+  document.getElementById("betweenMoonsInsights").innerHTML = betweenMoonsInsightHTML();
+
+  const care = document.getElementById("betweenMoonsCareCard");
+  care.innerHTML = betweenMoonsCareHTML(snapshot);
+  care.querySelectorAll("[data-long-gap-context]").forEach(button => {
+    button.addEventListener("click", () => {
+      const next = button.dataset.longGapContext;
+      data.settings.longGapContext = TSUKI731_LONG_GAP_CONTEXTS.has(next) ? next : "unknown";
+      saveData();
+      renderBetweenMoons();
+      showToast(next === "expected" ? "Tsuki will treat long gaps as expected for you 🌙" : next === "care-plan" ? "Care-plan context saved 🤍" : "Care context reset");
+    });
+  });
+
+  document.getElementById("betweenMoonsSummaryPreview").textContent = betweenMoonsSummaryText();
+}
+
+async function copyBetweenMoonsSummaryToClipboard() {
+  const text = betweenMoonsSummaryText();
+  try {
+    await navigator.clipboard.writeText(text);
+    showToast("Between Moons summary copied 📋");
+    return;
+  }
+  catch (_) {}
+
+  const area = document.createElement("textarea");
+  area.value = text;
+  area.setAttribute("readonly", "");
+  area.style.position = "fixed";
+  area.style.opacity = "0";
+  document.body.appendChild(area);
+  area.select();
+  try { document.execCommand("copy"); } catch (_) {}
+  area.remove();
+  showToast("Between Moons summary ready to paste 📋");
+}
+
+function renderInfrequentReportCard() {
+  const container = document.getElementById("reportSummary");
+  if (!container) return;
+  container.querySelector("#betweenMoonsReportCard")?.remove();
+  if (!usesVeryInfrequentCycle()) return;
+
+  const snapshot = betweenMoonsSnapshot();
+  const card = document.createElement("article");
+  card.id = "betweenMoonsReportCard";
+  card.className = "report-card between-moons-report-card";
+  card.innerHTML = `<h3>Between Moons summary 🌘</h3>
+    <div class="report-row"><span>Periods recorded in the past 12 months</span><strong>${snapshot.periods12m}</strong></div>
+    <div class="report-row"><span>Days since last recorded period</span><strong>${snapshot.daysSince == null ? "—" : snapshot.daysSince}</strong></div>
+    <div class="report-row"><span>Daily check-ins in the past 30 days</span><strong>${snapshot.checkins30}</strong></div>
+    <div class="report-row"><span>Recorded interval range</span><strong>${snapshot.intervalLow == null ? "Need more history" : `${snapshot.intervalLow}–${snapshot.intervalHigh} days`}</strong></div>
+    <p class="muted small-text">For this pattern, Tsuki prioritizes factual history and between-period observations instead of a next-period forecast.</p>`;
+  container.appendChild(card);
+}
+
+function decorateInfrequentCycleHistory() {
+  if (!usesVeryInfrequentCycle()) return;
+  const panel = document.getElementById("irregularRhythmPanel");
+  if (!panel) return;
+  const snapshot = betweenMoonsSnapshot();
+  const ranges = snapshot.intervalLow == null ? "Still building your interval history" : `${snapshot.intervalLow}–${snapshot.intervalHigh} days between recorded starts`;
+  panel.innerHTML = `<div><p class="eyebrow">YOUR BETWEEN-MOONS RHYTHM</p><h3>${snapshot.periods12m} recorded period${snapshot.periods12m === 1 ? "" : "s"} in the past 12 months</h3><p>${ranges}. Tsuki keeps these long real gaps visible but does not turn them into a next-period countdown.</p></div><span>🌘</span><small>Your daily check-ins can still build a useful body story between actual periods.</small>`;
+}
+
+function betweenMoonsHomeInsights() {
+  if (!usesVeryInfrequentCycle()) return [];
+  const snapshot = betweenMoonsSnapshot();
+  const insights = [];
+
+  if (snapshot.checkins60 >= 3 && snapshot.topSymptom) {
+    insights.push(createInsight({
+      id: `between-moons:symptom:${snapshot.topSymptom.value}`,
+      icon: "🌸",
+      title: `${snapshot.topSymptom.value} has been showing up recently`,
+      text: `You logged ${String(snapshot.topSymptom.value).toLowerCase()} on ${snapshot.topSymptom.count} recent check-ins. Tsuki can follow this pattern even when your periods are months apart.`,
+      cycles: Math.max(1, snapshot.periods12m),
+      observations: snapshot.topSymptom.count,
+      category: "symptom"
+    }));
+  }
+  if (snapshot.checkins60 >= 3 && snapshot.topEnergy) {
+    insights.push(createInsight({
+      id: `between-moons:energy:${snapshot.topEnergy.value}`,
+      icon: "✨",
+      title: `${snapshot.topEnergy.value} energy appears most often recently`,
+      text: `You logged ${String(snapshot.topEnergy.value).toLowerCase()} energy on ${snapshot.topEnergy.count} recent check-ins. This is based on your entries, not a guessed cycle phase.`,
+      cycles: Math.max(1, snapshot.periods12m),
+      observations: snapshot.topEnergy.count,
+      category: "energy"
+    }));
+  }
+  return insights;
+}
+
+const tsuki73BuildInsights731 = buildInsights;
+buildInsights = function buildInsights731(options = {}) {
+  const base = tsuki73BuildInsights731(options);
+  if (!usesVeryInfrequentCycle()) return base;
+  const additions = betweenMoonsHomeInsights();
+  const filtered = base.filter(item => item.id !== "irregular:current-longer-than-range");
+  return Array.from(new Map([...additions, ...filtered].map(item => [item.id, item])).values());
+};
+
+function loadBetweenMoonsSettingsUI() {
+  ensureBetweenMoonsSettings();
+  const shape = document.getElementById("irregularCycleShape");
+  const help = document.getElementById("irregularCycleShapeHelp");
+  const windowToggle = document.getElementById("showIrregularPredictionWindow");
+  if (shape) shape.value = irregularCycleShapeValue();
+
+  const infrequent = cyclePatternValue() === "irregular" && irregularCycleShapeValue() === "infrequent";
+  if (windowToggle) windowToggle.disabled = infrequent;
+  if (help) {
+    help.textContent = infrequent
+      ? "Tsuki will stop forecasting a next-period date and focus on your body story between actual periods. Your saved history stays unchanged."
+      : irregularCycleShapeValue() === "unpredictable"
+        ? "Tsuki will stay cautious and only show a window when your actual history supports something useful."
+        : "This changes how Tsuki helps between periods. It does not diagnose why your timing varies.";
+  }
+}
+
+function syncBetweenMoonsDraftUI() {
+  const cyclePattern = document.getElementById("cyclePattern")?.value;
+  const shape = document.getElementById("irregularCycleShape")?.value;
+  const infrequent = cyclePattern === "irregular" && shape === "infrequent";
+  const windowToggle = document.getElementById("showIrregularPredictionWindow");
+  if (windowToggle) windowToggle.disabled = infrequent;
+  const help = document.getElementById("irregularCycleShapeHelp");
+  if (help) {
+    help.textContent = infrequent
+      ? "Tsuki will stop forecasting a next-period date and focus on your body story between actual periods. Your saved history stays unchanged."
+      : "This changes how Tsuki helps between periods. It does not diagnose why your timing varies.";
+  }
+}
+
+ensureBetweenMoonsSettings();
+
+const tsuki73ApplyCyclePatternToday731 = applyCyclePatternToday;
+applyCyclePatternToday = function applyCyclePatternToday731() {
+  const result = tsuki73ApplyCyclePatternToday731();
+  renderBetweenMoonsTodayCard();
+  return result;
+};
+
+const tsuki73RenderCycleHistory731 = renderCycleHistory;
+renderCycleHistory = function renderCycleHistory731() {
+  const result = tsuki73RenderCycleHistory731();
+  decorateInfrequentCycleHistory();
+  return result;
+};
+
+const tsuki73RenderReports731 = renderReports;
+renderReports = function renderReports731() {
+  const result = tsuki73RenderReports731();
+  renderInfrequentReportCard();
+  return result;
+};
+
+const tsuki73LoadSettingsUI731 = loadSettingsUI;
+loadSettingsUI = function loadSettingsUI731() {
+  ensureBetweenMoonsSettings();
+  const result = tsuki73LoadSettingsUI731();
+  loadBetweenMoonsSettingsUI();
+  return result;
+};
+
+const tsuki73RenderEverything731 = renderEverything;
+renderEverything = function renderEverything731() {
+  ensureBetweenMoonsSettings();
+  const result = tsuki73RenderEverything731();
+  renderBetweenMoonsTodayCard();
+  if (document.querySelector('[data-screen="between-moons"]')?.classList.contains("active")) renderBetweenMoons();
+  return result;
+};
+
+const tsuki73ShowScreen731 = showScreen;
+showScreen = function showScreen731(screenName) {
+  const result = tsuki73ShowScreen731(screenName);
+  if (screenName === "between-moons") renderBetweenMoons();
+  return result;
+};
+
+const tsuki73CompanionPrimaryMessage731 = companionPrimaryMessage;
+companionPrimaryMessage = function companionPrimaryMessage731() {
+  if (!usesVeryInfrequentCycle()) return tsuki73CompanionPrimaryMessage731();
+  if (periodForDate(todayKey())) return "Your moon is here. I’m staying soft with you today 🌙";
+  const log = data.logs[todayKey()] || {};
+  if (log.tinyJoy) return `You saved a tiny joy today: “${log.tinyJoy}” 🌸`;
+  return "I’m following the days between your moons too. Your ordinary-day check-ins still tell a story. 🌘";
+};
+
+const tsuki73CompanionSecondaryNote731 = companionSecondaryNote;
+companionSecondaryNote = function companionSecondaryNote731() {
+  if (!usesVeryInfrequentCycle()) return tsuki73CompanionSecondaryNote731();
+  return "You don’t need a monthly period for your observations to matter.";
+};
+
+document.getElementById("irregularCycleShape")?.addEventListener("change", syncBetweenMoonsDraftUI);
+document.getElementById("cyclePattern")?.addEventListener("change", syncBetweenMoonsDraftUI);
+document.getElementById("copyBetweenMoonsSummary")?.addEventListener("click", copyBetweenMoonsSummaryToClipboard);
+
+document.getElementById("saveSettings")?.addEventListener("click", () => {
+  const pattern = document.getElementById("cyclePattern")?.value || cyclePatternValue();
+  const shape = document.getElementById("irregularCycleShape")?.value || irregularCycleShapeValue();
+  data.settings.irregularCycleShape = pattern === "irregular" && TSUKI731_IRREGULAR_SHAPES.has(shape) ? shape : (pattern === "irregular" ? "variable" : "unsure");
+  saveData();
+  loadBetweenMoonsSettingsUI();
+  renderBetweenMoonsTodayCard();
+}, { capture: true });
+
+if (Array.isArray(TUTORIAL_STEPS) && !TUTORIAL_STEPS.some(step => step.title === "The days between periods count too")) {
+  const position = Math.max(1, TUTORIAL_STEPS.length - 2);
+  TUTORIAL_STEPS.splice(position, 0, {
+    icon: "🌘",
+    eyebrow: "BETWEEN MOONS",
+    title: "The days between periods count too",
+    text: "If your periods may be months apart, choose that pattern in Me → Cycle defaults. Tsuki can stop guessing a next date and instead follow your symptoms, mood, energy, sleep and other check-ins between actual periods."
   });
 }
 

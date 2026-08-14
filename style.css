@@ -6267,3 +6267,114 @@ body.hide-sensitive .pregnancy-room-props {
     scroll-behavior: auto;
   }
 }
+
+/* ============================================================
+   TSUKI 7.3.1 — BETWEEN MOONS
+   ============================================================ */
+
+.between-moons-today {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  padding: 16px;
+  border-radius: 24px;
+  background: linear-gradient(145deg, rgba(255,255,255,.94), rgba(247,239,255,.92));
+  border: 1px solid rgba(161, 126, 190, .18);
+  box-shadow: 0 10px 28px rgba(95, 69, 112, .08);
+  margin: 14px 0;
+}
+
+.between-moons-today-icon {
+  width: 46px;
+  height: 46px;
+  flex: 0 0 46px;
+  border-radius: 16px;
+  display: grid;
+  place-items: center;
+  background: rgba(226, 208, 244, .65);
+  font-size: 23px;
+}
+
+.between-moons-today-copy { min-width: 0; }
+.between-moons-today-copy h3 { margin: 2px 0 6px; }
+.between-moons-today-copy p:not(.eyebrow) { margin: 0 0 8px; line-height: 1.55; }
+
+.between-moons-stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.between-moons-stat {
+  min-width: 0;
+  padding: 14px;
+  border-radius: 20px;
+  background: rgba(255,255,255,.88);
+  border: 1px solid rgba(154, 119, 177, .14);
+  box-shadow: 0 8px 22px rgba(84, 63, 97, .06);
+}
+
+.between-moons-stat > span { display: block; font-size: 21px; margin-bottom: 9px; }
+.between-moons-stat small, .between-moons-stat strong { display: block; }
+.between-moons-stat small { opacity: .68; margin-bottom: 4px; }
+.between-moons-stat strong { line-height: 1.35; overflow-wrap: anywhere; }
+
+.between-moons-signals, .between-moons-insights {
+  display: grid;
+  gap: 9px;
+  margin: 12px 0 14px;
+}
+
+.between-moons-signal-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 13px;
+  border-radius: 16px;
+  background: rgba(247, 240, 252, .72);
+}
+.between-moons-signal-row strong { text-align: right; overflow-wrap: anywhere; }
+
+.between-moons-insight, .between-moons-empty, .between-moons-care-note, .between-moons-care-calm, .between-moons-setup {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+.between-moons-insight, .between-moons-empty { padding: 13px; border-radius: 18px; background: rgba(250, 246, 253, .78); }
+.between-moons-insight > span, .between-moons-empty > span, .between-moons-care-note > span, .between-moons-care-calm > span { font-size: 22px; flex: 0 0 auto; }
+.between-moons-insight p, .between-moons-empty p, .between-moons-care-note p, .between-moons-care-calm p { margin: 4px 0 0; line-height: 1.55; }
+.between-moons-care-card:empty { display: none; }
+.between-moons-care-note, .between-moons-care-calm { padding: 3px 0; }
+.between-moons-care-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+
+.between-moons-summary-preview {
+  max-height: 260px;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  padding: 13px;
+  border-radius: 16px;
+  background: rgba(248, 244, 250, .88);
+  font: inherit;
+  font-size: .86rem;
+  line-height: 1.5;
+  margin: 12px 0;
+  -webkit-overflow-scrolling: touch;
+}
+
+.between-moons-report-card { border-style: dashed; }
+#showIrregularPredictionWindow:disabled { opacity: .5; }
+
+@media (max-width: 390px) {
+  .between-moons-stat { padding: 12px; }
+  .between-moons-signal-row { align-items: flex-start; flex-direction: column; gap: 4px; }
+  .between-moons-signal-row strong { text-align: left; }
+  .between-moons-care-actions { flex-direction: column; }
+  .between-moons-care-actions .secondary-button { width: 100%; }
+}
+
+@media (max-width: 330px) {
+  .between-moons-stats { grid-template-columns: 1fr; }
+}
