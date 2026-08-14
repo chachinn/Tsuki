@@ -84,7 +84,7 @@
           </div>
         </div>
         <p><strong>Tsuki (月)</strong> means “moon” or “month.” With its connection to monthly rhythms and cycles, it became a natural name for an app that helps you understand and follow your own cycle.</p>
-        <span class="drawer-about-tsuki-version">Tsuki 7.3.1</span>
+        <span class="drawer-about-tsuki-version">Tsuki 7.4.0</span>
       </section>
 
       <div id="pregnancyDrawerMenu" class="pregnancy-drawer-menu hidden">
@@ -148,6 +148,7 @@
 
       <section class="drawer-group">
         <p class="drawer-group-title">PERSONALIZE & PRIVATE</p>
+        <button class="drawer-row" id="drawerAccountButton"><span class="drawer-row-icon">👤</span><span><strong>Account</strong><small id="drawerAccountStatus">Optional sign-in</small></span><b>›</b></button>
         <button class="drawer-row" id="drawerAppearance"><span class="drawer-row-icon">🎨</span><span><strong>Appearance</strong><small>Theme and wallpaper</small></span><b>›</b></button>
         <button class="drawer-row" id="drawerTutorialButton"><span class="drawer-row-icon">🌙</span><span><strong>Tsuki Tutorial</strong><small>Take the quick guided tour</small></span><b>›</b></button>
         <button class="drawer-row" id="drawerWhatsNewButton"><span class="drawer-row-icon">✨</span><span><strong>What's New</strong><small>See the latest Tsuki update</small></span><b>›</b></button>
@@ -1981,6 +1982,18 @@
         <span>🌙</span>
       </div>
 
+      <article id="firebaseAccountCard" class="card firebase-account-card">
+        <div class="firebase-account-icon" aria-hidden="true">👤</div>
+        <div class="firebase-account-copy">
+          <div class="firebase-account-heading">
+            <div><p class="eyebrow">ACCOUNT</p><h3 id="firebaseAccountTitle">Optional Tsuki account</h3></div>
+            <span id="firebaseAccountStatusPill" class="status-pill">Local only</span>
+          </div>
+          <p id="firebaseAccountText" class="muted">Sign in if you want an account identity. Your cycle, pregnancy, journal and other health entries stay on this device in this release.</p>
+          <button type="button" id="openFirebaseAccount" class="secondary-button full-width">Sign in or create account</button>
+        </div>
+      </article>
+
       <article class="card life-mode-card">
         <div class="section-heading compact-heading">
           <div><p class="eyebrow">LIFE MODE</p><h3>What should Tsuki follow?</h3></div>
@@ -2150,7 +2163,7 @@
         <div class="diagnostics-body">
           <p class="muted small-text">Everything here stays on this device. Diagnostics never sends your cycle, pregnancy, journal, or health data anywhere.</p>
           <div class="diagnostics-grid">
-            <div><small>App version</small><strong id="diagAppVersion">7.3.0</strong></div>
+            <div><small>App version</small><strong id="diagAppVersion">7.4.0</strong></div>
             <div><small>Life mode</small><strong id="diagLifeMode">—</strong></div>
             <div><small>Local data</small><strong id="diagLocalData">Checking…</strong></div>
             <div><small>Device storage</small><strong id="diagStorage">Checking…</strong></div>
@@ -2289,15 +2302,15 @@
         <h3>Your data stays with you</h3>
 
         <p>
-          This version of Tsuki stores your entries locally
-          in your browser on this device.
+          Tsuki stores your health entries locally in your browser on this device. An optional Firebase account can identify you, but signing in does not upload your health data in this release.
         </p>
 
         <ul>
-          <li>✓ No account required</li>
-          <li>✓ No cloud required</li>
+          <li>✓ Account is optional — local use still works without one</li>
+          <li>✓ Firebase Authentication stores account identity only</li>
+          <li>✓ Cycle, pregnancy, journal and photo data remain local</li>
           <li>✓ No third-party health analytics</li>
-          <li>✓ You can export or delete your data</li>
+          <li>✓ You can export or delete your local data</li>
         </ul>
 
       </article>
@@ -2613,10 +2626,10 @@
     <section class="app-modal whats-new-modal">
       <div class="modal-grabber"></div>
       <div class="app-modal-header">
-        <div><p class="eyebrow">NEW IN TSUKI</p><h2 id="whatsNewTitle">Tsuki 7.2</h2></div>
+        <div><p class="eyebrow">NEW IN TSUKI</p><h2 id="whatsNewTitle">Tsuki 7.4</h2></div>
         <button type="button" id="closeWhatsNewButton" class="modal-close" aria-label="Close what's new">×</button>
       </div>
-      <div class="whats-new-hero"><span>🌙</span><div><strong>Smoother, safer, easier to learn</strong><small>Stability + polish update</small></div></div>
+      <div class="whats-new-hero"><span>👤</span><div><strong>An account when you want one</strong><small>Optional Firebase sign-in · local health data stays local</small></div></div>
       <div id="whatsNewList" class="whats-new-list"></div>
       <div class="whats-new-actions">
         <button type="button" id="whatsNewTutorialButton" class="secondary-button">Take the tutorial</button>
@@ -2708,6 +2721,77 @@
   </section>
 
 
+  <!-- OPTIONAL FIREBASE ACCOUNT -->
+  <div id="firebaseAuthModal" class="app-modal-backdrop firebase-auth-backdrop hidden" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="firebaseAuthTitle">
+    <section class="app-modal firebase-auth-modal">
+      <div class="modal-grabber"></div>
+      <div class="app-modal-header">
+        <div><p class="eyebrow">TSUKI ACCOUNT</p><h2 id="firebaseAuthTitle">Sign in to Tsuki</h2></div>
+        <button type="button" id="closeFirebaseAuth" class="modal-close" aria-label="Close account">×</button>
+      </div>
+
+      <article class="firebase-auth-privacy-note">
+        <span>🌙</span><div><strong>Your health data stays local</strong><p>Signing in creates an account identity in Firebase Authentication. This release does not upload your cycle, pregnancy, Between Moons, journal, photo or other health entries.</p></div>
+      </article>
+
+      <div id="firebaseAuthLoading" class="firebase-auth-state">
+        <span class="firebase-auth-spinner" aria-hidden="true"></span>
+        <p>Connecting to account services…</p>
+      </div>
+
+      <div id="firebaseAuthUnavailable" class="firebase-auth-state hidden" role="status">
+        <span>☁️</span>
+        <h3>Account services are unavailable</h3>
+        <p id="firebaseAuthUnavailableText">Tsuki still works locally. Connect to the internet when you want to sign in.</p>
+        <button type="button" id="retryFirebaseAuth" class="secondary-button full-width">Try again</button>
+      </div>
+
+      <div id="firebaseSignedOutView" class="hidden">
+        <div class="firebase-auth-tabs" role="tablist" aria-label="Account action">
+          <button type="button" id="authSignInTab" class="active" role="tab" aria-selected="true">Sign in</button>
+          <button type="button" id="authCreateTab" role="tab" aria-selected="false">Create account</button>
+        </div>
+
+        <button type="button" id="firebaseGoogleButton" class="firebase-google-button"><span class="firebase-google-mark">G</span><strong>Continue with Google</strong></button>
+        <div class="firebase-auth-divider"><span>or use email</span></div>
+
+        <form id="firebaseAuthForm" novalidate>
+          <label class="field-label" for="firebaseAuthEmail">Email</label>
+          <input id="firebaseAuthEmail" class="input" type="email" inputmode="email" autocomplete="email" maxlength="254" placeholder="you@example.com" required>
+
+          <label class="field-label" for="firebaseAuthPassword">Password</label>
+          <input id="firebaseAuthPassword" class="input" type="password" autocomplete="current-password" minlength="6" maxlength="128" placeholder="At least 6 characters" required>
+
+          <div id="firebaseConfirmPasswordWrap" class="hidden">
+            <label class="field-label" for="firebaseAuthPasswordConfirm">Confirm password</label>
+            <input id="firebaseAuthPasswordConfirm" class="input" type="password" autocomplete="new-password" minlength="6" maxlength="128" placeholder="Enter it again">
+          </div>
+
+          <p id="firebaseAuthMessage" class="firebase-auth-message hidden" role="status" aria-live="polite"></p>
+          <button type="submit" id="firebaseAuthSubmit" class="primary-button full-width">Sign in</button>
+        </form>
+
+        <button type="button" id="firebaseForgotPassword" class="text-button full-width">Forgot password?</button>
+        <p class="firebase-auth-local-copy">No account? That’s okay. Tsuki remains fully usable on this device without signing in.</p>
+        <button type="button" id="continueWithoutFirebase" class="secondary-button full-width">Continue without account</button>
+      </div>
+
+      <div id="firebaseSignedInView" class="hidden">
+        <div class="firebase-user-card">
+          <div id="firebaseUserAvatar" class="firebase-user-avatar">🌙</div>
+          <div><p class="eyebrow">SIGNED IN</p><h3 id="firebaseUserName">Tsuki account</h3><p id="firebaseUserEmail" class="muted"></p></div>
+        </div>
+        <div class="firebase-account-facts">
+          <div><small>Email status</small><strong id="firebaseEmailStatus">—</strong></div>
+          <div><small>Health data sync</small><strong>Off · local only</strong></div>
+        </div>
+        <p id="firebaseSignedInNote" class="muted small-text">Your sign-in can persist on this browser. Signing out does not erase any local Tsuki entries.</p>
+        <button type="button" id="firebaseSignOut" class="secondary-button full-width">Sign out</button>
+        <button type="button" id="firebaseDeleteAccount" class="text-button danger-text full-width">Delete sign-in account</button>
+      </div>
+    </section>
+  </div>
+
   <div id="appLockOverlay" class="app-lock-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="appLockTitle">
     <div class="app-lock-panel">
       <div class="app-lock-moon">🌙</div>
@@ -2726,6 +2810,7 @@
 </div>
 
 <script src="./app.js"></script>
+<script type="module" src="./firebase-tsuki.js"></script>
 
 </body>
 </html>

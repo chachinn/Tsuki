@@ -6378,3 +6378,80 @@ body.hide-sensitive .pregnancy-room-props {
 @media (max-width: 330px) {
   .between-moons-stats { grid-template-columns: 1fr; }
 }
+
+
+/* ============================================================
+   TSUKI 7.4 — OPTIONAL FIREBASE ACCOUNT
+   ============================================================ */
+
+.firebase-account-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.firebase-account-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 18px;
+  display: grid;
+  place-items: center;
+  background: rgba(255,255,255,.72);
+  box-shadow: inset 0 0 0 1px rgba(122,82,104,.08);
+  font-size: 1.25rem;
+}
+
+.firebase-account-copy { min-width: 0; }
+.firebase-account-heading { display:flex; gap:10px; justify-content:space-between; align-items:flex-start; }
+.firebase-account-heading h3 { margin-top:2px; }
+.firebase-account-copy > p { margin: 8px 0 12px; line-height: 1.5; }
+
+.firebase-auth-backdrop { z-index: 10040; }
+.firebase-auth-modal { max-width: 460px; padding-bottom: max(20px, calc(env(safe-area-inset-bottom) + 14px)); }
+.firebase-auth-privacy-note { display:grid; grid-template-columns:auto 1fr; gap:10px; padding:12px; margin-bottom:14px; border-radius:16px; background:rgba(255,255,255,.62); border:1px solid rgba(122,82,104,.08); }
+.firebase-auth-privacy-note > span { font-size:1.2rem; }
+.firebase-auth-privacy-note strong { display:block; margin-bottom:3px; }
+.firebase-auth-privacy-note p { margin:0; font-size:.84rem; line-height:1.45; color:var(--muted-text, #7d6874); }
+
+.firebase-auth-state { min-height:180px; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; gap:10px; padding:18px; }
+.firebase-auth-state.hidden { display:none; }
+.firebase-auth-spinner { width:26px; height:26px; border-radius:50%; border:3px solid rgba(129,93,113,.15); border-top-color:rgba(129,93,113,.72); animation:firebaseAuthSpin .8s linear infinite; }
+@keyframes firebaseAuthSpin { to { transform:rotate(360deg); } }
+
+.firebase-auth-tabs { display:grid; grid-template-columns:1fr 1fr; gap:5px; padding:4px; background:rgba(112,87,101,.07); border-radius:14px; margin-bottom:12px; }
+.firebase-auth-tabs button { min-height:42px; border:0; border-radius:11px; background:transparent; color:inherit; font:inherit; font-weight:700; }
+.firebase-auth-tabs button.active { background:rgba(255,255,255,.9); box-shadow:0 3px 12px rgba(68,44,57,.08); }
+
+.firebase-google-button { width:100%; min-height:48px; border:1px solid rgba(86,67,77,.14); border-radius:14px; background:rgba(255,255,255,.92); display:flex; align-items:center; justify-content:center; gap:10px; color:inherit; font:inherit; }
+.firebase-google-mark { width:25px; height:25px; border-radius:50%; display:grid; place-items:center; font-family:Arial,sans-serif; font-weight:800; color:#4285f4; border:1px solid rgba(66,133,244,.2); }
+.firebase-auth-divider { display:flex; align-items:center; gap:10px; color:var(--muted-text, #806e78); font-size:.78rem; margin:14px 0; }
+.firebase-auth-divider::before,.firebase-auth-divider::after { content:""; height:1px; flex:1; background:rgba(99,71,86,.11); }
+
+#firebaseAuthForm .input { margin-bottom:10px; }
+.firebase-auth-message { padding:10px 12px; border-radius:12px; margin:5px 0 10px; background:rgba(255,255,255,.7); font-size:.84rem; line-height:1.4; }
+.firebase-auth-message.error { background:rgba(180,65,93,.08); color:#8c3651; }
+.firebase-auth-message.success { background:rgba(71,142,105,.08); color:#397353; }
+.firebase-auth-local-copy { text-align:center; color:var(--muted-text, #806e78); font-size:.8rem; line-height:1.45; margin:12px 8px; }
+
+.firebase-user-card { display:grid; grid-template-columns:auto 1fr; gap:12px; align-items:center; padding:14px; border-radius:16px; background:rgba(255,255,255,.65); }
+.firebase-user-avatar { width:52px; height:52px; border-radius:50%; display:grid; place-items:center; overflow:hidden; background:rgba(245,214,226,.7); font-weight:800; }
+.firebase-user-avatar img { width:100%; height:100%; object-fit:cover; }
+.firebase-user-card h3,.firebase-user-card p { margin:0; overflow-wrap:anywhere; }
+.firebase-account-facts { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:12px 0; }
+.firebase-account-facts > div { padding:11px; border-radius:14px; background:rgba(255,255,255,.55); }
+.firebase-account-facts small,.firebase-account-facts strong { display:block; }
+.firebase-account-facts small { color:var(--muted-text, #806e78); margin-bottom:4px; }
+.firebase-account-facts strong { font-size:.84rem; }
+
+@media (max-width: 390px) {
+  .firebase-account-card { grid-template-columns:1fr; }
+  .firebase-account-icon { width:42px; height:42px; border-radius:15px; }
+  .firebase-account-heading { align-items:center; }
+  .firebase-account-facts { grid-template-columns:1fr; }
+  .firebase-auth-modal { max-height:calc(100dvh - max(8px, env(safe-area-inset-top)) - max(8px, env(safe-area-inset-bottom))); overflow:auto; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .firebase-auth-spinner { animation:none; }
+}

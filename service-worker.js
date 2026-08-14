@@ -1,15 +1,16 @@
 /* ============================================================
-   TSUKI SERVICE WORKER — BUILD 7.3.1
+   TSUKI SERVICE WORKER — BUILD 7.4
    Cycle + Pregnancy life modes
    ============================================================ */
 
-const CACHE_NAME = "tsuki-cache-v7-3-1";
+const CACHE_NAME = "tsuki-cache-v7-4";
 
 const APP_SHELL = [
   "./",
   "./index.html",
   "./style.css",
   "./app.js",
+  "./firebase-tsuki.js",
   "./manifest.json",
   "./icons/icon-192.png",
   "./icons/icon-512.png",

@@ -1,6 +1,6 @@
 /* ============================================================
-   TSUKI 🌙 — BUILD 7.3.1
-   BETWEEN MOONS + VERY INFREQUENT CYCLE SUPPORT
+   TSUKI 🌙 — BUILD 7.4
+   OPTIONAL FIREBASE ACCOUNT + LOCAL-FIRST IDENTITY
    ============================================================ */
 
 const STORAGE_KEY = "tsuki-data-v4";
@@ -8,19 +8,19 @@ const BUILD3_STORAGE_KEY = "tsuki-data-v3";
 const BUILD2_STORAGE_KEY = "tsuki-data-v2";
 const LEGACY_STORAGE_KEY = "tsuki-data-v1";
 const APP_LOCK_STORAGE_KEY = "tsuki-app-lock-v1";
-const APP_VERSION = "7.3.1";
-const APP_CACHE_NAME = "tsuki-cache-v7-3-1";
+const APP_VERSION = "7.4.0";
+const APP_CACHE_NAME = "tsuki-cache-v7-4";
 const TUTORIAL_STORAGE_KEY = "tsuki-tutorial-complete-v1";
 const WHATS_NEW_STORAGE_KEY = "tsuki-whats-new-seen-v1";
 const RECOVERY_ASSET_KEY = "tsuki-last-good-data-v1";
 
 const RELEASE_NOTES = [
-  { icon: "🌙", title: "Between Moons", text: "Very infrequent cycles now get a body-first home for the months between periods, so Tsuki stays useful even when a next-period date is not." },
-  { icon: "🫧", title: "Several-month gaps", text: "If your periods may be months apart, Tsuki can intentionally stop forecasting the next date instead of turning a huge range into a misleading prediction." },
-  { icon: "✨", title: "Your body still has a story", text: "Recent symptoms, moods, energy and sleep can be summarized from your check-ins even when there has not been a recent period." },
-  { icon: "📊", title: "Factual care summary", text: "Between Moons can summarize your last recorded period, periods in the past 12 months, recorded intervals and recent body signals without diagnosing a cause." },
-  { icon: "🤍", title: "Gentle long-gap context", text: "After a long unexplained gap, Tsuki can offer one calm care note. You can mark long gaps as expected for you or already covered by a care plan so it does not nag." },
-  { icon: "🛡️", title: "Stable by default", text: "Regular and existing irregular-cycle behavior stays unchanged unless you explicitly choose the several-month-gap pattern." }
+  { icon: "👤", title: "Optional Tsuki account", text: "Sign in with email and password or Google, or keep using Tsuki without an account. Your local tracker remains available either way." },
+  { icon: "🔐", title: "Firebase Authentication", text: "Account identity is handled by Firebase Authentication with persistent sign-in, password reset and email verification support." },
+  { icon: "🌙", title: "Local health data stays local", text: "Signing in does not upload cycle, pregnancy, Between Moons, journal, photo or other health entries in this release." },
+  { icon: "📱", title: "Mobile-safe Google sign-in", text: "Google sign-in uses a user-initiated popup flow so GitHub Pages does not depend on a cross-site redirect helper that modern browsers can block." },
+  { icon: "🫧", title: "Graceful offline behavior", text: "If Firebase is unavailable or you are offline, Tsuki still opens and all existing local tracking continues to work." },
+  { icon: "🛡️", title: "Stability first", text: "The authentication layer is isolated from Tsuki's local data engine, with regular-cycle, irregular-cycle and Pregnancy Mode regressions covered before release." }
 ];
 
 
