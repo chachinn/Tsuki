@@ -1,6 +1,6 @@
 /* ============================================================
-   TSUKI 🌙 — BUILD 7.2
-   STABILITY + POLISH + GUIDED TUTORIAL
+   TSUKI 🌙 — BUILD 7.3
+   PERSONAL RHYTHMS + IRREGULAR CYCLE SUPPORT
    ============================================================ */
 
 const STORAGE_KEY = "tsuki-data-v4";
@@ -8,19 +8,20 @@ const BUILD3_STORAGE_KEY = "tsuki-data-v3";
 const BUILD2_STORAGE_KEY = "tsuki-data-v2";
 const LEGACY_STORAGE_KEY = "tsuki-data-v1";
 const APP_LOCK_STORAGE_KEY = "tsuki-app-lock-v1";
-const APP_VERSION = "7.2.0";
-const APP_CACHE_NAME = "tsuki-cache-v7-2";
+const APP_VERSION = "7.3.0";
+const APP_CACHE_NAME = "tsuki-cache-v7-3";
 const TUTORIAL_STORAGE_KEY = "tsuki-tutorial-complete-v1";
 const WHATS_NEW_STORAGE_KEY = "tsuki-whats-new-seen-v1";
 const RECOVERY_ASSET_KEY = "tsuki-last-good-data-v1";
 
 const RELEASE_NOTES = [
-  { icon: "🛡️", title: "Stability & recovery", text: "Safer local saves, a rolling recovery snapshot, stronger route guards, and repair tools for unusual local-data states." },
-  { icon: "🌙", title: "Tsuki Tutorial", text: "A quick guided tour for first-time users, plus a replay button in the menu and Settings." },
-  { icon: "✨", title: "What's New", text: "After each Tsuki version update, a one-time popup explains what changed. You can reopen it anytime." },
-  { icon: "🛠️", title: "Diagnostics", text: "Check app version, local storage, offline cache, life mode, and runtime health without sending any data anywhere." },
-  { icon: "🫧", title: "Smoother navigation", text: "Invalid routes now recover safely, background reminder work is throttled, and returning to Tsuki refreshes UI state without a full redraw." },
-  { icon: "📱", title: "iPhone polish", text: "Tutorial and update sheets respect small screens, safe areas, reduced motion, and large tap targets." }
+  { icon: "🌙", title: "Personal Rhythms", text: "Choose whether your cycle is usually predictable, varies a lot, or is still unclear. Tsuki adapts its forecasting style without changing saved history." },
+  { icon: "🌸", title: "Irregular-cycle windows", text: "Variable cycles use one uncertainty-aware next-period window instead of repeated exact future dates. If the data is too variable, Tsuki simply says timing is uncertain." },
+  { icon: "🧭", title: "No forced phase guesses", text: "For variable timing, future ovulation and phase coloring stays quiet until another actual period is recorded." },
+  { icon: "📊", title: "Long-cycle history", text: "Long real intervals stay visible in Cycle History and Reports, with range, middle value, variability and confidence summaries." },
+  { icon: "🫧", title: "Missing-history controls", text: "Think you forgot to log a period between two dates? Exclude only that interval from prediction learning without deleting either saved period." },
+  { icon: "✨", title: "Event-based insights", text: "Variable-cycle insights focus on patterns around actual recorded periods instead of assuming every cycle follows the same phase schedule." },
+  { icon: "🛡️", title: "Stability first", text: "Regular-cycle behavior remains the default for existing users, data storage stays compatible, and new irregular-cycle logic is isolated behind the Cycle Pattern setting." }
 ];
 
 
@@ -155,7 +156,7 @@ function standardDeviation(numbers) {
 
 const defaultData = {
 
-  schemaVersion: 7.2,
+  schemaVersion: 7.3,
 
   mode: "cycle",
 
@@ -333,7 +334,7 @@ function normalizeData(parsed) {
   return {
     ...clone(defaultData),
     ...(parsed || {}),
-    schemaVersion: 7.2,
+    schemaVersion: 7.3,
     mode: ["cycle", "pregnancy", "postpartum"].includes(parsed?.mode) ? parsed.mode : "cycle",
     settings: {
       ...defaultData.settings,
@@ -441,7 +442,7 @@ function migrateBuild1(oldData) {
   const migrated = {
     ...clone(defaultData),
     ...oldData,
-    schemaVersion: 7.2,
+    schemaVersion: 7.3,
     settings: {
       ...defaultData.settings,
       ...(oldData.settings || {})
@@ -596,7 +597,7 @@ function scheduleRecoverySnapshot(serialized) {
 }
 
 function saveData() {
-  data.schemaVersion = 7.2;
+  data.schemaVersion = 7.3;
   try {
     const serialized = JSON.stringify(data);
     if (serialized === lastSavedSnapshot) return true;
@@ -8505,7 +8506,7 @@ function companionPrimaryMessage() {
   }
 
   if (estimate) {
-    const diff = daysBetween(new Date(), parseDate(estimate.start));
+    const diff = daysBetween(new Date(), typeof estimate.start === "string" ? parseDate(estimate.start) : estimate.start);
     if (diff > 0 && diff <= 7) {
       return `Your next moon is in ${diff} day${diff === 1 ? "" : "s"}. I’m keeping watch ✨`;
     }
@@ -9071,6 +9072,899 @@ function installCompanionImageGuard() {
     if (image.naturalWidth > 0) markLoaded();
     else markMissing();
   }
+}
+
+
+/* ============================================================
+   BUILD 7.3 — PERSONAL RHYTHMS + IRREGULAR CYCLE SUPPORT
+   Uncertainty-aware forecasting without changing regular-cycle defaults.
+   ============================================================ */
+
+const TSUKI73_CYCLE_PATTERNS = new Set(["regular", "irregular", "unsure"]);
+const TSUKI73_HISTORY_COMPLETENESS = new Set(["complete", "partial", "unsure"]);
+
+function ensureCycleProfileSettings() {
+  data.settings = data.settings || {};
+
+  if (!TSUKI73_CYCLE_PATTERNS.has(data.settings.cyclePattern)) {
+    const hasCycleHistory = Array.isArray(data.periods) && data.periods.length > 0;
+    const hasDailyHistory = data.logs && Object.keys(data.logs).length > 0;
+    data.settings.cyclePattern = (hasCycleHistory || hasDailyHistory) ? "regular" : "unsure";
+  }
+
+  if (!TSUKI73_HISTORY_COMPLETENESS.has(data.settings.cycleHistoryCompleteness)) {
+    data.settings.cycleHistoryCompleteness = "complete";
+  }
+
+  if (!Array.isArray(data.settings.ignoredCycleIntervals)) {
+    data.settings.ignoredCycleIntervals = [];
+  }
+
+  if (typeof data.settings.showIrregularPredictionWindow !== "boolean") {
+    data.settings.showIrregularPredictionWindow = true;
+  }
+
+  if (typeof data.settings.showIrregularConfidence !== "boolean") {
+    data.settings.showIrregularConfidence = true;
+  }
+}
+
+function cyclePatternValue() {
+  ensureCycleProfileSettings();
+  return TSUKI73_CYCLE_PATTERNS.has(data.settings.cyclePattern)
+    ? data.settings.cyclePattern
+    : "unsure";
+}
+
+function usesUncertainCycleForecast() {
+  return cyclePatternValue() !== "regular";
+}
+
+function cycleIntervalKey(previousPeriod, currentPeriod) {
+  if (!previousPeriod || !currentPeriod) return "";
+  return `${previousPeriod.id || previousPeriod.start}::${currentPeriod.id || currentPeriod.start}`;
+}
+
+function cycleIntervalRecords() {
+  const periods = validPeriods();
+  const ignored = new Set(data.settings.ignoredCycleIntervals || []);
+  const records = [];
+
+  for (let index = 1; index < periods.length; index += 1) {
+    const previous = periods[index - 1];
+    const current = periods[index];
+    const previousStart = parseDate(previous.start);
+    const currentStart = parseDate(current.start);
+    if (!previousStart || !currentStart) continue;
+
+    const days = daysBetween(previousStart, currentStart);
+    if (!Number.isFinite(days) || days <= 0) continue;
+
+    const key = cycleIntervalKey(previous, current);
+    records.push({
+      key,
+      previousId: previous.id,
+      currentId: current.id,
+      previousStart: previous.start,
+      currentStart: current.start,
+      days,
+      ignored: ignored.has(key),
+      irregularLearningEligible: days >= 15 && days <= 365,
+      regularLearningEligible: days >= 15 && days <= 60
+    });
+  }
+
+  return records;
+}
+
+function irregularLearningIntervals() {
+  return cycleIntervalRecords()
+    .filter(record => record.irregularLearningEligible && !record.ignored)
+    .slice(-8);
+}
+
+function medianNumber(values) {
+  const clean = values.filter(Number.isFinite).slice().sort((a, b) => a - b);
+  if (!clean.length) return null;
+  const middle = Math.floor(clean.length / 2);
+  return clean.length % 2
+    ? clean[middle]
+    : (clean[middle - 1] + clean[middle]) / 2;
+}
+
+function irregularForecastWindow() {
+  ensureCycleProfileSettings();
+  const latest = latestPeriod();
+  if (!latest) return null;
+
+  const records = irregularLearningIntervals();
+  const values = records.map(record => record.days);
+  if (values.length < 2) {
+    return {
+      useful: false,
+      reason: "needs-history",
+      sampleCount: values.length,
+      values
+    };
+  }
+
+  const low = Math.min(...values);
+  const high = Math.max(...values);
+  const median = medianNumber(values);
+  const spread = high - low;
+  const ratio = low > 0 ? high / low : Infinity;
+  const useful = spread <= 60 && ratio <= 2.25;
+  const cushion = values.length >= 4 ? 2 : 4;
+  const periodFloor = Math.max(2, configuredPeriodLength() + 1);
+  const startOffset = Math.max(periodFloor, low - cushion);
+  const endOffset = Math.min(365, high + cushion);
+  const anchor = parseDate(latest.start);
+
+  if (!anchor) return null;
+
+  return {
+    useful,
+    reason: useful ? "observed-range" : "too-variable",
+    sampleCount: values.length,
+    values,
+    low,
+    high,
+    median,
+    spread,
+    startOffset,
+    endOffset,
+    start: addDays(anchor, startOffset),
+    end: addDays(anchor, endOffset),
+    center: addDays(anchor, Math.round(median)),
+    anchor
+  };
+}
+
+function irregularPredictionConfidence() {
+  const forecast = irregularForecastWindow();
+  const completeness = data.settings.cycleHistoryCompleteness || "complete";
+
+  if (!forecast || forecast.sampleCount < 2) {
+    return { level: "Low", className: "confidence-low", reason: "Needs more usable cycle history" };
+  }
+
+  if (!forecast.useful) {
+    return { level: "Low", className: "confidence-low", reason: "Recent timing varies too much for a useful window" };
+  }
+
+  let level = "Low";
+  let className = "confidence-low";
+  let reason = "A wider range is still emerging";
+
+  if (forecast.sampleCount >= 6 && forecast.spread <= 18) {
+    level = "High";
+    className = "confidence-high";
+    reason = "Several recent intervals cluster within a similar range";
+  }
+  else if (forecast.sampleCount >= 4 && forecast.spread <= 35) {
+    level = "Medium";
+    className = "confidence-medium";
+    reason = "A usable recent range is emerging";
+  }
+
+  if (completeness !== "complete" && level === "High") {
+    level = "Medium";
+    className = "confidence-medium";
+    reason = "Some cycle history may be incomplete";
+  }
+  else if (completeness !== "complete" && level === "Medium") {
+    level = "Low";
+    className = "confidence-low";
+    reason = "Some cycle history may be incomplete";
+  }
+
+  return { level, className, reason };
+}
+
+const tsuki72CycleIntervals = cycleIntervals;
+const tsuki72TypicalCycleLength = typicalCycleLength;
+const tsuki72RecentAverageCycleLength = recentAverageCycleLength;
+const tsuki72ForecastCycleLength = forecastCycleLength;
+const tsuki72PredictionConfidence = predictionConfidence;
+const tsuki72PredictionPaddingDays = predictionPaddingDays;
+const tsuki72NextEstimatedPeriodDate = nextEstimatedPeriodDate;
+const tsuki72EstimatedWindow = estimatedWindow;
+const tsuki72CalendarPredictionWindows = calendarPredictionWindows;
+const tsuki72PeriodCountdownText = periodCountdownText;
+const tsuki72IsLatePeriod = isLatePeriod;
+const tsuki72CyclePhase = cyclePhase;
+const tsuki72PhaseForDate = phaseForDate;
+const tsuki72ProjectedCycleStartForDate = projectedCycleStartForDate;
+const tsuki72ProjectedPhaseForDate = projectedPhaseForDate;
+const tsuki72CompletedCycles = completedCycles;
+const tsuki72CycleContextForDate = cycleContextForDate;
+const tsuki72TimingBucket = timingBucket;
+const tsuki72BuildInsights = buildInsights;
+const tsuki72PhaseLogCopy = phaseLogCopy;
+
+cycleIntervals = function cycleIntervals73() {
+  if (!usesUncertainCycleForecast()) return tsuki72CycleIntervals();
+  return irregularLearningIntervals().map(record => record.days);
+};
+
+typicalCycleLength = function typicalCycleLength73() {
+  if (!usesUncertainCycleForecast()) return tsuki72TypicalCycleLength();
+  const configured = Number(data.settings.cycleLength);
+  return Number.isFinite(configured) && configured >= 15 && configured <= 365
+    ? Math.round(configured)
+    : 28;
+};
+
+recentAverageCycleLength = function recentAverageCycleLength73() {
+  if (!usesUncertainCycleForecast()) return tsuki72RecentAverageCycleLength();
+  const values = irregularLearningIntervals().slice(-3).map(record => record.days);
+  return values.length ? Math.round(average(values)) : typicalCycleLength();
+};
+
+forecastCycleLength = function forecastCycleLength73() {
+  if (!usesUncertainCycleForecast()) return tsuki72ForecastCycleLength();
+  const values = irregularLearningIntervals().map(record => record.days);
+  const middle = medianNumber(values);
+  return Number.isFinite(middle) ? Math.round(middle) : typicalCycleLength();
+};
+
+predictionConfidence = function predictionConfidence73() {
+  return usesUncertainCycleForecast()
+    ? irregularPredictionConfidence()
+    : tsuki72PredictionConfidence();
+};
+
+predictionPaddingDays = function predictionPaddingDays73() {
+  if (!usesUncertainCycleForecast()) return tsuki72PredictionPaddingDays();
+  const forecast = irregularForecastWindow();
+  if (!forecast?.useful) return 0;
+  return Math.max(0, Math.round((forecast.endOffset - forecast.startOffset) / 2));
+};
+
+nextEstimatedPeriodDate = function nextEstimatedPeriodDate73() {
+  if (!usesUncertainCycleForecast()) return tsuki72NextEstimatedPeriodDate();
+  const forecast = irregularForecastWindow();
+  return forecast?.useful && data.settings.showIrregularPredictionWindow !== false
+    ? forecast.center
+    : null;
+};
+
+estimatedWindow = function estimatedWindow73() {
+  if (!usesUncertainCycleForecast()) return tsuki72EstimatedWindow();
+  if (data.settings.showIrregularPredictionWindow === false) return null;
+  const forecast = irregularForecastWindow();
+  if (!forecast?.useful) return null;
+  return {
+    center: forecast.center,
+    start: forecast.start,
+    end: forecast.end,
+    padding: null,
+    irregular: true,
+    sampleCount: forecast.sampleCount,
+    observedLow: forecast.low,
+    observedHigh: forecast.high
+  };
+};
+
+calendarPredictionWindows = function calendarPredictionWindows73(monthsAhead = 12) {
+  if (!usesUncertainCycleForecast()) return tsuki72CalendarPredictionWindows(monthsAhead);
+  const window = estimatedWindow();
+  return window ? [window] : [];
+};
+
+periodCountdownText = function periodCountdownText73() {
+  if (!usesUncertainCycleForecast()) return tsuki72PeriodCountdownText();
+  if (!latestPeriod()) return "Tsuki is still learning your timing";
+  if (data.settings.showIrregularPredictionWindow === false) return "Period prediction hidden by you";
+
+  const forecast = irregularForecastWindow();
+  if (!forecast || forecast.sampleCount < 2) return "Tsuki needs more cycle history";
+  if (!forecast.useful) return "Timing is uncertain this cycle";
+
+  const today = parseDate(todayKey());
+  if (today < forecast.start) return `Possible window begins ${formatDate(forecast.start)}`;
+  if (today <= forecast.end) return "You're within your estimated window";
+  return "This cycle is longer than your recent range";
+};
+
+isLatePeriod = function isLatePeriod73() {
+  if (!usesUncertainCycleForecast()) return tsuki72IsLatePeriod();
+  const forecast = irregularForecastWindow();
+  if (!forecast?.useful || data.settings.showIrregularPredictionWindow === false) return false;
+  return parseDate(todayKey()) > forecast.end;
+};
+
+cyclePhase = function cyclePhase73(day) {
+  if (!usesUncertainCycleForecast()) return tsuki72CyclePhase(day);
+  if (!day) return "Log your period to begin";
+  if (day <= averagePeriodLength()) return "Period";
+  return "Cycle timing uncertain";
+};
+
+phaseForDate = function phaseForDate73(dateValue) {
+  if (!usesUncertainCycleForecast()) return tsuki72PhaseForDate(dateValue);
+  const key = typeof dateValue === "string" ? dateValue : dateKey(dateValue);
+  if (periodForDate(key)) return "Period";
+
+  const target = parseDate(key);
+  if (!target) return "No cycle yet";
+  const periods = validPeriods();
+  const hasAnchor = periods.some(period => parseDate(period.start) <= target);
+  if (!hasAnchor) return "No cycle yet";
+
+  const nextActual = periods.find(period => parseDate(period.start) > target);
+  if (nextActual) return tsuki72PhaseForDate(key);
+  return "Cycle timing uncertain";
+};
+
+projectedCycleStartForDate = function projectedCycleStartForDate73(dateValue) {
+  if (!usesUncertainCycleForecast()) return tsuki72ProjectedCycleStartForDate(dateValue);
+  const target = typeof dateValue === "string" ? parseDate(dateValue) : dateValue;
+  const anchor = latestPeriod() ? parseDate(latestPeriod().start) : null;
+  if (!target || !anchor || target < anchor) return null;
+  return anchor;
+};
+
+projectedPhaseForDate = function projectedPhaseForDate73(dateValue) {
+  if (!usesUncertainCycleForecast()) return tsuki72ProjectedPhaseForDate(dateValue);
+  const key = typeof dateValue === "string" ? dateValue : dateKey(dateValue);
+  if (periodForDate(key)) return "Period";
+  return latestPeriod() ? "Cycle timing uncertain" : "No cycle yet";
+};
+
+completedCycles = function completedCycles73() {
+  if (!usesUncertainCycleForecast()) return tsuki72CompletedCycles();
+  const periods = validPeriods();
+  const ignored = new Set(data.settings.ignoredCycleIntervals || []);
+  const cycles = [];
+
+  for (let index = 0; index < periods.length - 1; index += 1) {
+    const period = periods[index];
+    const next = periods[index + 1];
+    const start = parseDate(period.start);
+    const nextStart = parseDate(next.start);
+    if (!start || !nextStart) continue;
+    const cycleLength = daysBetween(start, nextStart);
+    const key = cycleIntervalKey(period, next);
+    if (cycleLength < 15 || cycleLength > 365 || ignored.has(key)) continue;
+
+    cycles.push({
+      id: period.id,
+      start: period.start,
+      end: dateKey(addDays(nextStart, -1)),
+      nextStart: next.start,
+      cycleLength,
+      periodLength: periodDuration(period) || averagePeriodLength(),
+      context: period.context || "",
+      nextMoonNote: period.nextMoonNote || "",
+      intervalKey: key
+    });
+  }
+
+  return cycles;
+};
+
+cycleContextForDate = function cycleContextForDate73(dateValue) {
+  if (!usesUncertainCycleForecast()) return tsuki72CycleContextForDate(dateValue);
+  const date = parseDate(dateValue);
+  if (!date) return null;
+
+  const cycle = completedCycles().find(item => {
+    const start = parseDate(item.start);
+    const nextStart = parseDate(item.nextStart);
+    return start && nextStart && date >= start && date < nextStart;
+  });
+  if (!cycle) return null;
+
+  const start = parseDate(cycle.start);
+  const nextStart = parseDate(cycle.nextStart);
+  const cycleDay = daysBetween(start, date) + 1;
+  const daysBeforeNextPeriod = daysBetween(date, nextStart);
+  let phase = "Between periods";
+
+  if (cycleDay <= cycle.periodLength) phase = "Period";
+  else if (daysBeforeNextPeriod >= 1 && daysBeforeNextPeriod <= 7) phase = "Pre-period";
+  else if (cycleDay <= cycle.periodLength + 3) phase = "After period";
+
+  return {
+    cycleId: cycle.id,
+    cycleStart: cycle.start,
+    cycleEnd: cycle.end,
+    cycleDay,
+    cycleLength: cycle.cycleLength,
+    periodLength: cycle.periodLength,
+    daysBeforeNextPeriod,
+    phase
+  };
+};
+
+timingBucket = function timingBucket73(context) {
+  if (!usesUncertainCycleForecast()) return tsuki72TimingBucket(context);
+  if (!context) return null;
+
+  if (context.cycleDay <= 2) {
+    return { id: "period-days-1-2", label: "on Days 1–2 of your period" };
+  }
+  if (context.cycleDay <= context.periodLength) {
+    return { id: "period", label: "during your recorded period" };
+  }
+  if (context.daysBeforeNextPeriod >= 1 && context.daysBeforeNextPeriod <= 3) {
+    return { id: "pre-period-1-3", label: "1–3 days before your next recorded period" };
+  }
+  if (context.daysBeforeNextPeriod >= 4 && context.daysBeforeNextPeriod <= 7) {
+    return { id: "pre-period-4-7", label: "4–7 days before your next recorded period" };
+  }
+  if (context.cycleDay > context.periodLength && context.cycleDay <= context.periodLength + 3) {
+    return { id: "after-period-1-3", label: "within 3 days after your recorded period" };
+  }
+  return null;
+};
+
+phaseLogCopy = function phaseLogCopy73(phase, day) {
+  if (phase !== "Cycle timing uncertain") return tsuki72PhaseLogCopy(phase, day);
+  return {
+    icon: "🌙",
+    title: "Body check-in",
+    question: "What are you noticing in your body today?",
+    eyebrow: day ? `CYCLE DAY ${day} · TIMING VARIES` : "YOUR RHYTHM",
+    description: "Your cycle timing varies, so Tsuki keeps this check-in focused on what you actually notice instead of guessing a phase."
+  };
+};
+
+function irregularEventPatternInsights() {
+  const contextualLogs = logsWithCycleContext();
+  const groups = new Map();
+
+  contextualLogs.forEach(log => {
+    const bucket = timingBucket(log.context);
+    if (!bucket) return;
+
+    (log.symptoms || []).forEach(symptom => {
+      const key = `symptom:${symptom}:${bucket.id}`;
+      if (!groups.has(key)) groups.set(key, { kind: "symptom", value: symptom, bucket, logs: [], cycles: new Set() });
+      const entry = groups.get(key);
+      entry.logs.push(log);
+      entry.cycles.add(log.context.cycleId);
+    });
+
+    [["mood", log.mood], ["energy", log.energy]].forEach(([kind, value]) => {
+      if (!value) return;
+      const key = `${kind}:${value}:${bucket.id}`;
+      if (!groups.has(key)) groups.set(key, { kind, value, bucket, logs: [], cycles: new Set() });
+      const entry = groups.get(key);
+      entry.logs.push(log);
+      entry.cycles.add(log.context.cycleId);
+    });
+
+    if (Number(log.pain) >= 3) {
+      const key = `pain:${bucket.id}`;
+      if (!groups.has(key)) groups.set(key, { kind: "pain", value: "Stronger pain", bucket, logs: [], cycles: new Set() });
+      const entry = groups.get(key);
+      entry.logs.push(log);
+      entry.cycles.add(log.context.cycleId);
+    }
+  });
+
+  const insights = [];
+  groups.forEach(entry => {
+    const cycles = entry.cycles.size;
+    if (cycles < 3) return;
+    const observations = entry.logs.length;
+    const label = String(entry.value || "");
+    const lower = label.toLowerCase();
+    const icon = entry.kind === "mood" ? "💗" : entry.kind === "energy" ? "🔋" : entry.kind === "pain" ? "⚡" : label === "Headache" ? "☁️" : "🌸";
+    const title = entry.kind === "mood"
+      ? `${label} mood has a timing pattern`
+      : entry.kind === "energy"
+        ? `${label} energy has a timing pattern`
+        : entry.kind === "pain"
+          ? "Stronger pain has a timing pattern"
+          : `${label} has a timing pattern`;
+    const subject = entry.kind === "mood" ? `${lower} mood` : entry.kind === "energy" ? `${lower} energy` : entry.kind === "pain" ? "stronger pain" : lower;
+
+    insights.push(createInsight({
+      id: `irregular:${entry.kind}:${label}:${entry.bucket.id}`,
+      icon,
+      title,
+      text: `You logged ${subject} ${entry.bucket.label} across ${cycles} completed cycles.`,
+      cycles,
+      observations,
+      category: entry.kind === "pain" ? "pain" : entry.kind
+    }));
+  });
+
+  return insights;
+}
+
+function irregularCycleSummaryInsights() {
+  const records = irregularLearningIntervals();
+  const values = records.map(record => record.days);
+  if (values.length < 2) return [];
+  const low = Math.min(...values);
+  const high = Math.max(...values);
+  const middle = Math.round(medianNumber(values));
+  const results = [createInsight({
+    id: "irregular:cycle-range",
+    icon: "🌙",
+    title: high - low <= 10 ? "Your recent timing has a fairly close range" : "Your cycle timing varies",
+    text: `Your recent usable cycle lengths ranged from ${low}–${high} days, with a middle value around ${middle} days. Tsuki uses this as a range rather than an exact promise.`,
+    cycles: values.length,
+    observations: values.length,
+    category: "cycle"
+  })];
+
+  const day = currentCycleDay();
+  if (day && values.length >= 3 && day > high) {
+    results.push(createInsight({
+      id: "irregular:current-longer-than-range",
+      icon: "🌙",
+      title: "This cycle is running longer",
+      text: `Today is Cycle Day ${day}, which is longer than your recent usable range of ${low}–${high} days. This is an observation from your logs, not a diagnosis.`,
+      cycles: values.length,
+      observations: values.length,
+      category: "cycle"
+    }));
+  }
+
+  return results;
+}
+
+function buildIrregularInsights({ includeDismissed = false } = {}) {
+  const insights = [
+    ...irregularCycleSummaryInsights(),
+    ...irregularEventPatternInsights()
+  ];
+
+  insights.sort((a, b) => b.cycles - a.cycles || b.observations - a.observations);
+  const unique = Array.from(new Map(insights.map(insight => [insight.id, insight])).values());
+  const dismissed = new Set(data.insightState?.dismissed || []);
+  const visible = includeDismissed ? unique : unique.filter(insight => !dismissed.has(insight.id));
+  if (visible.length) return visible;
+
+  const count = irregularLearningIntervals().length;
+  return [{
+    id: "irregular:learning",
+    icon: "🌱",
+    title: "Tsuki is learning your personal rhythm",
+    text: count < 2
+      ? "Add more actual period starts when you can. Tsuki will avoid an exact countdown until there is enough usable history for a meaningful range."
+      : "Your timing varies, so Tsuki is focusing on repeated observations around actual recorded periods rather than guessing a fixed phase schedule.",
+    cycles: count,
+    observations: count,
+    category: "cycle",
+    confidence: { label: "Emerging", className: "emerging" }
+  }];
+}
+
+buildInsights = function buildInsights73(options = {}) {
+  return usesUncertainCycleForecast()
+    ? buildIrregularInsights(options)
+    : tsuki72BuildInsights(options);
+};
+
+function shouldSuggestIrregularProfile() {
+  if (cyclePatternValue() !== "regular" || data.settings.dismissCyclePatternSuggestion) return false;
+  const values = cycleIntervalRecords()
+    .filter(record => record.days >= 15 && record.days <= 365)
+    .slice(-5)
+    .map(record => record.days);
+  if (values.length < 3) return false;
+  const spread = Math.max(...values) - Math.min(...values);
+  return spread >= 14 || values.some(value => value > 60);
+}
+
+function applyCyclePatternToday() {
+  const predictionCard = document.querySelector(".prediction-card");
+  predictionCard?.classList.toggle("irregular-prediction", usesUncertainCycleForecast());
+
+  const phase = document.getElementById("cyclePhaseText");
+  const day = currentCycleDay();
+  if (usesUncertainCycleForecast() && day && phaseForDate(todayKey()) !== "Period" && phase) {
+    phase.textContent = cyclePatternValue() === "unsure"
+      ? "Tsuki is learning how predictable your timing is."
+      : "Your timing varies, so Tsuki is following what you actually log.";
+  }
+
+  const forecast = irregularForecastWindow();
+  const nextText = document.getElementById("nextPeriodText");
+  if (usesUncertainCycleForecast() && nextText) {
+    if (data.settings.showIrregularPredictionWindow === false) {
+      nextText.textContent = "Hidden in your settings";
+    }
+    else if (!forecast || forecast.sampleCount < 2) {
+      nextText.textContent = "More history needed";
+    }
+    else if (!forecast.useful) {
+      nextText.textContent = "Timing too variable for a useful range";
+    }
+    else {
+      nextText.textContent = `${formatDate(forecast.start)} – ${formatDate(forecast.end)}`;
+    }
+  }
+
+  const badge = document.getElementById("predictionConfidence");
+  if (badge && usesUncertainCycleForecast()) {
+    const confidence = irregularPredictionConfidence();
+    badge.textContent = `${confidence.level} confidence`;
+    badge.className = `confidence-badge ${confidence.className}`;
+    badge.title = confidence.reason;
+    badge.classList.toggle("hidden", data.settings.showIrregularConfidence === false);
+  }
+  else if (badge) {
+    badge.classList.remove("hidden");
+  }
+
+  const late = document.getElementById("latePeriodNotice");
+  if (late && usesUncertainCycleForecast() && !late.classList.contains("hidden")) {
+    late.textContent = "🌙 This cycle is running longer than your recent recorded range. Tsuki will wait for your next actual period instead of sliding the forecast forward.";
+  }
+
+  let suggestion = document.getElementById("cyclePatternSuggestion");
+  if (!suggestion) {
+    suggestion = document.createElement("div");
+    suggestion.id = "cyclePatternSuggestion";
+    suggestion.className = "cycle-pattern-suggestion hidden";
+    const hero = document.querySelector('[data-screen="today"] .hero-card');
+    hero?.appendChild(suggestion);
+  }
+
+  const showSuggestion = shouldSuggestIrregularProfile() && !data.settings.hideDetails;
+  suggestion?.classList.toggle("hidden", !showSuggestion);
+  if (suggestion && showSuggestion) {
+    suggestion.innerHTML = `<div><strong>🌙 Your recent cycle lengths vary more</strong><p>Tsuki is still using your regular-cycle setting. You can switch to wider, uncertainty-aware windows without changing any saved history.</p></div><div class="cycle-pattern-suggestion-actions"><button type="button" data-review-cycle-pattern>Review setting</button><button type="button" data-dismiss-cycle-pattern>Not now</button></div>`;
+    suggestion.querySelector("[data-review-cycle-pattern]")?.addEventListener("click", () => {
+      showScreen("me");
+      loadSettingsUI();
+      requestAnimationFrame(() => document.getElementById("cyclePattern")?.focus());
+    });
+    suggestion.querySelector("[data-dismiss-cycle-pattern]")?.addEventListener("click", () => {
+      data.settings.dismissCyclePatternSuggestion = true;
+      saveData();
+      suggestion.classList.add("hidden");
+    });
+  }
+}
+
+function applyIrregularCalendarNote() {
+  const grid = document.getElementById("calendarGrid");
+  if (!grid) return;
+  let note = document.getElementById("irregularCalendarNote");
+  if (!note) {
+    note = document.createElement("div");
+    note.id = "irregularCalendarNote";
+    note.className = "irregular-calendar-note";
+    grid.insertAdjacentElement("afterend", note);
+  }
+
+  const show = usesUncertainCycleForecast() && !data.settings.hideDetails;
+  note.classList.toggle("hidden", !show);
+  if (!show) return;
+
+  const forecast = irregularForecastWindow();
+  note.innerHTML = forecast?.useful && data.settings.showIrregularPredictionWindow !== false
+    ? `<strong>🌙 One window at a time</strong><span>Only your next estimated period window is shown. Future phase and ovulation coloring stays quiet until you log the next actual period.</span>`
+    : `<strong>🌙 No forced prediction</strong><span>Tsuki does not have a useful next-period range right now, so future phase and ovulation coloring stays quiet.</span>`;
+}
+
+function decorateCycleHistory73() {
+  const container = document.getElementById("periodHistoryList");
+  if (!container) return;
+  container.querySelector("#irregularRhythmPanel")?.remove();
+  container.querySelectorAll(".interval-learning-control").forEach(node => node.remove());
+  if (!usesUncertainCycleForecast()) return;
+
+  const records = cycleIntervalRecords();
+  const usable = irregularLearningIntervals();
+  const values = usable.map(record => record.days);
+  const panel = document.createElement("article");
+  panel.id = "irregularRhythmPanel";
+  panel.className = "irregular-rhythm-panel";
+
+  if (values.length) {
+    const low = Math.min(...values);
+    const high = Math.max(...values);
+    const middle = Math.round(medianNumber(values));
+    panel.innerHTML = `<div><p class="eyebrow">YOUR RECENT RHYTHM</p><h3>${low}–${high} days</h3><p>Middle of usable history: about ${middle} days · ${values.length} interval${values.length === 1 ? "" : "s"} used for learning.</p></div><span>🌙</span><small>Tsuki keeps unusual or long recorded gaps visible. If a gap probably contains a period you forgot to log, you can exclude only that interval from prediction learning below.</small>`;
+  }
+  else {
+    panel.innerHTML = `<div><p class="eyebrow">YOUR RECENT RHYTHM</p><h3>Still learning</h3><p>Add actual period starts when you remember them. Tsuki will not force a precise forecast from too little history.</p></div><span>🌱</span>`;
+  }
+  container.prepend(panel);
+
+  container.querySelectorAll(".period-history-card").forEach(card => {
+    const periodId = card.querySelector("[data-period-edit]")?.dataset.periodEdit;
+    const record = records.find(item => item.currentId === periodId);
+    if (!record) return;
+
+    const control = document.createElement("div");
+    control.className = "interval-learning-control";
+    const eligible = record.irregularLearningEligible;
+    const state = record.ignored
+      ? "Excluded from prediction learning"
+      : eligible
+        ? "Used for prediction learning"
+        : "Kept in history only";
+    control.innerHTML = `<div><strong>${record.days} days from the previous recorded start</strong><small>${state}</small></div>${eligible ? `<button type="button" data-cycle-interval-toggle="${escapeHTML(record.key)}">${record.ignored ? "Use interval" : "Exclude interval"}</button>` : ""}`;
+    card.appendChild(control);
+  });
+
+  container.querySelectorAll("[data-cycle-interval-toggle]").forEach(button => {
+    button.addEventListener("click", () => toggleCycleIntervalLearning(button.dataset.cycleIntervalToggle));
+  });
+}
+
+function toggleCycleIntervalLearning(key) {
+  ensureCycleProfileSettings();
+  const ignored = new Set(data.settings.ignoredCycleIntervals || []);
+  if (ignored.has(key)) ignored.delete(key);
+  else ignored.add(key);
+  data.settings.ignoredCycleIntervals = Array.from(ignored);
+  saveData();
+  renderCycleHistory();
+  renderToday();
+  renderCalendar();
+  renderReports();
+  renderHomeInsights();
+  showToast(ignored.has(key) ? "That interval is excluded from prediction learning 🌙" : "That interval is used for prediction learning again 🌸");
+}
+
+function irregularReportHTML() {
+  if (!usesUncertainCycleForecast()) return "";
+  const allRecords = cycleIntervalRecords();
+  const usable = irregularLearningIntervals();
+  const values = usable.map(record => record.days);
+  const ignoredCount = allRecords.filter(record => record.ignored).length;
+  const recordedValues = allRecords.map(record => record.days);
+  const recordedRange = recordedValues.length ? `${Math.min(...recordedValues)}–${Math.max(...recordedValues)} days` : "Need more history";
+  const usableRange = values.length ? `${Math.min(...values)}–${Math.max(...values)} days` : "Need more usable history";
+  const middle = values.length ? `${Math.round(medianNumber(values))} days` : "—";
+  const confidence = irregularPredictionConfidence();
+
+  return `<article class="report-card irregular-report-card"><h3>Personal rhythm summary 🌙</h3><div class="report-row"><span>Cycle pattern</span><strong>${cyclePatternValue() === "irregular" ? "Varies a lot" : "Still learning"}</strong></div><div class="report-row"><span>All recorded intervals</span><strong>${recordedRange}</strong></div><div class="report-row"><span>Recent usable range</span><strong>${usableRange}</strong></div><div class="report-row"><span>Middle of recent history</span><strong>${middle}</strong></div><div class="report-row"><span>Intervals excluded from learning</span><strong>${ignoredCount}</strong></div><div class="report-row"><span>Prediction confidence</span><strong>${confidence.level}</strong></div><p class="muted small-text">These numbers summarize dates you recorded. They do not diagnose a condition or confirm ovulation.</p></article>`;
+}
+
+function loadCycleProfileUI() {
+  ensureCycleProfileSettings();
+  const select = document.getElementById("cyclePattern");
+  const completeness = document.getElementById("cycleHistoryCompleteness");
+  const windowToggle = document.getElementById("showIrregularPredictionWindow");
+  const confidenceToggle = document.getElementById("showIrregularConfidence");
+  const options = document.getElementById("irregularCycleOptions");
+  const predictable = document.getElementById("predictablePredictionOptions");
+  const cycleLength = document.getElementById("settingsCycleLength");
+  const help = document.getElementById("cyclePatternHelp");
+  const uncertain = usesUncertainCycleForecast();
+
+  if (select) select.value = cyclePatternValue();
+  if (completeness) completeness.value = data.settings.cycleHistoryCompleteness || "complete";
+  if (windowToggle) windowToggle.checked = data.settings.showIrregularPredictionWindow !== false;
+  if (confidenceToggle) confidenceToggle.checked = data.settings.showIrregularConfidence !== false;
+  options?.classList.toggle("hidden", !uncertain);
+  predictable?.classList.toggle("cycle-prediction-options-muted", uncertain);
+  const predictionSelect = document.getElementById("predictionMode");
+  if (predictionSelect) predictionSelect.disabled = uncertain;
+  if (cycleLength) cycleLength.max = uncertain ? "365" : "60";
+  if (help) {
+    help.textContent = cyclePatternValue() === "regular"
+      ? "Tsuki can use a more precise countdown when your timing is usually predictable."
+      : cyclePatternValue() === "irregular"
+        ? "Tsuki will use actual recorded ranges, avoid repeated future projections, and keep future ovulation timing uncertain."
+        : "Tsuki will stay cautious while it learns your timing. You can change this anytime.";
+  }
+}
+
+function syncCycleProfileDraftUI() {
+  const select = document.getElementById("cyclePattern");
+  if (!select) return;
+  const uncertain = select.value !== "regular";
+  document.getElementById("irregularCycleOptions")?.classList.toggle("hidden", !uncertain);
+  document.getElementById("predictablePredictionOptions")?.classList.toggle("cycle-prediction-options-muted", uncertain);
+  const predictionSelect = document.getElementById("predictionMode");
+  if (predictionSelect) predictionSelect.disabled = uncertain;
+  const cycleLength = document.getElementById("settingsCycleLength");
+  if (cycleLength) cycleLength.max = uncertain ? "365" : "60";
+}
+
+ensureCycleProfileSettings();
+
+const tsuki72RenderToday = renderToday;
+renderToday = function renderToday73() {
+  const result = tsuki72RenderToday();
+  applyCyclePatternToday();
+  return result;
+};
+
+const tsuki72RenderCalendar = renderCalendar;
+renderCalendar = function renderCalendar73() {
+  const result = tsuki72RenderCalendar();
+  applyIrregularCalendarNote();
+  return result;
+};
+
+const tsuki72RenderCycleHistory = renderCycleHistory;
+renderCycleHistory = function renderCycleHistory73() {
+  const result = tsuki72RenderCycleHistory();
+  decorateCycleHistory73();
+  return result;
+};
+
+const tsuki72RenderReports = renderReports;
+renderReports = function renderReports73() {
+  const result = tsuki72RenderReports();
+  const container = document.getElementById("reportSummary");
+  if (container && usesUncertainCycleForecast()) container.insertAdjacentHTML("beforeend", irregularReportHTML());
+  return result;
+};
+
+const tsuki72LoadSettingsUI = loadSettingsUI;
+loadSettingsUI = function loadSettingsUI73() {
+  ensureCycleProfileSettings();
+  const result = tsuki72LoadSettingsUI();
+  loadCycleProfileUI();
+  return result;
+};
+
+const tsuki72RenderEverything = renderEverything;
+renderEverything = function renderEverything73() {
+  ensureCycleProfileSettings();
+  return tsuki72RenderEverything();
+};
+
+const tsuki72CompanionPrimaryMessage = companionPrimaryMessage;
+companionPrimaryMessage = function companionPrimaryMessage73() {
+  if (!usesUncertainCycleForecast()) return tsuki72CompanionPrimaryMessage();
+  const today = todayKey();
+  const todayLog = data.logs[today] || {};
+  if (todayLog.tinyJoy) return `You saved a tiny joy today: “${todayLog.tinyJoy}” 🌸`;
+  if (periodForDate(today)) return "Period days can be soft days. I brought a blanket 🌙";
+  const forecast = irregularForecastWindow();
+  if (forecast?.useful && data.settings.showIrregularPredictionWindow !== false) return "Your next moon has a wider window, so I’m watching gently instead of counting down to one exact day ✨";
+  return "I’m learning your rhythm without forcing it into a schedule. 🌙";
+};
+
+const tsuki72CompanionSecondaryNote = companionSecondaryNote;
+companionSecondaryNote = function companionSecondaryNote73() {
+  if (!usesUncertainCycleForecast()) return tsuki72CompanionSecondaryNote();
+  if (periodForDate(todayKey())) return "Warm light, tea, and extra softness.";
+  return "Your timing can vary. Today’s observations matter more than a guessed phase.";
+};
+
+const tsuki72RenderCompanionHome = renderCompanionHome;
+renderCompanionHome = function renderCompanionHome73() {
+  const result = tsuki72RenderCompanionHome();
+  if (usesUncertainCycleForecast() && latestPeriod() && phaseForDate(todayKey()) !== "Period") {
+    const title = document.getElementById("companionHomeTitle");
+    if (title) title.textContent = "Tsuki is following your rhythm";
+  }
+  return result;
+};
+
+document.getElementById("cyclePattern")?.addEventListener("change", syncCycleProfileDraftUI);
+
+document.getElementById("saveSettings")?.addEventListener("click", () => {
+  const pattern = document.getElementById("cyclePattern")?.value || cyclePatternValue();
+  data.settings.cyclePattern = TSUKI73_CYCLE_PATTERNS.has(pattern) ? pattern : "unsure";
+  data.settings.cycleHistoryCompleteness = document.getElementById("cycleHistoryCompleteness")?.value || "complete";
+  data.settings.showIrregularPredictionWindow = document.getElementById("showIrregularPredictionWindow")?.checked !== false;
+  data.settings.showIrregularConfidence = document.getElementById("showIrregularConfidence")?.checked !== false;
+  if (pattern !== "regular") data.settings.dismissCyclePatternSuggestion = false;
+
+  const cycleLengthInput = document.getElementById("settingsCycleLength");
+  if (cycleLengthInput) {
+    const max = pattern === "regular" ? 60 : 365;
+    const value = Number(cycleLengthInput.value) || 28;
+    cycleLengthInput.value = String(Math.max(15, Math.min(max, Math.round(value))));
+  }
+}, { capture: true });
+
+if (Array.isArray(TUTORIAL_STEPS) && !TUTORIAL_STEPS.some(step => step.title === "Your rhythm can vary")) {
+  const position = Math.max(1, TUTORIAL_STEPS.length - 2);
+  TUTORIAL_STEPS.splice(position, 0, {
+    icon: "🌙",
+    eyebrow: "PERSONAL RHYTHMS",
+    title: "Your rhythm can vary",
+    text: "In Me → Cycle defaults, choose whether your timing is usually predictable, varies a lot, or is still unclear. Tsuki can switch from exact countdowns to wider, uncertainty-aware windows without changing your saved history."
+  });
 }
 
 

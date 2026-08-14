@@ -6115,3 +6115,155 @@ body.hide-sensitive .pregnancy-room-props {
 
 .reduce-motion .tutorial-dot,
 .reduce-motion .diagnostics-chevron { transition: none !important; }
+
+
+/* ============================================================
+   TSUKI 7.3 — PERSONAL RHYTHMS + IRREGULAR CYCLE SUPPORT
+   ============================================================ */
+
+.irregular-cycle-options {
+  margin: 14px 0 16px;
+  padding: 14px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.62);
+  border: 1px solid rgba(173, 139, 216, 0.22);
+}
+
+.irregular-cycle-options .settings-row {
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.cycle-prediction-options-muted {
+  opacity: 0.58;
+}
+
+.irregular-prediction {
+  border-style: dashed;
+}
+
+.cycle-pattern-suggestion {
+  margin-top: 14px;
+  padding: 13px 14px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.66);
+  border: 1px solid rgba(173, 139, 216, 0.28);
+}
+
+.cycle-pattern-suggestion strong,
+.cycle-pattern-suggestion p {
+  display: block;
+}
+
+.cycle-pattern-suggestion p {
+  margin: 5px 0 0;
+  font-size: 0.83rem;
+  line-height: 1.45;
+  opacity: 0.78;
+}
+
+.cycle-pattern-suggestion-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+
+.cycle-pattern-suggestion-actions button,
+.interval-learning-control button {
+  min-height: 40px;
+  border: 0;
+  border-radius: 999px;
+  padding: 8px 13px;
+  font: inherit;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.78);
+  box-shadow: inset 0 0 0 1px rgba(173, 139, 216, 0.25);
+}
+
+.irregular-calendar-note {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-top: 12px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.6);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.irregular-calendar-note span {
+  opacity: 0.75;
+}
+
+.irregular-rhythm-panel {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px 14px;
+  align-items: start;
+  margin-bottom: 14px;
+  padding: 16px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.68);
+  border: 1px solid rgba(173, 139, 216, 0.24);
+}
+
+.irregular-rhythm-panel h3,
+.irregular-rhythm-panel p {
+  margin: 2px 0;
+}
+
+.irregular-rhythm-panel > span {
+  font-size: 1.5rem;
+}
+
+.irregular-rhythm-panel > small {
+  grid-column: 1 / -1;
+  opacity: 0.72;
+  line-height: 1.45;
+}
+
+.interval-learning-control {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(90, 70, 110, 0.1);
+}
+
+.interval-learning-control strong,
+.interval-learning-control small {
+  display: block;
+}
+
+.interval-learning-control small {
+  margin-top: 3px;
+  opacity: 0.68;
+}
+
+.irregular-report-card {
+  margin-top: 14px;
+}
+
+@media (max-width: 390px) {
+  .interval-learning-control {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .interval-learning-control button,
+  .cycle-pattern-suggestion-actions button {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cycle-pattern-suggestion,
+  .irregular-calendar-note,
+  .irregular-rhythm-panel {
+    scroll-behavior: auto;
+  }
+}

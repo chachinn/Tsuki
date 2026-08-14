@@ -84,7 +84,7 @@
           </div>
         </div>
         <p><strong>Tsuki (月)</strong> means “moon” or “month.” With its connection to monthly rhythms and cycles, it became a natural name for an app that helps you understand and follow your own cycle.</p>
-        <span class="drawer-about-tsuki-version">Tsuki 7.2.0</span>
+        <span class="drawer-about-tsuki-version">Tsuki 7.3.0</span>
       </section>
 
       <div id="pregnancyDrawerMenu" class="pregnancy-drawer-menu hidden">
@@ -1969,14 +1969,44 @@
           value="5"
         >
 
+        <label class="field-label" for="cyclePattern">How predictable is your cycle?</label>
+        <select id="cyclePattern" class="input">
+          <option value="regular">Usually predictable</option>
+          <option value="irregular">Varies a lot</option>
+          <option value="unsure">I’m not sure yet</option>
+        </select>
+        <p id="cyclePatternHelp" class="muted small-text">
+          Tsuki uses this to decide whether an exact countdown or a wider timing window is more appropriate. If you have PCOS or another reason your cycles vary, “Varies a lot” may suit you better.
+        </p>
+
+        <div id="irregularCycleOptions" class="irregular-cycle-options hidden">
+          <label class="settings-row">
+            <span>🌸 Show estimated next-period window<small>Uses your actual recent period starts when a useful range exists.</small></span>
+            <input id="showIrregularPredictionWindow" type="checkbox" checked>
+          </label>
+          <label class="settings-row">
+            <span>✨ Show prediction confidence<small>Confidence describes the estimate, not your health.</small></span>
+            <input id="showIrregularConfidence" type="checkbox" checked>
+          </label>
+          <label class="field-label" for="cycleHistoryCompleteness">How complete is your period history?</label>
+          <select id="cycleHistoryCompleteness" class="input">
+            <option value="complete">I logged most of the periods I remember</option>
+            <option value="partial">Some periods may be missing</option>
+            <option value="unsure">I’m not sure</option>
+          </select>
+          <p class="muted small-text">Long gaps stay in your history. In Cycle History, you can exclude a single interval from prediction learning if you think a period was missed between two saved starts.</p>
+        </div>
+
+        <div id="predictablePredictionOptions">
         <label class="field-label">Prediction method</label>
         <select id="predictionMode" class="input">
           <option value="typical">Use my Typical Cycle Length</option>
           <option value="recentAverage">Use recent-cycle average</option>
         </select>
         <p class="muted small-text">
-          Typical Cycle Length remains the default. Recent-average mode uses up to your last 3 valid completed cycles. Historical averages are always available in Reports and Insights.
+          For usually predictable cycles, Typical Cycle Length remains the default. Recent-average mode uses up to your last 3 valid completed cycles. For variable timing, Tsuki uses recorded ranges instead.
         </p>
+        </div>
 
         <button
           id="saveSettings"
@@ -2053,7 +2083,7 @@
         <div class="diagnostics-body">
           <p class="muted small-text">Everything here stays on this device. Diagnostics never sends your cycle, pregnancy, journal, or health data anywhere.</p>
           <div class="diagnostics-grid">
-            <div><small>App version</small><strong id="diagAppVersion">7.2.0</strong></div>
+            <div><small>App version</small><strong id="diagAppVersion">7.3.0</strong></div>
             <div><small>Life mode</small><strong id="diagLifeMode">—</strong></div>
             <div><small>Local data</small><strong id="diagLocalData">Checking…</strong></div>
             <div><small>Device storage</small><strong id="diagStorage">Checking…</strong></div>

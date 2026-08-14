@@ -1,9 +1,9 @@
 /* ============================================================
-   TSUKI SERVICE WORKER — BUILD 7.2
+   TSUKI SERVICE WORKER — BUILD 7.3
    Cycle + Pregnancy life modes
    ============================================================ */
 
-const CACHE_NAME = "tsuki-cache-v7-2";
+const CACHE_NAME = "tsuki-cache-v7-3";
 
 const APP_SHELL = [
   "./",
