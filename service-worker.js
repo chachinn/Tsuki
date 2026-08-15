@@ -1,14 +1,16 @@
 /* ============================================================
-   TSUKI SERVICE WORKER — BUILD 7.4
+   TSUKI SERVICE WORKER — BUILD 7.6
    Cycle + Pregnancy life modes
    ============================================================ */
 
-const CACHE_NAME = "tsuki-cache-v7-4";
+const CACHE_NAME = "tsuki-cache-v7-6";
 
 const APP_SHELL = [
   "./",
   "./index.html",
   "./style.css",
+  "./body-signals.css",
+  "./body-signals.js",
   "./app.js",
   "./firebase-tsuki.js",
   "./manifest.json",
@@ -21,6 +23,8 @@ const UPDATE_FIRST = new Set([
   "./",
   "./index.html",
   "./style.css",
+  "./body-signals.css",
+  "./body-signals.js",
   "./app.js",
   "./manifest.json"
 ]);

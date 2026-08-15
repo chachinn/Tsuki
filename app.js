@@ -1,6 +1,6 @@
 /* ============================================================
-   TSUKI 🌙 — BUILD 7.4
-   OPTIONAL FIREBASE ACCOUNT + LOCAL-FIRST IDENTITY
+   TSUKI 🌙 — BUILD 7.6
+   BODY SIGNALS + PERSONAL LEAD-UP INTELLIGENCE
    ============================================================ */
 
 const STORAGE_KEY = "tsuki-data-v4";
@@ -8,19 +8,20 @@ const BUILD3_STORAGE_KEY = "tsuki-data-v3";
 const BUILD2_STORAGE_KEY = "tsuki-data-v2";
 const LEGACY_STORAGE_KEY = "tsuki-data-v1";
 const APP_LOCK_STORAGE_KEY = "tsuki-app-lock-v1";
-const APP_VERSION = "7.4.0";
-const APP_CACHE_NAME = "tsuki-cache-v7-4";
+const APP_VERSION = "7.6.0";
+const APP_CACHE_NAME = "tsuki-cache-v7-6";
 const TUTORIAL_STORAGE_KEY = "tsuki-tutorial-complete-v1";
 const WHATS_NEW_STORAGE_KEY = "tsuki-whats-new-seen-v1";
 const RECOVERY_ASSET_KEY = "tsuki-last-good-data-v1";
 
 const RELEASE_NOTES = [
-  { icon: "👤", title: "Optional Tsuki account", text: "Sign in with email and password or Google, or keep using Tsuki without an account. Your local tracker remains available either way." },
-  { icon: "🔐", title: "Firebase Authentication", text: "Account identity is handled by Firebase Authentication with persistent sign-in, password reset and email verification support." },
-  { icon: "🌙", title: "Local health data stays local", text: "Signing in does not upload cycle, pregnancy, Between Moons, journal, photo or other health entries in this release." },
-  { icon: "📱", title: "Mobile-safe Google sign-in", text: "Google sign-in uses a user-initiated popup flow so GitHub Pages does not depend on a cross-site redirect helper that modern browsers can block." },
-  { icon: "🫧", title: "Graceful offline behavior", text: "If Firebase is unavailable or you are offline, Tsuki still opens and all existing local tracking continues to work." },
-  { icon: "🛡️", title: "Stability first", text: "The authentication layer is isolated from Tsuki's local data engine, with regular-cycle, irregular-cycle and Pregnancy Mode regressions covered before release." }
+  { icon: "🌙", title: "My Period Signals", text: "Tsuki can now learn the body changes that repeatedly appear before your actual periods instead of assuming everyone has the same lead-up." },
+  { icon: "🩸", title: "Spotting & bleeding every day", text: "Daily Check-in can record spotting, light, medium or heavy bleeding even outside a saved period. Spotting never starts a period automatically." },
+  { icon: "🧠", title: "Smarter baseline comparison", text: "Tsuki compares your pre-period week with your own ordinary logged days so symptoms that happen all month are less likely to be mistaken for period clues." },
+  { icon: "✨", title: "Signal strength & combinations", text: "Emerging, common and strong personal signals gain evidence across actual period starts, and Tsuki can notice combinations that tend to travel together." },
+  { icon: "🌘", title: "Useful even when cycles are irregular", text: "Body-signal intelligence works from actual bleeding history, so Between Moons can still learn clues even when calendar timing is uncertain or periods are months apart." },
+  { icon: "🫧", title: "More complete Daily Check-in", text: "Cramps, bowel changes, breast changes, skin, headaches, discharge, appetite, cravings, stress, sleep, energy, mood, libido and custom symptoms can all contribute to your personal pattern." },
+  { icon: "🛡️", title: "Observational, not diagnostic", text: "Symptoms never rewrite your predicted date, confirm that a period is coming, diagnose PMS or PCOS, or replace medical advice." }
 ];
 
 
@@ -10462,6 +10463,14 @@ if (Array.isArray(TUTORIAL_STEPS) && !TUTORIAL_STEPS.some(step => step.title ===
     text: "If your periods may be months apart, choose that pattern in Me → Cycle defaults. Tsuki can stop guessing a next date and instead follow your symptoms, mood, energy, sleep and other check-ins between actual periods."
   });
 }
+
+
+/* ============================================================
+   BUILD 7.6 — BODY SIGNALS INSTALL
+   The module is loaded before app.js and installed here so it can wrap the
+   final Cycle/Between Moons functions before the first render.
+   ============================================================ */
+window.TsukiBodySignals?.install?.();
 
 
 /* ============================================================

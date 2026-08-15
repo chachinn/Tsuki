@@ -20,6 +20,7 @@
   <link rel="manifest" href="./manifest.json">
   <link rel="apple-touch-icon" href="./icons/icon-192.png">
   <link rel="stylesheet" href="./style.css">
+  <link rel="stylesheet" href="./body-signals.css">
 </head>
 
 <body>
@@ -84,7 +85,7 @@
           </div>
         </div>
         <p><strong>Tsuki (月)</strong> means “moon” or “month.” With its connection to monthly rhythms and cycles, it became a natural name for an app that helps you understand and follow your own cycle.</p>
-        <span class="drawer-about-tsuki-version">Tsuki 7.4.0</span>
+        <span class="drawer-about-tsuki-version">Tsuki 7.6.0</span>
       </section>
 
       <div id="pregnancyDrawerMenu" class="pregnancy-drawer-menu hidden">
@@ -131,6 +132,7 @@
       <section class="drawer-group">
         <p class="drawer-group-title">YOUR CYCLE</p>
         <button class="drawer-row" data-open-screen="cycle-history"><span class="drawer-row-icon">🌙</span><span><strong>Cycle History</strong><small>Periods and cycle context</small></span><b>›</b></button>
+        <button class="drawer-row" data-open-screen="period-signals"><span class="drawer-row-icon">✨</span><span><strong>My Period Signals</strong><small>What your body tends to do before bleeding</small></span><b>›</b></button>
         <button id="betweenMoonsDrawerRow" class="drawer-row hidden" data-open-screen="between-moons"><span class="drawer-row-icon">🌘</span><span><strong>Between Moons</strong><small>Your body story between infrequent periods</small></span><b>›</b></button>
         <button class="drawer-row" data-open-screen="past-moons"><span class="drawer-row-icon">🌕</span><span><strong>Past Moons</strong><small>Your completed cycle stories</small></span><b>›</b></button>
         <button class="drawer-row" data-open-screen="reports"><span class="drawer-row-icon">📊</span><span><strong>Reports</strong><small>Cycle summaries and trends</small></span><b>›</b></button>
@@ -226,11 +228,24 @@
         </div>
       </article>
 
+      <article id="periodSignalTodayCard" class="period-signal-today period-signal-private hidden" aria-live="polite">
+        <div class="period-signal-today-icon" aria-hidden="true">🌙</div>
+        <div class="period-signal-today-copy">
+          <p class="eyebrow">YOUR BODY SIGNALS</p>
+          <h3 id="periodSignalTodayTitle">Tsuki is listening</h3>
+          <p id="periodSignalTodayText">Your own lead-up patterns can appear here after repeated check-ins.</p>
+          <div id="periodSignalTodayChips" class="period-signal-today-chips"></div>
+          <div class="period-signal-today-actions">
+            <button type="button" id="periodSignalTodayOpen" class="text-button">See My Period Signals →</button>
+          </div>
+        </div>
+      </article>
+
       <div class="mini-grid">
 
         <article class="mini-card">
           <span>🩸</span>
-          <small>Flow</small>
+          <small>Bleeding</small>
           <strong id="todayFlow">None</strong>
         </article>
 
@@ -373,6 +388,7 @@
           </span>
 
           <span><i class="legend-dot logged"></i>Logged</span>
+          <span><i class="legend-dot spotting"></i>Spotting</span>
           <span><i class="legend-dot follicular"></i>Follicular</span>
           <span><i class="legend-dot ovulation"></i>Est. ovulation</span>
           <span><i class="legend-dot luteal"></i>Luteal</span>
@@ -545,7 +561,8 @@
 
         <article class="card" id="periodFlowCard">
 
-          <p class="card-label">Flow</p>
+          <p class="card-label">Bleeding / spotting</p>
+          <p class="body-signal-helper">Track bleeding even when it is not part of a saved period. Spotting never starts a period automatically.</p>
 
           <div class="choice-grid four">
 
@@ -588,11 +605,11 @@
           <div class="card-row">
             <div>
               <p class="card-label">
-                Cramps / Pain
+                Cramps / pelvic discomfort
               </p>
 
               <p class="muted small-text">
-                How uncomfortable are you?
+                Track this on any day — including before bleeding begins.
               </p>
             </div>
 
@@ -619,9 +636,74 @@
 
         </article>
 
+
+        <article id="bleedingPeriodPrompt" class="bleeding-period-prompt hidden" aria-live="polite">
+          <span aria-hidden="true">🩸</span>
+          <div>
+            <p class="eyebrow">BLEEDING LOGGED</p>
+            <h4>Did your period start?</h4>
+            <p id="bleedingPeriodPromptFlow">Bleeding is saved for this day.</p>
+            <p>Tsuki will never decide this for you. You can start a period from this date, or keep the bleeding as a separate observation.</p>
+            <div class="bleeding-period-prompt-actions">
+              <button type="button" id="confirmPeriodFromBleeding" class="secondary-button small">Yes, log period</button>
+              <button type="button" id="markBleedingNotPeriod" class="text-button">No, just record bleeding</button>
+            </div>
+          </div>
+        </article>
+
         <article class="card hidden" id="phaseSpecificLogCard">
           <div id="phaseSpecificLogContent"></div>
         </article>
+
+        <details class="body-signal-details">
+          <summary><span>＋ Body details</span><small>Discharge, appetite, stress & libido</small></summary>
+          <div class="body-signal-details-grid">
+            <article class="card">
+              <p class="card-label">Cervical mucus / discharge</p>
+              <p class="muted small-text">A body observation only — Tsuki does not use discharge to confirm ovulation.</p>
+              <div class="segmented">
+                <label><input type="radio" name="discharge" value="Dry"><span>Dry</span></label>
+                <label><input type="radio" name="discharge" value="Sticky"><span>Sticky</span></label>
+                <label><input type="radio" name="discharge" value="Creamy"><span>Creamy</span></label>
+                <label><input type="radio" name="discharge" value="Watery"><span>Watery</span></label>
+                <label><input type="radio" name="discharge" value="Slippery / stretchy"><span>Slippery</span></label>
+              </div>
+            </article>
+            <article class="card">
+              <p class="card-label">Appetite</p>
+              <div class="segmented">
+                <label><input type="radio" name="appetite" value="Low"><span>Low</span></label>
+                <label><input type="radio" name="appetite" value="Usual"><span>Usual</span></label>
+                <label><input type="radio" name="appetite" value="High"><span>High</span></label>
+              </div>
+            </article>
+            <article class="card">
+              <p class="card-label">Cravings</p>
+              <div class="segmented">
+                <label><input type="radio" name="cravingIntensity" value="None"><span>None</span></label>
+                <label><input type="radio" name="cravingIntensity" value="Mild"><span>Mild</span></label>
+                <label><input type="radio" name="cravingIntensity" value="Strong"><span>Strong</span></label>
+              </div>
+            </article>
+            <article class="card">
+              <p class="card-label">Stress</p>
+              <div class="segmented">
+                <label><input type="radio" name="stress" value="Low"><span>Low</span></label>
+                <label><input type="radio" name="stress" value="Medium"><span>Medium</span></label>
+                <label><input type="radio" name="stress" value="High"><span>High</span></label>
+              </div>
+            </article>
+            <article class="card">
+              <p class="card-label">Libido</p>
+              <div class="segmented">
+                <label><input type="radio" name="libido" value="Low"><span>Low</span></label>
+                <label><input type="radio" name="libido" value="Medium"><span>Medium</span></label>
+                <label><input type="radio" name="libido" value="High"><span>High</span></label>
+              </div>
+            </article>
+          </div>
+        </details>
+
 
         <article class="card">
 
@@ -659,6 +741,18 @@
               <input type="checkbox" name="moodChoice" value="Irritable">
               <span>😤</span>
               <small>Irritable</small>
+            </label>
+
+            <label class="choice">
+              <input type="checkbox" name="moodChoice" value="Anxious">
+              <span>😟</span>
+              <small>Anxious</small>
+            </label>
+
+            <label class="choice">
+              <input type="checkbox" name="moodChoice" value="Emotional">
+              <span>🥹</span>
+              <small>Emotional</small>
             </label>
 
           </div>
@@ -781,6 +875,26 @@
 
           </div>
 
+
+            <p class="symptom-section-label">More body signals</p>
+
+            <label><input type="checkbox" name="symptom" value="Breast Fullness"><span>🌸 Breast fullness</span></label>
+            <label><input type="checkbox" name="symptom" value="Pelvic Heaviness"><span>🌙 Pelvic heaviness</span></label>
+            <label><input type="checkbox" name="symptom" value="Water Retention"><span>💧 Puffiness / water retention</span></label>
+            <label><input type="checkbox" name="symptom" value="Body Aches"><span>🌿 Body aches</span></label>
+            <label><input type="checkbox" name="symptom" value="Feeling Warmer"><span>🌡️ Feeling warmer</span></label>
+            <label><input type="checkbox" name="symptom" value="Migraine"><span>🌧️ Migraine</span></label>
+            <label><input type="checkbox" name="symptom" value="Brain Fog"><span>🌫️ Brain fog</span></label>
+            <label><input type="checkbox" name="symptom" value="Oily Skin"><span>✨ Oilier skin</span></label>
+            <label><input type="checkbox" name="symptom" value="Dry Sensitive Skin"><span>🌸 Dry / sensitive skin</span></label>
+
+            <p class="symptom-section-label">Bowel changes</p>
+
+            <label><input type="checkbox" name="symptom" value="Constipation"><span>🌿 Constipation</span></label>
+            <label><input type="checkbox" name="symptom" value="Loose Stools"><span>🌿 Loose stools</span></label>
+            <label><input type="checkbox" name="symptom" value="Frequent Stools"><span>🌿 More frequent bowel movements</span></label>
+            <label><input type="checkbox" name="symptom" value="Gas"><span>🫧 More gas</span></label>
+
           <div id="customSymptomGrid" class="tag-checkbox-grid custom-symptom-grid"></div>
           <div class="inline-add custom-symptom-add">
             <input id="customSymptomInput" class="input" maxlength="30" placeholder="Add your own symptom…">
@@ -833,6 +947,49 @@
 
     </section>
 
+
+
+    <!-- MY PERIOD SIGNALS -->
+    <section class="screen" data-screen="period-signals">
+      <button class="back-button" data-open-screen="today">← Back</button>
+
+      <div class="page-title">
+        <div><p class="eyebrow">YOUR BODY, YOUR LEAD-UP</p><h2>My Period Signals</h2></div>
+        <span>🌙</span>
+      </div>
+
+      <article class="period-signals-hero period-signal-private">
+        <span aria-hidden="true">✨</span>
+        <h3>Your calendar is only one clue</h3>
+        <p>Tsuki looks at the seven days before <strong>periods you actually recorded</strong> and compares those check-ins with your own ordinary logged days. That helps it learn what is unusually concentrated before your period instead of treating every symptom as a prediction.</p>
+      </article>
+
+      <article id="periodSignalCurrentState" class="period-signal-current period-signal-private"></article>
+      <div id="periodSignalLearningStats" class="period-signal-learning-stats period-signal-private"></div>
+
+      <section class="section-block period-signal-private">
+        <div class="section-heading"><div><p class="eyebrow">TSUKI LEARNED</p><h3>Your recurring lead-up</h3></div></div>
+        <div id="periodSignalLearnedList" class="period-signal-list"></div>
+      </section>
+
+      <section class="section-block period-signal-private">
+        <div class="section-heading"><div><p class="eyebrow">TOGETHER</p><h3>Signal combinations</h3></div></div>
+        <div id="periodSignalCombinationList" class="period-signal-combinations"></div>
+      </section>
+
+      <section class="section-block period-signal-private">
+        <div class="section-heading"><div><p class="eyebrow">WHAT I ALREADY NOTICE</p><h3>Signals I want Tsuki to watch</h3></div></div>
+        <article class="soft-note">Choosing something here does <strong>not</strong> teach Tsuki that it is true. It only tells Tsuki what you personally notice; learned evidence remains separate until your logs actually repeat before future periods.</article>
+        <div id="periodSignalWatchlistGrid" class="period-signal-watchlist"></div>
+      </section>
+
+      <button type="button" id="periodSignalLogToday" class="primary-button full-width">📝 Log today’s body signals</button>
+
+      <article class="period-signal-safety">
+        <strong>About spotting and unexpected bleeding</strong><br>
+        Spotting can be part of someone’s personal lead-up, but it can also happen for many other reasons. Tsuki records the pattern without deciding what caused it or guaranteeing that a period is coming. New, persistent, heavy, concerning, or otherwise unexpected bleeding can be useful to discuss with a healthcare professional. Pregnancy bleeding stays in the separate Pregnancy safety pathway.
+      </article>
+    </section>
 
     <!-- INSIGHTS -->
     <section class="screen" data-screen="insights">
@@ -2163,7 +2320,7 @@
         <div class="diagnostics-body">
           <p class="muted small-text">Everything here stays on this device. Diagnostics never sends your cycle, pregnancy, journal, or health data anywhere.</p>
           <div class="diagnostics-grid">
-            <div><small>App version</small><strong id="diagAppVersion">7.4.0</strong></div>
+            <div><small>App version</small><strong id="diagAppVersion">7.6.0</strong></div>
             <div><small>Life mode</small><strong id="diagLifeMode">—</strong></div>
             <div><small>Local data</small><strong id="diagLocalData">Checking…</strong></div>
             <div><small>Device storage</small><strong id="diagStorage">Checking…</strong></div>
@@ -2626,10 +2783,10 @@
     <section class="app-modal whats-new-modal">
       <div class="modal-grabber"></div>
       <div class="app-modal-header">
-        <div><p class="eyebrow">NEW IN TSUKI</p><h2 id="whatsNewTitle">Tsuki 7.4</h2></div>
+        <div><p class="eyebrow">NEW IN TSUKI</p><h2 id="whatsNewTitle">Tsuki 7.6</h2></div>
         <button type="button" id="closeWhatsNewButton" class="modal-close" aria-label="Close what's new">×</button>
       </div>
-      <div class="whats-new-hero"><span>👤</span><div><strong>An account when you want one</strong><small>Optional Firebase sign-in · local health data stays local</small></div></div>
+      <div class="whats-new-hero"><span>🌙</span><div><strong>Your body has clues too</strong><small>Personal lead-up signals · smarter than calendar timing alone</small></div></div>
       <div id="whatsNewList" class="whats-new-list"></div>
       <div class="whats-new-actions">
         <button type="button" id="whatsNewTutorialButton" class="secondary-button">Take the tutorial</button>
@@ -2809,6 +2966,7 @@
 
 </div>
 
+<script src="./body-signals.js"></script>
 <script src="./app.js"></script>
 <script type="module" src="./firebase-tsuki.js"></script>
 

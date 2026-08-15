@@ -1,0 +1,306 @@
+/* ============================================================
+   TSUKI 7.6 — BODY SIGNALS
+   Compact, private, mobile-first personal lead-up intelligence.
+   ============================================================ */
+
+.period-signal-today {
+  margin: 12px 0 4px;
+  padding: 15px;
+  border-radius: 22px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+  background: linear-gradient(145deg, rgba(255, 239, 245, .96), rgba(245, 239, 255, .94));
+  border: 1px solid rgba(206, 121, 157, .15);
+  box-shadow: var(--shadow-soft);
+}
+
+.period-signal-today.hidden { display: none; }
+.period-signal-today[data-signal-tone="bleeding"] { background: linear-gradient(145deg, rgba(255, 238, 242, .98), rgba(255, 248, 250, .96)); }
+.period-signal-today[data-signal-tone="familiar"] { background: linear-gradient(145deg, rgba(255, 232, 242, .98), rgba(243, 236, 255, .96)); }
+.period-signal-today[data-signal-tone="watching"] { background: linear-gradient(145deg, rgba(248, 242, 255, .98), rgba(255, 248, 251, .96)); }
+
+.period-signal-today-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 17px;
+  display: grid;
+  place-items: center;
+  font-size: 1.25rem;
+  background: rgba(255,255,255,.7);
+}
+
+.period-signal-today-copy { min-width: 0; }
+.period-signal-today-copy h3 { margin: 2px 0 6px; }
+.period-signal-today-copy > p:not(.eyebrow) { margin: 0; color: var(--muted); line-height: 1.5; font-size: .82rem; }
+.period-signal-today-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.period-signal-today-chips span {
+  max-width: 100%;
+  padding: 6px 9px;
+  border-radius: 999px;
+  font-size: .72rem;
+  background: rgba(255,255,255,.72);
+  border: 1px solid rgba(122,82,104,.08);
+}
+.period-signal-today-actions { margin-top: 10px; display: flex; gap: 8px; flex-wrap: wrap; }
+
+.body-signal-helper {
+  margin: 8px 0 0;
+  font-size: .76rem;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
+.bleeding-period-prompt {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 11px;
+  align-items: start;
+  margin-top: -2px;
+  padding: 13px;
+  border-radius: 18px;
+  background: rgba(255, 241, 245, .9);
+  border: 1px solid rgba(205, 105, 145, .14);
+}
+.bleeding-period-prompt.hidden { display: none; }
+.bleeding-period-prompt > span { font-size: 1.2rem; }
+.bleeding-period-prompt h4 { margin: 2px 0 4px; }
+.bleeding-period-prompt p { margin: 0; font-size: .78rem; line-height: 1.45; color: var(--muted); }
+.bleeding-period-prompt-actions { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 9px; }
+
+.body-signal-details {
+  border-radius: 20px;
+  overflow: hidden;
+  background: rgba(255,255,255,.52);
+  border: 1px solid rgba(122,82,104,.07);
+  margin-bottom: 12px;
+}
+.body-signal-details > summary {
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: center;
+  padding: 14px 15px;
+  font-weight: 700;
+}
+.body-signal-details > summary::-webkit-details-marker { display:none; }
+.body-signal-details > summary small { font-weight: 500; color: var(--muted); text-align: right; }
+.body-signal-details[open] > summary { border-bottom: 1px solid rgba(122,82,104,.07); }
+.body-signal-details-grid { display: grid; gap: 10px; padding: 12px; }
+.body-signal-details-grid .card { margin: 0; }
+
+.symptom-section-label {
+  grid-column: 1 / -1;
+  margin: 8px 0 2px;
+  font-size: .68rem;
+  letter-spacing: .08em;
+  font-weight: 800;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+
+.period-signals-hero {
+  padding: 19px;
+  border-radius: 26px;
+  background: linear-gradient(145deg, var(--pink-100), var(--lavender-100));
+  box-shadow: var(--shadow-soft);
+  margin-bottom: 14px;
+}
+.period-signals-hero > span { font-size: 2rem; }
+.period-signals-hero h3 { margin: 8px 0 6px; }
+.period-signals-hero p { color: var(--muted); line-height: 1.55; font-size: .84rem; }
+
+.period-signal-current {
+  display: grid;
+  grid-template-columns: auto minmax(0,1fr);
+  gap: 12px;
+  padding: 15px;
+  border-radius: 20px;
+  background: rgba(255,255,255,.7);
+  box-shadow: var(--shadow-soft);
+  margin-bottom: 12px;
+}
+.period-signal-current > span { font-size: 1.35rem; }
+.period-signal-current h3 { margin: 2px 0 5px; }
+.period-signal-current p { margin: 0; color: var(--muted); line-height: 1.5; font-size: .8rem; }
+
+.period-signal-learning-stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0,1fr));
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.period-signal-learning-stats > div {
+  min-width: 0;
+  padding: 12px;
+  border-radius: 17px;
+  background: rgba(255,255,255,.68);
+  box-shadow: var(--shadow-soft);
+}
+.period-signal-learning-stats small { display:block; color:var(--muted); font-size:.68rem; line-height:1.35; }
+.period-signal-learning-stats strong { display:block; margin-top:4px; font-size:1.05rem; }
+
+.period-signal-list { display: grid; gap: 10px; }
+.period-signal-card {
+  padding: 14px;
+  border-radius: 20px;
+  background: var(--white);
+  box-shadow: var(--shadow-soft);
+}
+.period-signal-card-top {
+  display: grid;
+  grid-template-columns: auto minmax(0,1fr) auto;
+  gap: 9px;
+  align-items: start;
+}
+.period-signal-icon { font-size: 1.25rem; padding-top: 2px; }
+.period-signal-card h4 { margin:0; }
+.period-signal-card-top p { margin:3px 0 0; font-size:.72rem; color:var(--muted); }
+.period-signal-strength {
+  align-self: start;
+  white-space: nowrap;
+  padding: 5px 7px;
+  border-radius: 999px;
+  font-size: .62rem;
+  font-weight: 800;
+  background: rgba(129,93,113,.08);
+}
+.period-signal-strength.strong { background: rgba(222,117,157,.16); color: var(--pink-600); }
+.period-signal-strength.recurring { background: rgba(176,143,211,.15); }
+.period-signal-source {
+  display: inline-flex;
+  margin-top: 8px;
+  padding: 4px 7px;
+  border-radius: 999px;
+  background: rgba(255,246,224,.8);
+  font-size: .65rem;
+  color: var(--muted);
+}
+.period-signal-evidence { color:var(--muted); font-size:.76rem; line-height:1.5; margin:9px 0 0; }
+.period-signal-card details { margin-top:8px; font-size:.72rem; color:var(--muted); }
+.period-signal-card details summary { cursor:pointer; color:var(--pink-600); font-weight:700; }
+.period-signal-card details p { line-height:1.5; }
+
+.period-signal-empty {
+  display:grid;
+  grid-template-columns:auto minmax(0,1fr);
+  gap:12px;
+  padding:16px;
+  border-radius:20px;
+  background:rgba(255,255,255,.6);
+}
+.period-signal-empty > span { font-size:1.4rem; }
+.period-signal-empty h3 { margin:0 0 5px; }
+.period-signal-empty p { margin:0; color:var(--muted); font-size:.8rem; line-height:1.5; }
+
+.period-signal-combinations { display:grid; gap:8px; }
+.period-signal-combo {
+  display:grid;
+  grid-template-columns:auto minmax(0,1fr);
+  gap:10px;
+  padding:11px 12px;
+  border-radius:17px;
+  background:rgba(255,255,255,.62);
+}
+.period-signal-combo > span { white-space:nowrap; }
+.period-signal-combo strong { font-size:.79rem; }
+.period-signal-combo p { margin:3px 0 0; color:var(--muted); font-size:.7rem; line-height:1.4; }
+
+.period-signal-watchlist {
+  display:grid;
+  gap:10px;
+}
+.period-signal-watch-group > small {
+  display:block;
+  margin:0 0 6px 3px;
+  font-size:.66rem;
+  font-weight:800;
+  letter-spacing:.06em;
+  color:var(--muted);
+  text-transform:uppercase;
+}
+.period-signal-watch-chips { display:flex; flex-wrap:wrap; gap:6px; }
+.period-signal-watch-chips label { position:relative; }
+.period-signal-watch-chips input { position:absolute; opacity:0; pointer-events:none; }
+.period-signal-watch-chips span {
+  display:block;
+  padding:7px 9px;
+  border-radius:999px;
+  border:1px solid rgba(122,82,104,.09);
+  background:rgba(255,255,255,.64);
+  font-size:.7rem;
+}
+.period-signal-watch-chips input:checked + span {
+  background:var(--pink-100);
+  border-color:rgba(220,119,158,.28);
+  box-shadow: inset 0 0 0 1px rgba(220,119,158,.08);
+}
+
+.period-signal-safety {
+  margin-top:14px;
+  padding:14px;
+  border-radius:18px;
+  background:rgba(250,247,255,.8);
+  border:1px solid rgba(126,103,152,.08);
+  font-size:.76rem;
+  line-height:1.5;
+  color:var(--muted);
+}
+.period-signal-safety strong { color:var(--text); }
+
+.calendar-day.spotting-day::after,
+.calendar-day.bleeding-observation-day::after {
+  content:"";
+  position:absolute;
+  left:50%;
+  transform:translateX(-50%);
+  bottom:3px;
+  width:5px;
+  height:5px;
+  border-radius:50%;
+  background:#d57499;
+  box-shadow:0 0 0 1px rgba(255,255,255,.8);
+}
+.calendar-day.bleeding-observation-day::after { width:7px; height:7px; background:#b85d7f; }
+.calendar-day { position:relative; }
+.legend-dot.spotting { background:#d57499; box-shadow:0 0 0 2px rgba(213,116,153,.14); }
+
+.between-moons-period-signals {
+  display:grid;
+  grid-template-columns:auto minmax(0,1fr);
+  gap:11px;
+  padding:13px;
+  margin-bottom:10px;
+  border-radius:18px;
+  background:linear-gradient(145deg, rgba(255,239,245,.78), rgba(245,239,255,.78));
+}
+.between-moons-period-signals > span { font-size:1.25rem; }
+.between-moons-period-signals p { margin:4px 0; color:var(--muted); font-size:.76rem; line-height:1.45; }
+.between-moons-period-signals small { color:var(--muted); font-size:.68rem; }
+
+body.hide-sensitive .period-signal-private,
+body.hide-sensitive #periodSignalTodayCard {
+  filter: blur(8px);
+  user-select:none;
+  pointer-events:none;
+}
+body.hide-sensitive #periodSignalTodayCard { display:none !important; }
+
+@media (max-width: 390px) {
+  .period-signal-card-top { grid-template-columns:auto minmax(0,1fr); }
+  .period-signal-strength { grid-column:2; justify-self:start; white-space:normal; }
+  .period-signal-learning-stats { gap:6px; }
+  .period-signal-today-actions,
+  .bleeding-period-prompt-actions { flex-direction:column; }
+  .period-signal-today-actions button,
+  .bleeding-period-prompt-actions button { width:100%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .period-signal-today,
+  .period-signal-card,
+  .period-signal-watch-chips span { transition:none !important; animation:none !important; }
+}
