@@ -28,6 +28,8 @@ const APP_SHELL = [
   "./smart-reminders-core.js",
   "./cycle-reproductive-enhancements.js",
   "./cycle-phase-guidance.js",
+  "./cycle-phase-dedupe.js",
+  "./medical-accuracy-hardening.js",
   "./app.js",
   "./firebase-tsuki.js",
   "./manifest.json",
@@ -59,6 +61,8 @@ const UPDATE_FIRST = new Set([
   "./smart-reminders-core.js",
   "./cycle-reproductive-enhancements.js",
   "./cycle-phase-guidance.js",
+  "./cycle-phase-dedupe.js",
+  "./medical-accuracy-hardening.js",
   "./app.js",
   "./manifest.json"
 ]);
