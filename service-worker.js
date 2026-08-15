@@ -3,7 +3,7 @@
    Public app version remains v1.0 pre-release.
    ============================================================ */
 
-const CACHE_NAME = "tsuki-cache-v1-pre-anticipatory-care-8";
+const CACHE_NAME = "tsuki-cache-v1-pre-personal-health-9";
 
 const APP_SHELL = [
   "./",
@@ -19,6 +19,7 @@ const APP_SHELL = [
   "./postpartum-feeding-intelligence.js",
   "./maternal-intelligence.js",
   "./anticipatory-care-intelligence.js",
+  "./personal-health-intelligence.js",
   "./app.js",
   "./firebase-tsuki.js",
   "./manifest.json",
@@ -41,6 +42,7 @@ const UPDATE_FIRST = new Set([
   "./postpartum-feeding-intelligence.js",
   "./maternal-intelligence.js",
   "./anticipatory-care-intelligence.js",
+  "./personal-health-intelligence.js",
   "./app.js",
   "./manifest.json"
 ]);

@@ -296,7 +296,6 @@
   function install() {
     if (window.TsukiPersonalHealthIntelligence?.installed) return;
     if (typeof data === "undefined" || typeof showScreen !== "function") return setTimeout(install, 100);
-    if (!window.TsukiAnticipatoryCareIntelligence?.installed) return setTimeout(install, 100);
 
     if (typeof renderEverything === "function" && !renderEverything.__phiWrapped) {
       const base = renderEverything;
