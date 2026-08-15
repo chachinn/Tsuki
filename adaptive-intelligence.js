@@ -23,6 +23,9 @@
   ];
 
   const adaptiveReleaseNotes = [
+    { icon: "🌘", title: "Smarter irregular rhythms", text: "Tsuki can separate timing families, notice recent interval shifts and explain why timing remains uncertain without inventing an exact date." },
+    { icon: "🤰", title: "Pregnancy intelligence", text: "Pregnancy Mode now learns your own logged baseline, recent trajectories, repeated day-to-day patterns and appointment-ready factual summaries." },
+    { icon: "🛡️", title: "Safety stays separate", text: "Pregnancy warning signs always override personal pattern learning, and all adaptive analysis remains local to this device." },
     { icon: "🧠", title: "Adaptive intelligence", text: "Tsuki now learns how your own body patterns unfold over time instead of relying only on cycle-day averages." },
     { icon: "🌙", title: "Signal sequences", text: "Repeated personal lead-up sequences can show which body change tends to appear first and what commonly follows next." },
     { icon: "🪞", title: "My Normal 2.0", text: "Your ordinary energy, sleep, mood and body-signal baseline helps Tsuki notice what is different for you without calling it abnormal." },

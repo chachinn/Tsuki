@@ -3,7 +3,7 @@
    Public app version remains v1.0 pre-release.
    ============================================================ */
 
-const CACHE_NAME = "tsuki-cache-v1-pre-adaptive-1";
+const CACHE_NAME = "tsuki-cache-v1-pre-life-intel-2";
 
 const APP_SHELL = [
   "./",
@@ -12,6 +12,7 @@ const APP_SHELL = [
   "./body-signals.css",
   "./body-signals.js",
   "./adaptive-intelligence.js",
+  "./life-mode-intelligence.js",
   "./app.js",
   "./firebase-tsuki.js",
   "./manifest.json",
@@ -27,6 +28,7 @@ const UPDATE_FIRST = new Set([
   "./body-signals.css",
   "./body-signals.js",
   "./adaptive-intelligence.js",
+  "./life-mode-intelligence.js",
   "./app.js",
   "./manifest.json"
 ]);

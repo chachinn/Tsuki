@@ -9,7 +9,7 @@ const BUILD2_STORAGE_KEY = "tsuki-data-v2";
 const LEGACY_STORAGE_KEY = "tsuki-data-v1";
 const APP_LOCK_STORAGE_KEY = "tsuki-app-lock-v1";
 const APP_VERSION = "1.0.0";
-const APP_CACHE_NAME = "tsuki-cache-v1-pre-adaptive-1";
+const APP_CACHE_NAME = "tsuki-cache-v1-pre-life-intel-2";
 const TUTORIAL_STORAGE_KEY = "tsuki-tutorial-complete-v1";
 const WHATS_NEW_STORAGE_KEY = "tsuki-whats-new-seen-v1";
 const RECOVERY_ASSET_KEY = "tsuki-last-good-data-v1";
@@ -56,10 +56,14 @@ function dateKey(date) {
 
 function parseDate(value) {
   if (!value) return null;
-
-  const [year, month, day] = value.split("-").map(Number);
-
-  return new Date(year, month - 1, day);
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? null : new Date(value);
+  }
+  if (typeof value !== "string") return null;
+  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!match) return null;
+  const result = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+  return Number.isNaN(result.getTime()) ? null : result;
 }
 
 
