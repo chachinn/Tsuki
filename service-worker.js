@@ -3,7 +3,7 @@
    Public app version remains v1.0 pre-release.
    ============================================================ */
 
-const CACHE_NAME = "tsuki-cache-v1-pre-repro-intel-4";
+const CACHE_NAME = "tsuki-cache-v1-pre-care-health-5";
 
 const APP_SHELL = [
   "./",
@@ -15,6 +15,7 @@ const APP_SHELL = [
   "./life-mode-intelligence.js",
   "./meta-intelligence.js",
   "./reproductive-intelligence.js",
+  "./care-health-intelligence.js",
   "./app.js",
   "./firebase-tsuki.js",
   "./manifest.json",
@@ -33,6 +34,7 @@ const UPDATE_FIRST = new Set([
   "./life-mode-intelligence.js",
   "./meta-intelligence.js",
   "./reproductive-intelligence.js",
+  "./care-health-intelligence.js",
   "./app.js",
   "./manifest.json"
 ]);
