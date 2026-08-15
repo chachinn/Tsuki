@@ -6455,3 +6455,10 @@ body.hide-sensitive .pregnancy-room-props {
 @media (prefers-reduced-motion: reduce) {
   .firebase-auth-spinner { animation:none; }
 }
+
+
+/* TSUKI V1 — FIREBASE CLOUD BACKUP */
+.firebase-cloud-backup-panel{margin:16px 0;padding:16px;border:1px solid var(--line);border-radius:var(--radius-lg);background:rgba(255,255,255,.88);box-shadow:var(--shadow-soft)}
+.cloud-backup-heading,.cloud-backup-toggle-row,.cloud-backup-schedule,.cloud-restore-actions{display:flex;align-items:center;gap:12px}.cloud-backup-heading{justify-content:space-between;margin-bottom:8px}.cloud-backup-status{padding:6px 10px;border-radius:999px;background:var(--pink-100);font-size:11px;font-weight:800}.cloud-backup-status.active{background:var(--green)}
+.cloud-backup-toggle-row{justify-content:space-between;margin:14px 0 10px;padding:12px;border-radius:var(--radius-md);background:rgba(255,255,255,.72)}.cloud-backup-toggle-row span,.cloud-backup-schedule div{display:grid;gap:3px}.cloud-backup-toggle-row input{width:22px;height:22px;accent-color:var(--pink-500)}.cloud-backup-schedule{align-items:flex-start;margin-bottom:12px;padding:11px 12px;border-radius:var(--radius-md);background:var(--lavender-100)}
+.cloud-backup-history-label{display:block;margin:13px 0 6px;font-size:12px;font-weight:800}.cloud-backup-history-select{width:100%;min-height:44px;margin-bottom:10px;padding:0 12px;border:1px solid var(--line);border-radius:var(--radius-sm);background:#fff}.cloud-restore-preview{margin:11px 0;padding:13px;border:1px solid var(--line);border-radius:var(--radius-md);background:var(--pink-50)}.cloud-restore-actions{justify-content:flex-end;margin-top:12px}.cloud-restore-actions button{flex:1}.cloud-backup-privacy-note{margin:10px 0;padding:10px 11px;border-radius:var(--radius-sm);background:rgba(255,240,199,.42);font-size:11px;line-height:1.45}.cloud-delete-backups{width:100%;min-height:42px;border:0;background:transparent;color:var(--danger);font-weight:800}.cloud-delete-backups:disabled{opacity:.45}@media(max-width:390px){.firebase-cloud-backup-panel{padding:14px}.cloud-restore-actions{flex-direction:column-reverse}.cloud-restore-actions button{width:100%}}

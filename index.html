@@ -2888,7 +2888,7 @@
       </div>
 
       <article class="firebase-auth-privacy-note">
-        <span>🌙</span><div><strong>Your health data stays local</strong><p>Signing in creates an account identity in Firebase Authentication. This release does not upload your cycle, pregnancy, Between Moons, journal, photo or other health entries.</p></div>
+        <span>🌙</span><div><strong>Your tracker is local by default</strong><p>Signing in creates an account identity only. Health data is uploaded only if you separately enable Cloud Backup after signing in.</p></div>
       </article>
 
       <div id="firebaseAuthLoading" class="firebase-auth-state">
@@ -2940,8 +2940,21 @@
         </div>
         <div class="firebase-account-facts">
           <div><small>Email status</small><strong id="firebaseEmailStatus">—</strong></div>
-          <div><small>Health data sync</small><strong>Off · local only</strong></div>
+          <div><small>Cloud backup</small><strong id="firebaseCloudBackupFact">Off</strong></div>
         </div>
+        <section id="firebaseCloudBackupPanel" class="firebase-cloud-backup-panel hidden" aria-label="Cloud Backup">
+          <div class="cloud-backup-heading"><div><p class="eyebrow">CLOUD BACKUP</p><h3>Keep your Tsuki safe</h3></div><span id="cloudBackupStatusPill" class="cloud-backup-status">Off</span></div>
+          <p class="muted small-text">Optional backup, not live sync. Signing in alone never uploads your tracker. Enabling backup requires separate consent.</p>
+          <label class="cloud-backup-toggle-row"><span><strong>Daily automatic backup</strong><small>Due once per day at 8:00 AM while Tsuki can run</small></span><input type="checkbox" id="cloudBackupEnabled" aria-label="Enable daily cloud backup"></label>
+          <div class="cloud-backup-schedule"><span>🕗</span><div><strong>8:00 AM daily</strong><small id="cloudBackupScheduleNote">If Tsuki was closed, a due backup runs when the app next opens or resumes after 8:00 AM.</small></div></div>
+          <button type="button" id="cloudBackupNow" class="primary-button full-width">Back up now</button>
+          <label class="cloud-backup-history-label" for="cloudBackupHistorySelect">Backup history</label><select id="cloudBackupHistorySelect" class="cloud-backup-history-select"><option value="">No cloud backups yet</option></select>
+          <button type="button" id="cloudRestorePreviewButton" class="secondary-button full-width" disabled>Preview selected restore</button>
+          <div id="cloudRestorePreview" class="cloud-restore-preview hidden"><div id="cloudRestorePreviewContent"></div><div class="cloud-restore-actions"><button type="button" id="cloudRestoreCancel" class="secondary-button">Cancel</button><button type="button" id="cloudRestoreConfirm" class="primary-button">Restore safely</button></div></div>
+          <p id="cloudBackupLastText" class="muted small-text">No cloud backup has been created yet.</p>
+          <p class="cloud-backup-privacy-note">🔐 Firebase Authentication + UID-scoped Firestore rules. Not end-to-end encrypted. Latest 7 snapshots are retained. Individual local media over 25 MB stays on this device.</p>
+          <div id="cloudBackupMessage" class="firebase-auth-message hidden"></div><button type="button" id="cloudDeleteBackups" class="cloud-delete-backups" disabled>Delete cloud backups</button>
+        </section>
         <p id="firebaseSignedInNote" class="muted small-text">Your sign-in can persist on this browser. Signing out does not erase any local Tsuki entries.</p>
         <button type="button" id="firebaseSignOut" class="secondary-button full-width">Sign out</button>
         <button type="button" id="firebaseDeleteAccount" class="text-button danger-text full-width">Delete sign-in account</button>
@@ -2981,6 +2994,7 @@
 <script src="./release-readiness.js"></script>
 <script src="./smart-reminders.js"></script>
 <script type="module" src="./firebase-tsuki.js"></script>
+<script type="module" src="./firebase-backup.js"></script>
 
 </body>
 </html>
