@@ -1,7 +1,7 @@
 /* ============================================================
    TSUKI 🌙 — SMART REMINDERS BOOTSTRAP
    Keeps the existing Smart Reminders runtime intact while loading the
-   phase-aware cycle/reproductive and medical-accuracy enhancements after
+   phase-aware cycle/reproductive, medical, and UI enhancements after
    the core app is ready.
    ============================================================ */
 (() => {
@@ -34,5 +34,6 @@
     .then(() => loadScript("./cycle-phase-guidance.js"))
     .then(() => loadScript("./cycle-phase-dedupe.js"))
     .then(() => loadScript("./medical-accuracy-hardening.js"))
+    .then(() => loadScript("./plans-travel-ux.js"))
     .catch(error => console.error("Tsuki runtime enhancement load failed:", error));
 })();
