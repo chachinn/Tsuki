@@ -812,7 +812,7 @@
 
   function install() {
     if (state.installed) return;
-    if (typeof data === "undefined" || typeof saveData !== "function" || typeof showScreen !== "function") {
+    if (typeof data === "undefined" || typeof saveData !== "function" || typeof showScreen !== "function" || !window.TsukiBodySignals?.test || !window.TsukiAdaptiveIntelligence?.installed) {
       setTimeout(install, 40);
       return;
     }
