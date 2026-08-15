@@ -1,15 +1,17 @@
 /* ============================================================
    TSUKI 🌙 — VERSION 1.0 PRE-RELEASE
    FOUR-PHASE CYCLE GUIDANCE
-   User-facing model: Menstruation → Follicular → Ovulation → Luteal.
-   Early/mid/late luteal are only adaptive substages inside Luteal.
+   User-facing model for regular cycles:
+   Menstruation → Follicular → Ovulation → Luteal.
+   Early/mid/late luteal are adaptive substages inside Luteal only.
+   Irregular/uncertain or overdue timing uses a general body-first check-in.
    ============================================================ */
 (() => {
   "use strict";
 
   if (window.TsukiFourPhaseCycleGuidance?.installed) return;
 
-  const VERSION = "1.0.0-pre-four-phase-1";
+  const VERSION = "1.0.0-pre-four-phase-2";
   const $ = (selector, root = document) => root.querySelector(selector);
   const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
   const esc = value => typeof escapeHTML === "function"
@@ -32,9 +34,26 @@
     try { return typeof cycleDayForDate === "function" ? cycleDayForDate(dateKey) : null; }
     catch (_) { return null; }
   };
+  const actualPeriod = dateKey => {
+    try { return typeof periodForDate === "function" ? Boolean(periodForDate(dateKey)) : Boolean(data?.periods?.some(period => period.start === dateKey)); }
+    catch (_) { return Boolean(data?.periods?.some(period => period.start === dateKey)); }
+  };
+
+  function timingState(dateKey = key()) {
+    if (!regular()) return "general";
+    if (actualPeriod(dateKey)) return "actual-period";
+    try {
+      const timing = cycleTimingForDate(dateKey);
+      const date = parseDate(dateKey);
+      const expected = parseDate(timing?.nextStart);
+      if (!date || !expected) return "predicted";
+      return daysBetween(expected, date) > 0 ? "overdue" : "predicted";
+    }
+    catch (_) { return "predicted"; }
+  }
 
   function lutealSubstage(dateKey = key()) {
-    if (!regular() || rawPhase(dateKey) !== "Luteal phase") return "";
+    if (!regular() || rawPhase(dateKey) !== "Luteal phase" || timingState(dateKey) === "overdue") return "";
     try {
       const timing = cycleTimingForDate(dateKey);
       const date = parseDate(dateKey);
@@ -74,8 +93,25 @@
     ];
   }
 
+  function generalQuestions(reason = "uncertain") {
+    const intro = reason === "overdue"
+      ? "Your expected period window has passed without a saved period. Tsuki will stop assuming a precise phase and follow what your body is actually doing."
+      : "Your cycle timing is variable or still being learned, so Tsuki will ask body-first questions without assuming Follicular, Ovulation or Luteal.";
+    return `<p class="eyebrow">GENERAL CYCLE CHECK-IN</p>
+      <p class="tsuki-help">${esc(intro)} Unexpected spotting or bleeding can still be logged separately.</p>
+      ${segmentedHTML("discharge", "Cervical mucus / discharge", ["Dry", "Sticky", "Creamy", "Watery", "Slippery / stretchy"])}
+      ${segmentedHTML("focus", "Focus / concentration", ["Low", "Medium", "High"])}
+      ${segmentedHTML("motivation", "Motivation", ["Low", "Medium", "High"])}
+      ${segmentedHTML("stress", "Stress", ["Low", "Medium", "High"])}
+      ${segmentedHTML("appetite", "Appetite", ["Low", "Usual", "High"])}
+      ${segmentedHTML("cravingIntensity", "Cravings", ["None", "Mild", "Strong"])}
+      ${segmentedHTML("libido", "Libido", ["Low", "Medium", "High"])}
+      <p class="tsuki-help">Mood, energy, sleep, pain and your full symptom list remain available in the regular daily sections below.</p>`;
+  }
+
   function phaseQuestions(phase, dateKey) {
-    if (!regular()) return "";
+    if (!regular()) return generalQuestions("uncertain");
+    if (timingState(dateKey) === "overdue") return generalQuestions("overdue");
 
     if (phase === "Period") {
       return `<p class="eyebrow">MENSTRUATION</p>
@@ -102,7 +138,7 @@
       const substage = lutealSubstage(dateKey);
       const sublabel = substage ? `${substage[0].toUpperCase()}${substage.slice(1)} luteal focus` : "Luteal focus";
       return `<p class="eyebrow">LUTEAL</p>
-        <p class="tsuki-help"><strong>${esc(sublabel)}</strong> · This remains one Luteal phase. Tsuki only adapts the prompts as your expected period gets closer.</p>
+        <p class="tsuki-help"><strong>${esc(sublabel)}</strong> · This remains one Luteal phase. Tsuki only adapts prompts as your expected period gets closer.</p>
         ${segmentedHTML("discharge", "Cervical mucus / discharge", ["Dry", "Sticky", "Creamy", "Watery", "Slippery / stretchy"])}
         ${segmentedHTML("stress", "Stress", ["Low", "Medium", "High"])}
         ${segmentedHTML("focus", "Focus / concentration", ["Low", "Medium", "High"])}
@@ -112,7 +148,7 @@
         <div class="phase-field-block"><p class="card-label">Notice any of these?</p>${symptomButtons(lutealSymptoms(substage))}</div>`;
     }
 
-    return "";
+    return generalQuestions("uncertain");
   }
 
   function syncSymptoms() {
@@ -132,9 +168,11 @@
   }
 
   function apply() {
-    if (!regular()) return;
+    if (data?.mode !== "cycle") return;
     const dateKey = key();
     const phase = rawPhase(dateKey);
+    const isRegular = regular();
+    const state = timingState(dateKey);
     const name = userPhaseName(phase);
     const day = cycleDay(dateKey);
     const content = $("#phaseSpecificLogContent");
@@ -148,27 +186,39 @@
     if (content && card) {
       const html = phaseQuestions(phase, dateKey);
       content.innerHTML = html;
-      content.dataset.fourPhaseSig = `${phase}|${lutealSubstage(dateKey)}`;
+      content.dataset.fourPhaseSig = `${isRegular ? phase : "general"}|${state}|${lutealSubstage(dateKey)}`;
       card.classList.toggle("hidden", !html);
       card.classList.toggle("tsuki-phase-focus", Boolean(html));
     }
 
-    if (title && ["Period", "Follicular phase", "Estimated ovulation", "Luteal phase"].includes(phase)) title.textContent = name;
-    if (screenTitle && ["Period", "Follicular phase", "Estimated ovulation", "Luteal phase"].includes(phase)) screenTitle.textContent = `${name} check-in`;
-    if (eyebrow && ["Period", "Follicular phase", "Estimated ovulation", "Luteal phase"].includes(phase)) eyebrow.textContent = day ? `CYCLE DAY ${day} · ${name.toUpperCase()}` : name.toUpperCase();
-
-    if (question) {
-      if (phase === "Period") question.textContent = "How is your period and how are you feeling today?";
-      if (phase === "Follicular phase") question.textContent = "How are your energy, focus, motivation and cervical mucus today?";
-      if (phase === "Estimated ovulation") question.textContent = "Are you noticing any ovulation-related body changes today?";
-      if (phase === "Luteal phase") question.textContent = "What changes are you noticing during your luteal phase today?";
+    const showGeneral = !isRegular || state === "overdue";
+    if (showGeneral) {
+      if (title) title.textContent = state === "overdue" ? "Timing uncertain" : "General cycle check-in";
+      if (screenTitle) screenTitle.textContent = state === "overdue" ? "Timing-uncertain check-in" : "General cycle check-in";
+      if (eyebrow) eyebrow.textContent = day ? `CYCLE DAY ${day} · BODY-FIRST` : "BODY-FIRST CHECK-IN";
+      if (question) question.textContent = state === "overdue" ? "Your period has not started yet—what is your body doing today?" : "What are you noticing in your body today?";
+      if (description) description.textContent = state === "overdue"
+        ? "Tsuki will not keep extending a predicted luteal phase after the expected period window. Actual bleeding, symptoms and body observations take priority."
+        : "Because your timing varies or is still being learned, Tsuki uses general observations instead of assigning phase-specific questions.";
     }
+    else {
+      if (title && ["Period", "Follicular phase", "Estimated ovulation", "Luteal phase"].includes(phase)) title.textContent = name;
+      if (screenTitle && ["Period", "Follicular phase", "Estimated ovulation", "Luteal phase"].includes(phase)) screenTitle.textContent = `${name} check-in`;
+      if (eyebrow && ["Period", "Follicular phase", "Estimated ovulation", "Luteal phase"].includes(phase)) eyebrow.textContent = day ? `CYCLE DAY ${day} · ${name.toUpperCase()}` : name.toUpperCase();
 
-    if (description) {
-      if (phase === "Period") description.textContent = "Track flow, cramps and your usual daily symptoms. The selected calendar date remains Cycle Day 1 when your period begins.";
-      if (phase === "Follicular phase") description.textContent = "Focus, motivation and cervical-mucus changes can be useful pattern context; period flow stays hidden unless unexpected bleeding is logged.";
-      if (phase === "Estimated ovulation") description.textContent = "Cervical mucus, libido and mid-cycle discomfort are optional clues. Tsuki does not confirm ovulation from one sign.";
-      if (phase === "Luteal phase") description.textContent = "Discharge, concentration, stress, appetite, cravings, libido and common pre-period symptoms are tracked within one Luteal phase.";
+      if (question) {
+        if (phase === "Period") question.textContent = "How is your period and how are you feeling today?";
+        if (phase === "Follicular phase") question.textContent = "How are your focus, motivation and cervical mucus today?";
+        if (phase === "Estimated ovulation") question.textContent = "Are you noticing any ovulation-related body changes today?";
+        if (phase === "Luteal phase") question.textContent = "What changes are you noticing during your luteal phase today?";
+      }
+
+      if (description) {
+        if (phase === "Period") description.textContent = "Track flow, cramps and your usual daily symptoms. The actual saved period date controls Cycle Day 1.";
+        if (phase === "Follicular phase") description.textContent = "Focus, motivation and cervical-mucus changes can add pattern context; period flow stays hidden unless unexpected bleeding is logged.";
+        if (phase === "Estimated ovulation") description.textContent = "Cervical mucus, libido and mid-cycle discomfort are optional clues. Tsuki does not confirm ovulation from one sign.";
+        if (phase === "Luteal phase") description.textContent = "Discharge, concentration, stress, appetite, cravings, libido and common pre-period symptoms are tracked within one Luteal phase.";
+      }
     }
 
     syncSymptoms();
@@ -217,14 +267,14 @@
     window.TsukiFourPhaseCycleGuidance = {
       installed: true,
       version: VERSION,
-      test: { userPhaseName, lutealSubstage, phaseQuestions }
+      test: { userPhaseName, lutealSubstage, phaseQuestions, generalQuestions, timingState }
     };
   }
 
   window.TsukiFourPhaseCycleGuidance = {
     installed: false,
     version: VERSION,
-    test: { userPhaseName, lutealSubstage, phaseQuestions },
+    test: { userPhaseName, lutealSubstage, phaseQuestions, generalQuestions, timingState },
     install
   };
 
