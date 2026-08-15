@@ -1,9 +1,9 @@
 /* ============================================================
-   TSUKI SERVICE WORKER — BUILD 7.6
-   Cycle + Pregnancy life modes
+   TSUKI SERVICE WORKER — VERSION 1.0 PRE-RELEASE
+   Public app version remains v1.0 pre-release.
    ============================================================ */
 
-const CACHE_NAME = "tsuki-cache-v7-6";
+const CACHE_NAME = "tsuki-cache-v1-pre-adaptive-1";
 
 const APP_SHELL = [
   "./",
@@ -11,6 +11,7 @@ const APP_SHELL = [
   "./style.css",
   "./body-signals.css",
   "./body-signals.js",
+  "./adaptive-intelligence.js",
   "./app.js",
   "./firebase-tsuki.js",
   "./manifest.json",
@@ -25,6 +26,7 @@ const UPDATE_FIRST = new Set([
   "./style.css",
   "./body-signals.css",
   "./body-signals.js",
+  "./adaptive-intelligence.js",
   "./app.js",
   "./manifest.json"
 ]);

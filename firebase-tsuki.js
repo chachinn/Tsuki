@@ -1,5 +1,5 @@
 /* ============================================================
-   TSUKI 7.4 — OPTIONAL FIREBASE AUTHENTICATION
+   TSUKI — OPTIONAL FIREBASE AUTHENTICATION
    Identity only. Health data remains local in this release.
    ============================================================ */
 
@@ -143,11 +143,11 @@ function renderAuthUI() {
     if (byId("firebaseAuthTitle")) byId("firebaseAuthTitle").textContent = "Your Tsuki account";
     renderAccountAvatar(user);
   } else {
-    if (cardTitle) cardTitle.textContent = authState.serviceAvailable ? "Optional Tsuki account" : "Optional Tsuki account";
+    if (cardTitle) cardTitle.textContent = "Optional Tsuki account";
     if (cardText) cardText.textContent = authState.serviceAvailable
       ? "Sign in if you want an account identity. Your cycle, pregnancy, journal and other health entries stay on this device in this release."
       : "Tsuki is still fully usable locally. Account services need an internet connection when you want to sign in.";
-    if (pill) pill.textContent = authState.serviceAvailable ? "Local only" : "Local only";
+    if (pill) pill.textContent = "Local only";
     if (cardButton) cardButton.textContent = authState.serviceAvailable ? "Sign in or create account" : "Account options";
     if (drawerStatus) drawerStatus.textContent = authState.serviceAvailable ? "Optional sign-in" : "Local use available";
     setAuthMode(authState.mode);
@@ -340,6 +340,17 @@ window.TsukiAuth = {
   retry: loadFirebaseAuth
 };
 
+function loadAdaptiveIntelligence() {
+  if (document.querySelector('script[data-tsuki-adaptive]')) return;
+  const script = document.createElement("script");
+  script.src = "./adaptive-intelligence.js";
+  script.dataset.tsukiAdaptive = "1";
+  script.async = false;
+  script.addEventListener("error", () => console.warn("Tsuki adaptive intelligence could not load. Core local tracking remains available."), { once: true });
+  document.head.appendChild(script);
+}
+
 bindAuthUI();
 renderAuthUI();
+loadAdaptiveIntelligence();
 loadFirebaseAuth();

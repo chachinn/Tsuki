@@ -1,6 +1,6 @@
 /* ============================================================
-   TSUKI 🌙 — BUILD 7.6
-   BODY SIGNALS + PERSONAL LEAD-UP INTELLIGENCE
+   TSUKI 🌙 — VERSION 1.0 PRE-RELEASE
+   BODY SIGNALS + ADAPTIVE PERSONAL INTELLIGENCE
    ============================================================ */
 
 const STORAGE_KEY = "tsuki-data-v4";
@@ -8,20 +8,22 @@ const BUILD3_STORAGE_KEY = "tsuki-data-v3";
 const BUILD2_STORAGE_KEY = "tsuki-data-v2";
 const LEGACY_STORAGE_KEY = "tsuki-data-v1";
 const APP_LOCK_STORAGE_KEY = "tsuki-app-lock-v1";
-const APP_VERSION = "7.6.0";
-const APP_CACHE_NAME = "tsuki-cache-v7-6";
+const APP_VERSION = "1.0.0";
+const APP_CACHE_NAME = "tsuki-cache-v1-pre-adaptive-1";
 const TUTORIAL_STORAGE_KEY = "tsuki-tutorial-complete-v1";
 const WHATS_NEW_STORAGE_KEY = "tsuki-whats-new-seen-v1";
 const RECOVERY_ASSET_KEY = "tsuki-last-good-data-v1";
 
 const RELEASE_NOTES = [
-  { icon: "🌙", title: "My Period Signals", text: "Tsuki can now learn the body changes that repeatedly appear before your actual periods instead of assuming everyone has the same lead-up." },
-  { icon: "🩸", title: "Spotting & bleeding every day", text: "Daily Check-in can record spotting, light, medium or heavy bleeding even outside a saved period. Spotting never starts a period automatically." },
-  { icon: "🧠", title: "Smarter baseline comparison", text: "Tsuki compares your pre-period week with your own ordinary logged days so symptoms that happen all month are less likely to be mistaken for period clues." },
-  { icon: "✨", title: "Signal strength & combinations", text: "Emerging, common and strong personal signals gain evidence across actual period starts, and Tsuki can notice combinations that tend to travel together." },
-  { icon: "🌘", title: "Useful even when cycles are irregular", text: "Body-signal intelligence works from actual bleeding history, so Between Moons can still learn clues even when calendar timing is uncertain or periods are months apart." },
-  { icon: "🫧", title: "More complete Daily Check-in", text: "Cramps, bowel changes, breast changes, skin, headaches, discharge, appetite, cravings, stress, sleep, energy, mood, libido and custom symptoms can all contribute to your personal pattern." },
-  { icon: "🛡️", title: "Observational, not diagnostic", text: "Symptoms never rewrite your predicted date, confirm that a period is coming, diagnose PMS or PCOS, or replace medical advice." }
+  { icon: "🧠", title: "Adaptive intelligence", text: "Tsuki learns how your own body patterns unfold over time instead of relying only on cycle-day averages." },
+  { icon: "🌙", title: "Signal sequences", text: "Repeated personal lead-up sequences can show which body change tends to appear first and what commonly follows next." },
+  { icon: "🪞", title: "My Normal 2.0", text: "Your ordinary baseline helps Tsuki notice what is different for you without calling it abnormal." },
+  { icon: "🌦️", title: "Body Signal Weather", text: "Familiar clues and patterns summarize current evidence without inventing a period date." },
+  { icon: "🧩", title: "Pattern families & drift", text: "Tsuki can recognize more than one recurring lead-up style and notice when personal signals change over time." },
+  { icon: "💭", title: "Smarter questions", text: "Tsuki can ask one focused question when an answer would help distinguish a signal from missing data." },
+  { icon: "✈️", title: "Context-aware learning", text: "Optional travel, illness, stress, sleep, treatment and routine context helps reduce false patterns." },
+  { icon: "🩸", title: "Bleeding intelligence", text: "Tsuki summarizes recorded duration, flow, spotting lead-up and cramp timing while keeping unexpected bleeding separate." },
+  { icon: "🛡️", title: "Private and explainable", text: "Adaptive analysis runs on this device. Missing check-ins stay unknown, Pregnancy remains isolated, and symptoms never rewrite forecast dates." }
 ];
 
 
