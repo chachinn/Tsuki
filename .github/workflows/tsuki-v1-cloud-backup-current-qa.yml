@@ -1,0 +1,78 @@
+name: Tsuki V1 Cloud Backup Current QA
+on:
+  push:
+    branches: [agent/tsuki-v1-cloud-backup-current]
+permissions:
+  contents: write
+jobs:
+  qa:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: agent/tsuki-v1-cloud-backup-current
+          fetch-depth: 0
+      - name: Patch current production candidate
+        run: python .github/tsuki-cloud-rebuild/patch.py
+      - name: Static privacy, restore and PWA gates
+        run: |
+          set -euo pipefail
+          node --check app.js
+          node --check firebase-tsuki.js
+          node --check firebase-backup.js
+          node --check service-worker.js
+          git diff --check
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          app=Path('app.js').read_text(); idx=Path('index.html').read_text(); sw=Path('service-worker.js').read_text(); cloud=Path('firebase-backup.js').read_text(); auth=Path('firebase-tsuki.js').read_text(); rules=Path('firestore.rules').read_text()
+          checks={
+           'public-v1':'const APP_VERSION = "1.0.0"' in app,
+           'storage-v4':'const TSUKI_DATA_KEY = "tsuki-data-v4"' in cloud,
+           'cache-v12':'tsuki-cache-v1-pre-cloud-backup-12' in app and 'tsuki-cache-v1-pre-cloud-backup-12' in sw,
+           'smart-reminders-preserved':'./smart-reminders.js' in idx and '"./smart-reminders.js"' in sw,
+           'loader':'./firebase-backup.js' in idx,
+           'offline-local-module':sw.count('"./firebase-backup.js"')>=2,
+           'auth-app-getter':'get app() { return authState.app; }' in auth and 'authState.app = firebaseApp' in auth,
+           'explicit-opt-in':'enabled: false' in cloud and 'ensureConsent(settings)' in cloud,
+           'no-upload-login-order':cloud.index('if (!settings.enabled') < cloud.index('await runCloudBackup("auto")'),
+           'latest-seven':'const RETAINED_SNAPSHOTS = 7' in cloud,
+           'not-e2e':'not end-to-end encrypted' in cloud.lower(),
+           'sensitive-consent':'sexual-activity' in cloud and 'fertility-sign' in cloud and 'postpartum' in cloud and 'baby' in cloud,
+           'real-asset-get':'typeof appearanceAssetGet !== "function"' in cloud and 'appearanceAssetGet(key)' in cloud,
+           'real-asset-put':'appearanceAssetPut(TSUKI_RECOVERY_KEY, currentRaw)' in cloud,
+           'safe-restore-abort':'restore was cancelled before changing your data' in cloud,
+           'app-lock-excluded':'tsuki-app-lock-v1' not in cloud,
+           'uid-rules':'request.auth.uid == userId' in rules,
+           'backup-not-sync':'Backup, not live sync' in cloud,
+          }
+          install=sw.split('self.addEventListener("install"',1)[1].split('UPDATE CONTROL',1)[0]
+          checks['no-auto-skipwaiting']='skipWaiting()' not in install
+          for k,v in checks.items(): print(f'{k}: {"PASS" if v else "FAIL"}')
+          bad=[k for k,v in checks.items() if not v]
+          if bad: raise SystemExit('failed: '+', '.join(bad))
+          PY
+      - name: Install Playwright
+        run: |
+          npm init -y >/dev/null 2>&1
+          npm install playwright@1.55.0 >/dev/null 2>&1
+          npx playwright install --with-deps chromium >/dev/null 2>&1
+      - name: Local-first mobile regression
+        run: |
+          python3 -m http.server 4173 >/tmp/tsuki-cloud.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill $SERVER_PID || true' EXIT
+          sleep 1
+          node .github/tsuki-cloud-rebuild/qa.cjs
+      - name: Commit QA-passed candidate files
+        run: |
+          set -euo pipefail
+          rm -rf node_modules package.json package-lock.json
+          git add app.js index.html style.css service-worker.js firebase-tsuki.js firebase-backup.js firebase.json firestore.rules
+          git diff --cached --check
+          git config user.name "Tsuki QA Bot"
+          git config user.email "actions@users.noreply.github.com"
+          if ! git diff --cached --quiet; then
+            git commit -m "Tsuki v1 Cloud Backup current candidate"
+            git push origin HEAD:agent/tsuki-v1-cloud-backup-current
+          fi
