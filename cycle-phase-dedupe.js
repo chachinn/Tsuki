@@ -33,12 +33,30 @@
     });
   }
 
+  function syncPromotedValues() {
+    const content = phaseContent();
+    const details = $(".body-signal-details");
+    if (!content || !details) return;
+
+    BODY_FIELDS.forEach(name => {
+      const visibleInputs = $$(`input[name="${name}"]`, content);
+      if (!visibleInputs.length || visibleInputs.some(input => input.checked)) return;
+
+      const savedInput = $$(`input[name="${name}"]`, details).find(input => input.checked);
+      if (!savedInput) return;
+
+      const visibleMatch = visibleInputs.find(input => input.value === savedInput.value);
+      if (visibleMatch) visibleMatch.checked = true;
+    });
+  }
+
   function syncBodyDetails() {
     const content = phaseContent();
     const details = $(".body-signal-details");
     if (!content || !details) return;
 
     restoreBodyDetails();
+    syncPromotedValues();
 
     const promoted = new Set(
       BODY_FIELDS.filter(name => content.querySelector(`input[name="${name}"]`))
@@ -60,12 +78,14 @@
     details.classList.toggle("hidden", bodyCards.length > 0 && visibleCards.length === 0);
 
     const summary = details.querySelector("summary small");
-    if (summary && visibleCards.length) {
+    if (summary) {
       const remaining = BODY_FIELDS.filter(name => {
         const card = details.querySelector(`input[name="${name}"]`)?.closest("article.card");
         return card && !card.classList.contains("hidden");
       });
-      summary.textContent = remaining.map(name => BODY_LABELS[name]).join(", ");
+      summary.textContent = remaining.length
+        ? remaining.map(name => BODY_LABELS[name]).join(", ")
+        : "Phase-specific questions shown above";
     }
   }
 
@@ -101,7 +121,6 @@
   }
 
   function apply() {
-    if (document.body?.dataset?.screen && document.body.dataset.screen !== "log") return;
     syncBodyDetails();
     syncSymptomList();
   }
@@ -127,7 +146,7 @@
 
     window.TsukiCyclePhaseDedupe = {
       installed: true,
-      version: "1.0.0-pre-phase-dedupe-1",
+      version: "1.0.0-pre-phase-dedupe-2",
       apply,
       disconnect: () => observer.disconnect()
     };
