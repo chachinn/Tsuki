@@ -9,12 +9,13 @@ const BUILD2_STORAGE_KEY = "tsuki-data-v2";
 const LEGACY_STORAGE_KEY = "tsuki-data-v1";
 const APP_LOCK_STORAGE_KEY = "tsuki-app-lock-v1";
 const APP_VERSION = "1.0.0";
-const APP_CACHE_NAME = "tsuki-cache-v1-pre-personal-health-9";
+const APP_CACHE_NAME = "tsuki-cache-v1-pre-release-ready-10";
 const TUTORIAL_STORAGE_KEY = "tsuki-tutorial-complete-v1";
 const WHATS_NEW_STORAGE_KEY = "tsuki-whats-new-seen-v1";
 const RECOVERY_ASSET_KEY = "tsuki-last-good-data-v1";
 
 const RELEASE_NOTES = [
+  { icon: "🛡️", title: "Release readiness & Data Health Check", text: "Tsuki can now check local data readability, recovery readiness, storage pressure and PWA cache state before updates or restores without uploading or rewriting health history." },
   { icon: "🌙", title: "Personal Health Intelligence 3.0", text: "Tsuki now connects your health timeline across Cycle, irregular rhythms, Pregnancy and Postpartum with user-correctable insights, fertility-sign context, recovery milestones, baby baseline and a universal concern pathway." },
   { icon: "🔭", title: "Care Forecast", text: "Pregnancy and Postpartum can now look ahead across saved appointments, tests, routines, recovery load, feeding patterns and baby observations to suggest the next useful care action without predicting a diagnosis." },
   { icon: "🫶", title: "Smarter Pregnancy + Postpartum help", text: "Tsuki now prioritizes what matters next from your own care schedule, repeated patterns, recovery load and feeding/baby observations while urgent warning signs always come first." },
@@ -600,7 +601,7 @@ function scheduleRecoverySnapshot(serialized) {
   clearTimeout(recoverySnapshotTimer);
   recoverySnapshotTimer = setTimeout(async () => {
     try {
-      await appearanceAssetSet(RECOVERY_ASSET_KEY, serialized);
+      await appearanceAssetPut(RECOVERY_ASSET_KEY, serialized);
       lastRecoverySnapshotAt = Date.now();
     }
     catch (_) {
