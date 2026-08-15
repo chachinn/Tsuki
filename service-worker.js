@@ -3,7 +3,7 @@
    Public app version remains v1.0 pre-release.
    ============================================================ */
 
-const CACHE_NAME = "tsuki-cache-v1-pre-travel-intel-12";
+const CACHE_NAME = "tsuki-cache-v1-pre-plans-events-13";
 
 const APP_SHELL = [
   "./",
@@ -16,6 +16,7 @@ const APP_SHELL = [
   "./meta-intelligence.js",
   "./reproductive-intelligence.js",
   "./travel-intelligence.js",
+  "./plans-events-intelligence.js",
   "./care-health-intelligence.js",
   "./postpartum-feeding-intelligence.js",
   "./maternal-intelligence.js",
@@ -43,6 +44,7 @@ const UPDATE_FIRST = new Set([
   "./meta-intelligence.js",
   "./reproductive-intelligence.js",
   "./travel-intelligence.js",
+  "./plans-events-intelligence.js",
   "./care-health-intelligence.js",
   "./postpartum-feeding-intelligence.js",
   "./maternal-intelligence.js",
