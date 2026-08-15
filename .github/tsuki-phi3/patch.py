@@ -21,7 +21,11 @@ sw = Path('service-worker.js')
 text = sw.read_text().replace('tsuki-cache-v1-pre-anticipatory-care-8', 'tsuki-cache-v1-pre-personal-health-9')
 needle = '  "./anticipatory-care-intelligence.js",\n'
 line = '  "./personal-health-intelligence.js",\n'
-# both APP_SHELL and UPDATE_FIRST contain the anchor
 if text.count(line) < 2:
     text = text.replace(needle, needle + line)
 sw.write_text(text)
+
+phi = Path('personal-health-intelligence.js')
+text = phi.read_text()
+text = text.replace('    if (!window.TsukiAnticipatoryCareIntelligence?.installed) return setTimeout(install, 100);\n', '')
+phi.write_text(text)
