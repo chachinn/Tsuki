@@ -9,12 +9,13 @@ const BUILD2_STORAGE_KEY = "tsuki-data-v2";
 const LEGACY_STORAGE_KEY = "tsuki-data-v1";
 const APP_LOCK_STORAGE_KEY = "tsuki-app-lock-v1";
 const APP_VERSION = "1.0.0";
-const APP_CACHE_NAME = "tsuki-cache-v1-pre-smart-reminders-11";
+const APP_CACHE_NAME = "tsuki-cache-v1-pre-travel-intel-12";
 const TUTORIAL_STORAGE_KEY = "tsuki-tutorial-complete-v1";
 const WHATS_NEW_STORAGE_KEY = "tsuki-whats-new-seen-v1";
 const RECOVERY_ASSET_KEY = "tsuki-last-good-data-v1";
 
 const RELEASE_NOTES = [
+  { icon: "✈️", title: "Travel Intelligence", text: "Log trips, compare them with recorded or predicted period timing, find period-aware date ideas, and check gestational age for planned travel without turning uncertainty into a diagnosis." },
   { icon: "🔔", title: "Smart Reminders 2.0", text: "Choose Minimal, Helpful or Proactive reminders. Tsuki can connect saved care, routines and upcoming items while urgent maternity/newborn safety suppresses ordinary reminders." },
   { icon: "🛡️", title: "Release readiness & Data Health Check", text: "Tsuki can now check local data readability, recovery readiness, storage pressure and PWA cache state before updates or restores without uploading or rewriting health history." },
   { icon: "🌙", title: "Personal Health Intelligence 3.0", text: "Tsuki now connects your health timeline across Cycle, irregular rhythms, Pregnancy and Postpartum with user-correctable insights, fertility-sign context, recovery milestones, baby baseline and a universal concern pathway." },
