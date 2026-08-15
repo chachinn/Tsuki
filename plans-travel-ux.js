@@ -7,7 +7,7 @@
   "use strict";
   if (window.TsukiPlansTravelUX?.installed) return;
 
-  const VERSION = "1.0.0-pre-plans-travel-ux-1";
+  const VERSION = "1.0.0-pre-plans-travel-ux-2";
   const $ = (s, r = document) => r.querySelector(s);
 
   function ensureStylesheet() {
@@ -19,6 +19,10 @@
     document.head.appendChild(link);
   }
 
+  function setText(node, value) {
+    if (node && node.textContent !== value) node.textContent = value;
+  }
+
   function setCustomPlanUI() {
     const select = $("#planLogKind");
     const input = $("#planLogName");
@@ -27,10 +31,13 @@
     const labelText = label?.querySelector(".field-label");
     let hint = label?.querySelector(".tsuki-custom-plan-hint");
     const custom = select.value === "custom";
+    const wantedLabel = custom ? "What is this plan?" : "Name";
+    const wantedPlaceholder = custom ? "e.g. Family reunion, beach day, graduation" : "e.g. Mom's birthday dinner";
+    const wantedRequired = custom ? "true" : "false";
 
-    if (labelText) labelText.textContent = custom ? "What is this plan?" : "Name";
-    input.placeholder = custom ? "e.g. Family reunion, beach day, graduation" : "e.g. Mom's birthday dinner";
-    input.setAttribute("aria-required", custom ? "true" : "false");
+    setText(labelText, wantedLabel);
+    if (input.placeholder !== wantedPlaceholder) input.placeholder = wantedPlaceholder;
+    if (input.getAttribute("aria-required") !== wantedRequired) input.setAttribute("aria-required", wantedRequired);
 
     if (custom && label && !hint) {
       hint = document.createElement("small");
@@ -67,10 +74,8 @@
     const formCard = $("#travelSaveTrip")?.closest(".travel-card");
     if (formCard) {
       formCard.classList.add("tsuki-entry-card");
-      const eyebrow = formCard.querySelector(".eyebrow");
-      const h3 = formCard.querySelector("h3");
-      if (eyebrow) eyebrow.textContent = "LOG IT";
-      if (h3) h3.textContent = "Save a trip";
+      setText(formCard.querySelector(".eyebrow"), "LOG IT");
+      setText(formCard.querySelector("h3"), "Save a trip");
     }
 
     let historyCard = $("#tsukiTravelHistoryCard");
@@ -88,10 +93,8 @@
     const card = $("#planSaveEvent")?.closest(".plans-events-card");
     if (!card) return;
     card.classList.add("tsuki-entry-card");
-    const eyebrow = card.querySelector(".eyebrow");
-    const h3 = card.querySelector("h3");
-    if (eyebrow) eyebrow.textContent = "LOG IT";
-    if (h3) h3.textContent = "Save a plan or event";
+    setText(card.querySelector(".eyebrow"), "LOG IT");
+    setText(card.querySelector("h3"), "Save a plan or event");
   }
 
   function addPlanningSwitcher(screen) {
@@ -138,7 +141,7 @@
       note.className = "tsuki-pregnancy-plan-note";
       travelCard.querySelector("button")?.insertAdjacentElement("afterend", note);
     }
-    if (note.textContent !== text) note.textContent = text;
+    setText(note, text);
   }
 
   function harmonize() {
