@@ -11,7 +11,7 @@
 
   if (window.TsukiFourPhaseCycleGuidance?.installed) return;
 
-  const VERSION = "1.0.0-pre-four-phase-2";
+  const VERSION = "1.0.0-pre-four-phase-3";
   const $ = (selector, root = document) => root.querySelector(selector);
   const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
   const esc = value => typeof escapeHTML === "function"
@@ -38,6 +38,7 @@
     try { return typeof periodForDate === "function" ? Boolean(periodForDate(dateKey)) : Boolean(data?.periods?.some(period => period.start === dateKey)); }
     catch (_) { return Boolean(data?.periods?.some(period => period.start === dateKey)); }
   };
+  const effectivePhase = dateKey => actualPeriod(dateKey) ? "Period" : rawPhase(dateKey);
 
   function timingState(dateKey = key()) {
     if (!regular()) return "general";
@@ -53,7 +54,7 @@
   }
 
   function lutealSubstage(dateKey = key()) {
-    if (!regular() || rawPhase(dateKey) !== "Luteal phase" || timingState(dateKey) === "overdue") return "";
+    if (!regular() || effectivePhase(dateKey) !== "Luteal phase" || timingState(dateKey) === "overdue") return "";
     try {
       const timing = cycleTimingForDate(dateKey);
       const date = parseDate(dateKey);
@@ -170,7 +171,7 @@
   function apply() {
     if (data?.mode !== "cycle") return;
     const dateKey = key();
-    const phase = rawPhase(dateKey);
+    const phase = effectivePhase(dateKey);
     const isRegular = regular();
     const state = timingState(dateKey);
     const name = userPhaseName(phase);
@@ -267,14 +268,14 @@
     window.TsukiFourPhaseCycleGuidance = {
       installed: true,
       version: VERSION,
-      test: { userPhaseName, lutealSubstage, phaseQuestions, generalQuestions, timingState }
+      test: { userPhaseName, lutealSubstage, phaseQuestions, generalQuestions, timingState, effectivePhase }
     };
   }
 
   window.TsukiFourPhaseCycleGuidance = {
     installed: false,
     version: VERSION,
-    test: { userPhaseName, lutealSubstage, phaseQuestions, generalQuestions, timingState },
+    test: { userPhaseName, lutealSubstage, phaseQuestions, generalQuestions, timingState, effectivePhase },
     install
   };
 
