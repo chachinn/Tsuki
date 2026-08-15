@@ -31,5 +31,6 @@
   loadScript("./smart-reminders-core.js")
     .then(() => loadScript("./cycle-reproductive-enhancements.js"))
     .then(() => loadScript("./cycle-phase-guidance.js"))
+    .then(() => loadScript("./cycle-phase-dedupe.js"))
     .catch(error => console.error("Tsuki runtime enhancement load failed:", error));
 })();
