@@ -20,12 +20,8 @@ body {
     linear-gradient(180deg,#fffafb 0%,#fff7f9 46%,#fffaf8 100%);
 }
 
-.main-content {
-  padding: 12px 14px calc(112px + var(--safe-bottom));
-}
-
+.main-content { padding: 12px 14px calc(112px + var(--safe-bottom)); }
 .screen.active { max-width: 720px; margin: 0 auto; }
-
 .app-header {
   border-bottom: 1px solid rgba(198,118,151,.06);
   box-shadow: 0 4px 18px rgba(132,84,105,.035);
@@ -43,9 +39,7 @@ body {
 .tsuki-phase-focus,
 .tsuki-sex-v2,
 .period-signal-today,
-.body-signal-details,
-.plans-events-hero,
-.travel-hero {
+.body-signal-details {
   border-color: var(--ui-border) !important;
   box-shadow: var(--ui-shadow-soft) !important;
 }
@@ -61,16 +55,10 @@ body {
   margin-bottom: var(--ui-gap);
 }
 
-.hero-card,
-.plans-events-hero,
-.travel-hero {
-  box-shadow: var(--ui-shadow) !important;
-}
-
+.hero-card { box-shadow: var(--ui-shadow) !important; }
 h2,h3,strong { text-wrap: balance; }
 p,.muted,small { line-height: 1.48; }
 .eyebrow { letter-spacing: .15em; font-size: 10px; }
-
 .section-block { margin-top: 21px; }
 .section-heading { margin-bottom: 10px; }
 
@@ -103,18 +91,13 @@ textarea.input,
 }
 
 .field-label { margin: 9px 0 6px; font-size: 12px; }
-
 .primary-button,
 .secondary-button {
   min-height: 50px;
   border-radius: 18px !important;
   font-weight: 800;
 }
-
-.primary-button {
-  box-shadow: 0 8px 20px rgba(218,87,136,.17) !important;
-}
-
+.primary-button { box-shadow: 0 8px 20px rgba(218,87,136,.17) !important; }
 .primary-button:active,
 .secondary-button:active,
 .icon-button:active,
@@ -123,19 +106,15 @@ textarea.input,
 .choice-grid,
 .tsuki-choice-grid,
 .tsuki-method-grid { gap: 8px !important; }
-
 .choice span,
 .tsuki-choice-grid label,
 .tsuki-method-grid label,
 .segmented-option,
-.signal-option {
-  min-height: 46px;
-}
+.signal-option { min-height: 46px; }
 
 .mini-grid,
 .feature-grid,
 .quick-actions { gap: 9px; }
-
 .mini-card,
 .feature-card,
 .quick-action {
@@ -148,75 +127,184 @@ textarea.input,
 .travel-warning,
 .travel-result,
 .plans-events-result,
-.tsuki-risk {
-  border-radius: 16px !important;
-}
+.tsuki-risk { border-radius: 16px !important; }
 
-/* Going Out / Plans + Travel become one visual family */
+/* ============================================================
+   PLANS + TRAVEL WORKSPACE
+   ============================================================ */
 [data-screen="going-out"].active {
   display: flex;
   flex-direction: column;
   gap: 0;
 }
 
-.plans-events-intel,
-.travel-intel { margin: 0 !important; }
-
-.plans-events-hero,
-.travel-hero {
-  padding: 18px !important;
-  border-radius: 24px !important;
-  background: linear-gradient(145deg,rgba(255,247,250,.96),rgba(248,244,252,.96)) !important;
+.tsuki-planning-workspace { margin: 0 0 18px; }
+.tsuki-source-panel {
+  margin: 0 !important;
+  min-height: 0 !important;
 }
+.tsuki-source-panel:empty { display: none !important; }
+.tsuki-source-hero-hidden { display: none !important; }
 
-.travel-hero.tsuki-ux-secondary-hero { display: none; }
-
-.plans-events-card h3,
-.travel-card h3 { margin-bottom: 9px; }
-
-.plans-events-grid,
-.travel-grid { gap: 9px !important; }
-
-.tsuki-planning-switcher {
-  position: sticky;
-  top: calc(66px + env(safe-area-inset-top,0px));
-  z-index: 8;
+.tsuki-planning-hero {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-  padding: 7px;
-  margin: 12px 0 14px;
+  grid-template-columns: auto minmax(0,1fr);
+  gap: 13px;
+  align-items: center;
+  padding: 17px;
   border: 1px solid var(--ui-border);
-  border-radius: 18px;
-  background: rgba(255,250,252,.88);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  border-radius: 24px;
+  background: linear-gradient(145deg,rgba(255,247,250,.98),rgba(248,244,252,.98));
   box-shadow: var(--ui-shadow-soft);
 }
+.tsuki-planning-hero-icon {
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  border-radius: 17px;
+  font-size: 25px;
+  background: rgba(255,255,255,.76);
+  box-shadow: inset 0 0 0 1px rgba(198,118,151,.08);
+}
+.tsuki-planning-hero h2 {
+  margin: 1px 0 5px;
+  font-size: 23px;
+  line-height: 1.12;
+}
+.tsuki-planning-hero p:last-child {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+}
 
-.tsuki-planning-switcher button {
-  min-height: 42px;
+.tsuki-workspace-tabs {
+  position: sticky;
+  top: calc(65px + env(safe-area-inset-top,0px));
+  z-index: 8;
+  display: grid;
+  grid-template-columns: repeat(3,1fr);
+  gap: 6px;
+  margin: 12px 0 14px;
+  padding: 6px;
+  border: 1px solid var(--ui-border);
+  border-radius: 18px;
+  background: rgba(255,250,252,.91);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  box-shadow: var(--ui-shadow-soft);
+}
+.tsuki-workspace-tabs button {
+  min-width: 0;
+  min-height: 43px;
+  padding: 7px 6px;
   border: 0;
   border-radius: 13px;
   background: transparent;
-  color: var(--text);
+  color: var(--muted);
+  font-size: 12px;
   font-weight: 800;
 }
-.tsuki-planning-switcher button.active {
-  background: rgba(244,211,224,.78);
+.tsuki-workspace-tabs button.active {
   color: var(--pink-600);
+  background: linear-gradient(145deg,rgba(247,217,229,.92),rgba(242,225,247,.82));
+  box-shadow: 0 2px 8px rgba(170,92,126,.07);
 }
 
-.tsuki-entry-card { scroll-margin-top: 132px; }
+.tsuki-workspace-panel[hidden],
+.tsuki-history-panel[hidden] { display: none !important; }
 
-.tsuki-travel-history-card {
-  margin-top: 22px !important;
-  background: linear-gradient(180deg,rgba(255,255,255,.9),rgba(255,248,251,.9)) !important;
+.tsuki-workspace-heading {
+  padding: 2px 3px 11px;
+}
+.tsuki-workspace-heading h3 {
+  margin: 2px 0 4px;
+  font-size: 20px;
+}
+.tsuki-workspace-heading > p:last-child {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
 }
 
-.tsuki-travel-history-card > .eyebrow { margin-bottom: 5px; }
-.tsuki-travel-history-card > h3 { margin-bottom: 4px; }
-.tsuki-travel-history-card > p { margin-bottom: 12px; }
+.tsuki-workspace-body > .plans-events-card,
+.tsuki-workspace-body > .travel-card {
+  margin-bottom: 12px !important;
+}
+
+.plans-events-card h3,
+.travel-card h3 { margin-bottom: 8px; }
+.plans-events-grid,
+.travel-grid { gap: 9px !important; }
+
+.tsuki-entry-card {
+  border-color: rgba(217,87,136,.16) !important;
+  background: linear-gradient(180deg,rgba(255,255,255,.94),rgba(255,249,251,.90)) !important;
+}
+
+.tsuki-planning-disclosure {
+  margin: 4px 0 12px;
+  border: 1px solid var(--ui-border);
+  border-radius: 18px;
+  overflow: hidden;
+  background: rgba(255,255,255,.55);
+}
+.tsuki-planning-disclosure > summary {
+  list-style: none;
+  cursor: pointer;
+  position: relative;
+  padding: 14px 42px 14px 15px;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 800;
+}
+.tsuki-planning-disclosure > summary::-webkit-details-marker { display: none; }
+.tsuki-planning-disclosure > summary::after {
+  content: "+";
+  position: absolute;
+  right: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--pink-600);
+  font-size: 20px;
+  font-weight: 500;
+}
+.tsuki-planning-disclosure[open] > summary::after { content: "−"; }
+.tsuki-planning-disclosure > .plans-events-card,
+.tsuki-planning-disclosure > .travel-card {
+  margin: 0 !important;
+  border: 0 !important;
+  border-top: 1px solid var(--ui-border) !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  background: rgba(255,255,255,.68) !important;
+}
+
+.tsuki-history-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 7px;
+  margin: 0 0 11px;
+}
+.tsuki-history-tabs button {
+  min-height: 42px;
+  border: 1px solid var(--ui-border);
+  border-radius: 14px;
+  background: rgba(255,255,255,.66);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+.tsuki-history-tabs button.active {
+  background: rgba(245,222,232,.78);
+  color: var(--pink-600);
+  border-color: rgba(217,87,136,.18);
+}
+.tsuki-history-panel {
+  padding: 2px 0 6px;
+}
+.tsuki-history-panel .plans-events-history,
+.tsuki-history-panel .travel-history { margin-top: 0 !important; }
 
 .tsuki-custom-plan-hint {
   display: block;
@@ -226,11 +314,12 @@ textarea.input,
 }
 
 .tsuki-pregnancy-plan-note {
-  margin: 10px 0 0;
+  margin: 0 0 12px;
   padding: 11px 12px;
   border-radius: 15px;
-  background: rgba(247,241,252,.76);
+  background: rgba(247,241,252,.82);
   border: 1px solid rgba(160,126,177,.10);
+  color: var(--text);
   font-size: 12px;
   line-height: 1.48;
 }
@@ -239,11 +328,8 @@ textarea.input,
 .card .card,
 .plans-events-card .plans-events-result,
 .travel-card .travel-result,
-.phi-input-card .phi-input-detail {
-  box-shadow: none !important;
-}
+.phi-input-card .phi-input-detail { box-shadow: none !important; }
 
-/* Bottom nav should feel lighter and leave content breathing room */
 .bottom-nav {
   border-top: 1px solid rgba(198,118,151,.08);
   box-shadow: 0 -8px 24px rgba(117,73,93,.055);
@@ -265,9 +351,14 @@ textarea.input,
   .travel-grid { grid-template-columns: 1fr !important; }
   .plans-events-grid .wide,
   .travel-grid .wide { grid-column: auto !important; }
-  .tsuki-planning-switcher { top: calc(62px + env(safe-area-inset-top,0px)); }
+  .tsuki-workspace-tabs { top: calc(62px + env(safe-area-inset-top,0px)); }
+  .tsuki-workspace-tabs button span { display: block; margin-top: 2px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  *,*::before,*::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; }
+  *,*::before,*::after {
+    scroll-behavior: auto !important;
+    transition-duration: .01ms !important;
+    animation-duration: .01ms !important;
+  }
 }
