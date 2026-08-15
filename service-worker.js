@@ -3,7 +3,7 @@
    Public app version remains v1.0 pre-release.
    ============================================================ */
 
-const CACHE_NAME = "tsuki-cache-v1-pre-plans-events-13";
+const CACHE_NAME = "tsuki-cache-v1-pre-four-phase-14";
 
 const APP_SHELL = [
   "./",
@@ -27,6 +27,7 @@ const APP_SHELL = [
   "./smart-reminders.js",
   "./smart-reminders-core.js",
   "./cycle-reproductive-enhancements.js",
+  "./cycle-phase-guidance.js",
   "./app.js",
   "./firebase-tsuki.js",
   "./manifest.json",
@@ -57,6 +58,7 @@ const UPDATE_FIRST = new Set([
   "./smart-reminders.js",
   "./smart-reminders-core.js",
   "./cycle-reproductive-enhancements.js",
+  "./cycle-phase-guidance.js",
   "./app.js",
   "./manifest.json"
 ]);
