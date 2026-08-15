@@ -10,6 +10,7 @@ const APP_SHELL = [
   "./index.html",
   "./style.css",
   "./body-signals.css",
+  "./ui-polish.css",
   "./body-signals.js",
   "./adaptive-intelligence.js",
   "./life-mode-intelligence.js",
@@ -30,6 +31,7 @@ const APP_SHELL = [
   "./cycle-phase-guidance.js",
   "./cycle-phase-dedupe.js",
   "./medical-accuracy-hardening.js",
+  "./plans-travel-ux.js",
   "./app.js",
   "./firebase-tsuki.js",
   "./manifest.json",
@@ -43,6 +45,7 @@ const UPDATE_FIRST = new Set([
   "./index.html",
   "./style.css",
   "./body-signals.css",
+  "./ui-polish.css",
   "./body-signals.js",
   "./adaptive-intelligence.js",
   "./life-mode-intelligence.js",
@@ -63,6 +66,7 @@ const UPDATE_FIRST = new Set([
   "./cycle-phase-guidance.js",
   "./cycle-phase-dedupe.js",
   "./medical-accuracy-hardening.js",
+  "./plans-travel-ux.js",
   "./app.js",
   "./manifest.json"
 ]);
