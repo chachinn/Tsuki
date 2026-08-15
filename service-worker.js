@@ -25,6 +25,8 @@ const APP_SHELL = [
   "./personal-health-inputs.js",
   "./release-readiness.js",
   "./smart-reminders.js",
+  "./smart-reminders-core.js",
+  "./cycle-reproductive-enhancements.js",
   "./app.js",
   "./firebase-tsuki.js",
   "./manifest.json",
@@ -53,10 +55,11 @@ const UPDATE_FIRST = new Set([
   "./personal-health-inputs.js",
   "./release-readiness.js",
   "./smart-reminders.js",
+  "./smart-reminders-core.js",
+  "./cycle-reproductive-enhancements.js",
   "./app.js",
   "./manifest.json"
 ]);
-
 
 /* ============================================================
    INSTALL
@@ -68,11 +71,7 @@ self.addEventListener("install", event => {
       .open(CACHE_NAME)
       .then(cache => cache.addAll(APP_SHELL))
   );
-
 });
-
-
-
 
 /* ============================================================
    UPDATE CONTROL
@@ -103,7 +102,6 @@ self.addEventListener("activate", event => {
 
   self.clients.claim();
 });
-
 
 /* ============================================================
    HELPERS
@@ -160,7 +158,6 @@ async function cacheFirst(request) {
 
   return response;
 }
-
 
 /* ============================================================
    FETCH
