@@ -9,12 +9,13 @@ const BUILD2_STORAGE_KEY = "tsuki-data-v2";
 const LEGACY_STORAGE_KEY = "tsuki-data-v1";
 const APP_LOCK_STORAGE_KEY = "tsuki-app-lock-v1";
 const APP_VERSION = "1.0.0";
-const APP_CACHE_NAME = "tsuki-cache-v1-pre-care-health-5";
+const APP_CACHE_NAME = "tsuki-cache-v1-pre-postpartum-feed-6";
 const TUTORIAL_STORAGE_KEY = "tsuki-tutorial-complete-v1";
 const WHATS_NEW_STORAGE_KEY = "tsuki-whats-new-seen-v1";
 const RECOVERY_ASSET_KEY = "tsuki-last-good-data-v1";
 
 const RELEASE_NOTES = [
+  { icon: "🤱", title: "Postpartum & Feeding Intelligence", text: "A dedicated postpartum mode now connects recovery, breastfeeding/pumping or other feeding plans, baby observations, return-of-cycle tracking and source-backed safety support." },
   { icon: "🤍", title: "Care Hub & women’s health support", text: "Activity, medicine/vitamin routines, appointments, baby-care guidance and safety-aware suggestions now come together without changing cycle or pregnancy dating." },
   { icon: "💕", title: "Sexual activity & pregnancy context", text: "Optional private sexual-activity tracking can add pregnancy-possibility, testing and time-sensitive follow-up context without changing period forecasts." },
   { icon: "◐", title: "Pregnancy possibility, not safe days", text: "Tsuki can show Lower, Uncertain or Higher estimated pregnancy possibility, but never labels unprotected sex safe and stays conservative for irregular cycles." },
