@@ -23,6 +23,9 @@
   ];
 
   const adaptiveReleaseNotes = [
+    { icon: "🎯", title: "Self-calibrating intelligence", text: "Tsuki now checks how much evidence supports its own observations and can lower confidence when history is sparse." },
+    { icon: "🧩", title: "Independent clue families", text: "Closely related symptoms are grouped before current evidence is interpreted, reducing accidental double-counting." },
+    { icon: "📐", title: "Rhythm change detection", text: "Irregular timing is compared across recent and earlier personal history using robust change checks without diagnosing the reason." },
     { icon: "🌘", title: "Smarter irregular rhythms", text: "Tsuki can separate timing families, notice recent interval shifts and explain why timing remains uncertain without inventing an exact date." },
     { icon: "🤰", title: "Pregnancy intelligence", text: "Pregnancy Mode now learns your own logged baseline, recent trajectories, repeated day-to-day patterns and appointment-ready factual summaries." },
     { icon: "🛡️", title: "Safety stays separate", text: "Pregnancy warning signs always override personal pattern learning, and all adaptive analysis remains local to this device." },
