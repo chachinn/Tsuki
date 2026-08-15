@@ -7,7 +7,7 @@
   "use strict";
   if (window.TsukiPlansTravelUX?.installed) return;
 
-  const VERSION = "1.0.0-pre-plans-travel-ux-3";
+  const VERSION = "1.0.0-pre-plans-travel-ux-4";
   const $ = (s, r = document) => r.querySelector(s);
   const $$ = (s, r = document) => [...r.querySelectorAll(s)];
   let busy = false;
@@ -265,6 +265,12 @@
     moveHistory(planHistory, travelHistory, shell);
   }
 
+  function cleanupLegacyChrome() {
+    document.getElementById("tsukiPlanningSwitcher")?.remove();
+    const legacyHistoryCard = document.getElementById("tsukiTravelHistoryCard");
+    if (legacyHistoryCard && !legacyHistoryCard.querySelector("#travelIntelHistory")) legacyHistoryCard.remove();
+  }
+
   function hideSourceChrome(plansPanel, travelPanel) {
     plansPanel.querySelector(".plans-events-hero")?.classList.add("tsuki-source-hero-hidden");
     travelPanel.querySelector(".travel-hero")?.classList.add("tsuki-source-hero-hidden");
@@ -285,6 +291,7 @@
       const shell = ensureShell(screen);
       hideSourceChrome(plansPanel, travelPanel);
       organizeCards(shell, plansPanel, travelPanel);
+      cleanupLegacyChrome();
       setCustomPlanUI();
       pregnancyContextCard(shell.querySelector("#tsukiTravelContextSlot"));
 
