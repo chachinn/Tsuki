@@ -1,17 +1,23 @@
-HANA ICON PACK
+TSUKI ICON PACK
 
-Recommended app files:
+Production icon files:
 - icon-192.png
 - icon-512.png
 - icon-maskable-512.png
 - apple-touch-icon.png
 
-Optional:
+Optional browser/Android sizes:
 - favicon-32.png
 - favicon-16.png
-- additional Android/PWA sizes are included.
+- icon-48.png
+- icon-72.png
+- icon-96.png
+- icon-128.png
+- icon-144.png
+- icon-256.png
+- icon-384.png
 
-For manifest.json, you can use:
+manifest.json uses:
 {
   "icons": [
     {
@@ -37,3 +43,5 @@ For manifest.json, you can use:
 
 For iPhone in index.html:
 <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
+
+Legacy source/master files from other app repositories should not be kept in Tsuki unless they are intentionally used by the production icon pipeline.
