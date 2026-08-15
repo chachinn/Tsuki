@@ -277,7 +277,7 @@
     if (!card) {
       card = document.createElement("article");
       card.id = "personalHealthIntelligenceCard";
-      card.className = "phi-card period-signal-private pregnancy-sensitive";
+      card.className = "phi-card period-signal-private";
       const anchor = q("#maternalPregnancyIntel", screen) || q("#maternalPostpartumIntel", screen) || q("#metaIntelligenceCard", screen) || screen.firstElementChild;
       if (anchor) anchor.insertAdjacentElement("afterend", card); else screen.prepend(card);
     } else if (card.parentElement !== screen) {

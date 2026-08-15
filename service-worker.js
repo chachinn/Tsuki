@@ -20,6 +20,7 @@ const APP_SHELL = [
   "./maternal-intelligence.js",
   "./anticipatory-care-intelligence.js",
   "./personal-health-intelligence.js",
+  "./personal-health-inputs.js",
   "./app.js",
   "./firebase-tsuki.js",
   "./manifest.json",
@@ -43,6 +44,7 @@ const UPDATE_FIRST = new Set([
   "./maternal-intelligence.js",
   "./anticipatory-care-intelligence.js",
   "./personal-health-intelligence.js",
+  "./personal-health-inputs.js",
   "./app.js",
   "./manifest.json"
 ]);
