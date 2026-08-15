@@ -10,7 +10,7 @@
 
   if (window.TsukiMedicalAccuracyHardening?.installed) return;
 
-  const VERSION = "1.0.0-pre-medical-hardening-1";
+  const VERSION = "1.0.0-pre-medical-hardening-2";
   const q = (s, r = document) => r.querySelector(s);
   const qa = (s, r = document) => [...r.querySelectorAll(s)];
   const today = () => typeof todayKey === "function" ? todayKey() : new Date().toISOString().slice(0, 10);
@@ -24,7 +24,9 @@
   const diffDays = (a, b) => {
     const x = parse(a), y = parse(b);
     if (!x || !y) return null;
-    return Math.round((new Date(y.getFullYear(), y.getMonth(), y.getDate()) - new Date(x.getFullYear(), x.getMonth(), x.getDate())) / 86400000);
+    const left = new Date(x.getFullYear(), x.getMonth(), x.getDate());
+    const right = new Date(y.getFullYear(), y.getMonth(), y.getDate());
+    return Math.round((right - left) / 86400000);
   };
 
   function syncCareCompatibility() {
@@ -35,9 +37,7 @@
     care.completions = care.completions && typeof care.completions === "object" ? care.completions : {};
 
     care.routines.forEach(routine => {
-      if (!routine || typeof routine !== "object") return;
-      // New Care Hub stores `scope`; older maternity modules read mode/lifeMode.
-      if (routine.scope && !routine.mode && !routine.lifeMode) routine.mode = routine.scope;
+      if (routine?.scope && !routine.mode && !routine.lifeMode) routine.mode = routine.scope;
     });
 
     care.routineChecks.forEach(check => {
@@ -52,7 +52,6 @@
     Object.values(data?.logs || {}).forEach(log => {
       const activity = log?.sexualActivity;
       if (!activity || typeof activity !== "object" || !activity.type) return;
-      // Personal Health timeline historically read hadVaginalSex.
       activity.hadVaginalSex = activity.type === "vaginal";
     });
   }
@@ -71,9 +70,9 @@
   }
 
   function inferBbtUnit(entry) {
-    const explicit = String(entry?.bbtUnit || "").toUpperCase();
-    if (explicit === "C" || explicit === "CELSIUS" || explicit.includes("°C")) return "C";
-    if (explicit === "F" || explicit === "FAHRENHEIT" || explicit.includes("°F")) return "F";
+    const explicit = String(entry?.bbtUnit || "").trim().toUpperCase();
+    if (["C", "CELSIUS", "°C"].includes(explicit)) return "C";
+    if (["F", "FAHRENHEIT", "°F"].includes(explicit)) return "F";
     const value = Number(entry?.bbt);
     if (!Number.isFinite(value)) return "";
     if (value >= 80 && value <= 110) return "F";
@@ -97,58 +96,33 @@
       const n = diffDays(entry.date, today());
       return n != null && n >= 0 && n <= 7;
     });
-    const mucus = recent.filter(x => ["slippery", "watery", "egg-white", "slippery / stretchy"].includes(String(x.cervicalMucus || "").toLowerCase()));
-    const positiveOPK = recent.filter(x => String(x.opk || "").toLowerCase() === "positive");
-    const temps = recent.map(entry => ({ entry, c: bbtCelsius(entry) })).filter(x => Number.isFinite(x.c));
+    const mucus = recent.some(x => ["slippery", "watery", "egg-white", "slippery / stretchy"].includes(String(x.cervicalMucus || "").toLowerCase()));
+    const positiveOPK = recent.some(x => String(x.opk || "").toLowerCase() === "positive");
+    const temps = recent.map(bbtCelsius).filter(Number.isFinite);
     const recentIllness = Array.isArray(data?.personalHealth?.healthContexts) && data.personalHealth.healthContexts.some(ctx => {
       if (String(ctx?.context || "").toLowerCase() !== "illness") return false;
       const n = diffDays(ctx.date, today());
       return n != null && n >= 0 && n <= 7;
     });
 
-    // ACOG describes a typical post-ovulation BBT rise of about 0.5–1°F
-    // (~0.28–0.56°C), sustained until the end of the cycle. BBT is
-    // retrospective, and fever/illness can make it unreliable.
     let tempShift = false;
     if (!recentIllness && temps.length >= 5) {
-      const values = temps.map(x => x.c);
-      const last3 = values.slice(-3);
-      const earlier = values.slice(0, -3);
+      const last3 = temps.slice(-3);
+      const earlier = temps.slice(0, -3);
       const mean = arr => arr.reduce((sum, value) => sum + value, 0) / arr.length;
+      // ACOG describes the usual rise as about 0.5–1°F (~0.28–0.56°C).
       tempShift = earlier.length >= 2 && mean(last3) - mean(earlier) >= 0.28;
     }
 
-    const aligned = (mucus.length ? 1 : 0) + (positiveOPK.length ? 1 : 0) + (tempShift ? 1 : 0);
-    const irregular = (() => {
-      try { return typeof cyclePatternSetting === "function" ? cyclePatternSetting() !== "regular" : data?.settings?.cyclePattern !== "regular"; }
-      catch (_) { return true; }
-    })();
+    const aligned = (mucus ? 1 : 0) + (positiveOPK ? 1 : 0) + (tempShift ? 1 : 0);
+    let irregular = true;
+    try { irregular = typeof cyclePatternSetting === "function" ? cyclePatternSetting() !== "regular" : data?.settings?.cyclePattern !== "regular"; } catch (_) {}
 
-    if (!recent.length) return {
-      level: "learning",
-      title: "No recent fertility signs",
-      text: "Optional BBT, cervical mucus and ovulation-test entries can add context. Tsuki does not confirm ovulation from calendar timing alone."
-    };
-    if (aligned >= 2) return {
-      level: "higher-context",
-      title: "Several fertility signs are lining up",
-      text: `${aligned} different sign types currently point in a similar direction. This strengthens fertility context, but does not prove ovulation${irregular ? " and irregular cycles add extra uncertainty" : ""}.`
-    };
-    if (tempShift) return {
-      level: "after-the-fact",
-      title: "A temperature shift may be forming",
-      text: "Your recorded waking temperatures show a sustained rise consistent with an after-the-fact ovulation clue. BBT does not predict ovulation in advance, and illness or fever can make it unreliable."
-    };
-    if (recentIllness && temps.length) return {
-      level: "uncertain",
-      title: "Temperature context is uncertain",
-      text: "You also logged illness recently, so Tsuki is not using BBT to suggest an ovulation-related temperature shift. Other fertility signs can still be recorded."
-    };
-    return {
-      level: "uncertain",
-      title: "Fertility context is still mixed",
-      text: "One sign by itself is not enough for Tsuki to call the pattern strong. Missing observations stay unknown."
-    };
+    if (!recent.length) return { level:"learning", title:"No recent fertility signs", text:"Optional BBT, cervical mucus and ovulation-test entries can add context. Tsuki does not confirm ovulation from calendar timing alone." };
+    if (aligned >= 2) return { level:"higher-context", title:"Several fertility signs are lining up", text:`${aligned} different sign types currently point in a similar direction. This strengthens fertility context, but does not prove ovulation${irregular ? " and irregular cycles add extra uncertainty" : ""}.` };
+    if (tempShift) return { level:"after-the-fact", title:"A temperature shift may be forming", text:"Your recorded waking temperatures show a sustained rise consistent with an after-the-fact ovulation clue. BBT does not predict ovulation in advance, and illness or fever can make it unreliable." };
+    if (recentIllness && temps.length) return { level:"uncertain", title:"Temperature context is uncertain", text:"You also logged illness recently, so Tsuki is not using BBT to suggest an ovulation-related temperature shift. Other fertility signs can still be recorded." };
+    return { level:"uncertain", title:"Fertility context is still mixed", text:"One sign by itself is not enough for Tsuki to call the pattern strong. Missing observations stay unknown." };
   }
 
   function addBbtUnitControl() {
@@ -157,6 +131,7 @@
     if (!form || !input || q("#phiBbtUnit", form)) return;
     const label = input.closest("label");
     if (!label) return;
+
     const select = document.createElement("select");
     select.id = "phiBbtUnit";
     select.name = "bbtUnit";
@@ -167,6 +142,7 @@
       : null;
     select.value = last ? inferBbtUnit(last) : "C";
     label.appendChild(select);
+
     const hint = document.createElement("small");
     hint.textContent = "Take BBT after waking, before getting out of bed. Tsuki uses it only as an after-the-fact pattern clue.";
     label.appendChild(hint);
@@ -177,7 +153,7 @@
         const date = form.querySelector('input[name="date"]')?.value || today();
         const unit = q("#phiBbtUnit", form)?.value || "C";
         const entry = data?.personalHealth?.fertilitySigns?.find(x => x?.date === date);
-        if (!entry || !Number.isFinite(Number(entry.bbt))) return;
+        if (!entry || !Number.isFinite(Number(entry.bbt)) || entry.bbtUnit === unit) return;
         entry.bbtUnit = unit;
         if (typeof saveData === "function") saveData();
       }, 0));
@@ -192,25 +168,34 @@
     const summary = medicallyConservativeFertilitySummary();
     const strong = section.querySelector("strong");
     const p = section.querySelector("p");
-    if (strong) strong.textContent = `🌱 ${summary.title}`;
-    if (p) p.textContent = summary.text;
+    const wantedTitle = `🌱 ${summary.title}`;
+    if (strong && strong.textContent !== wantedTitle) strong.textContent = wantedTitle;
+    if (p && p.textContent !== summary.text) p.textContent = summary.text;
   }
 
   function upgradePostpartumBreastPrompt() {
     const screen = q('[data-screen="postpartum-feeding"]');
     if (!screen) return;
     qa(".pp-alert-discuss p", screen).forEach(p => {
-      if (/breast redness|feverish|flu-like/i.test(p.textContent || "")) {
-        p.textContent = `${p.textContent} Contact a healthcare professional promptly, especially with fever or worsening breast redness, warmth, swelling or pain.`;
-      }
+      if (p.dataset.medicalBreastPrompt === "1") return;
+      if (!/breast redness|feverish|flu-like/i.test(p.textContent || "")) return;
+      p.dataset.medicalBreastPrompt = "1";
+      p.textContent = `${p.textContent} Contact a healthcare professional promptly, especially with fever or worsening breast redness, warmth, swelling or pain.`;
     });
   }
 
+  let scheduled = false;
   function applyUiCorrections() {
+    scheduled = false;
     syncObjectAliases();
     addBbtUnitControl();
     correctFertilityCard();
     upgradePostpartumBreastPrompt();
+  }
+  function scheduleUiCorrections() {
+    if (scheduled) return;
+    scheduled = true;
+    requestAnimationFrame(applyUiCorrections);
   }
 
   function wrapSaveData() {
@@ -227,41 +212,29 @@
 
   function install() {
     if (window.TsukiMedicalAccuracyHardening?.installed) return;
-    if (typeof data === "undefined" || typeof saveData !== "function" || !document.body) {
-      setTimeout(install, 80);
-      return;
-    }
+    if (typeof data === "undefined" || typeof saveData !== "function" || !document.body) return setTimeout(install, 80);
 
     syncCompatibility();
     wrapSaveData();
-
-    // Correct the exposed test helper too, so QA and future integrations use
-    // the medically conservative BBT interpretation.
     if (window.TsukiPersonalHealthIntelligence?.test) {
       window.TsukiPersonalHealthIntelligence.test.fertilitySignSummary = medicallyConservativeFertilitySummary;
     }
 
-    const observer = new MutationObserver(() => requestAnimationFrame(applyUiCorrections));
-    observer.observe(document.body, { childList: true, subtree: true });
-    document.addEventListener("change", () => requestAnimationFrame(applyUiCorrections));
-    requestAnimationFrame(applyUiCorrections);
+    const observer = new MutationObserver(scheduleUiCorrections);
+    observer.observe(document.body, { childList:true, subtree:true });
+    document.addEventListener("change", scheduleUiCorrections);
+    scheduleUiCorrections();
 
     window.TsukiMedicalAccuracyHardening = {
-      installed: true,
-      version: VERSION,
-      apply: applyUiCorrections,
+      installed:true,
+      version:VERSION,
+      apply:scheduleUiCorrections,
       syncCompatibility,
-      test: {
-        inferBbtUnit,
-        bbtCelsius,
-        medicallyConservativeFertilitySummary,
-        syncCareCompatibility,
-        syncSexualActivityCompatibility
-      },
-      disconnect: () => observer.disconnect()
+      test:{ inferBbtUnit, bbtCelsius, medicallyConservativeFertilitySummary, syncCareCompatibility, syncSexualActivityCompatibility },
+      disconnect:() => observer.disconnect()
     };
   }
 
-  window.TsukiMedicalAccuracyHardening = { installed: false, version: VERSION, install, test: null };
+  window.TsukiMedicalAccuracyHardening = { installed:false, version:VERSION, install, test:null };
   if (!window.__TSUKI_TEST__) install();
 })();
