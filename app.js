@@ -9,12 +9,14 @@ const BUILD2_STORAGE_KEY = "tsuki-data-v2";
 const LEGACY_STORAGE_KEY = "tsuki-data-v1";
 const APP_LOCK_STORAGE_KEY = "tsuki-app-lock-v1";
 const APP_VERSION = "1.0.0";
-const APP_CACHE_NAME = "tsuki-cache-v1-pre-meta-intel-3";
+const APP_CACHE_NAME = "tsuki-cache-v1-pre-repro-intel-4";
 const TUTORIAL_STORAGE_KEY = "tsuki-tutorial-complete-v1";
 const WHATS_NEW_STORAGE_KEY = "tsuki-whats-new-seen-v1";
 const RECOVERY_ASSET_KEY = "tsuki-last-good-data-v1";
 
 const RELEASE_NOTES = [
+  { icon: "💕", title: "Sexual activity & pregnancy context", text: "Optional private sexual-activity tracking can add pregnancy-possibility, testing and time-sensitive follow-up context without changing period forecasts." },
+  { icon: "◐", title: "Pregnancy possibility, not safe days", text: "Tsuki can show Lower, Uncertain or Higher estimated pregnancy possibility, but never labels unprotected sex safe and stays conservative for irregular cycles." },
   { icon: "🧠", title: "Adaptive intelligence", text: "Tsuki learns how your own body patterns unfold over time instead of relying only on cycle-day averages." },
   { icon: "🌙", title: "Signal sequences", text: "Repeated personal lead-up sequences can show which body change tends to appear first and what commonly follows next." },
   { icon: "🪞", title: "My Normal 2.0", text: "Your ordinary baseline helps Tsuki notice what is different for you without calling it abnormal." },
