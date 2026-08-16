@@ -1,0 +1,57 @@
+/* ============================================================
+   TSUKI 🌙 — PERIOD LOGGER SCROLL SAFETY
+   Keeps the period-entry sheet usable on short iPhone viewports.
+   Presentation-only: no period dates, history, or calculations change.
+   ============================================================ */
+
+/* The period logger is a flex column. Its active panel must own the
+   remaining height and scroll internally; otherwise controls added below
+   the calendar (start time, context, Save) can be clipped by overflow:hidden. */
+.quick-period-modal {
+  overflow: hidden;
+}
+
+.quick-period-modal > .modal-grabber,
+.quick-period-modal > .app-modal-header,
+.quick-period-modal > .quick-period-tabs {
+  flex: 0 0 auto;
+}
+
+.quick-period-modal > .quick-period-panel:not(.hidden) {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+  scroll-padding-bottom: calc(150px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: calc(22px + env(safe-area-inset-bottom, 0px));
+}
+
+/* Avoid two competing vertical scrollers in Previous months. */
+.quick-period-modal #quickPeriodBulkPanel:not(.hidden) .bulk-period-months {
+  max-height: none;
+  overflow: visible;
+}
+
+/* Give the sheet a definite flex height on phone-sized viewports so the
+   panel can reliably calculate the remaining scrollable space. */
+@media (max-width: 760px) {
+  .quick-period-modal {
+    height: min(92dvh, 860px);
+    max-height: min(92dvh, 860px);
+  }
+}
+
+/* Very short landscape/keyboard viewports need slightly more room. */
+@media (max-height: 620px) {
+  .quick-period-modal {
+    height: 94dvh;
+    max-height: 94dvh;
+  }
+
+  .quick-period-modal > .quick-period-panel:not(.hidden) {
+    scroll-padding-bottom: calc(190px + env(safe-area-inset-bottom, 0px));
+  }
+}
