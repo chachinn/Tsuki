@@ -7,7 +7,7 @@
   "use strict";
   if (window.TsukiCycleMilestoneHero?.installed) return;
 
-  const VERSION = "1.0.0-pre-cycle-milestones-1";
+  const VERSION = "1.0.0-pre-cycle-milestones-2";
   const $ = selector => document.querySelector(selector);
 
   function cyclePattern() {
@@ -187,9 +187,18 @@
     catch (_) {}
   }
 
+  function restoreDefaultLabel() {
+    const card = $("#periodCountdownText")?.closest(".prediction-card");
+    const label = card?.querySelector(".small-label");
+    if (label && label.textContent !== "Next period") label.textContent = "Next period";
+  }
+
   function apply() {
     const milestone = milestoneForToday();
-    if (!milestone) return;
+    if (!milestone) {
+      restoreDefaultLabel();
+      return;
+    }
 
     const card = $("#periodCountdownText")?.closest(".prediction-card");
     const label = card?.querySelector(".small-label");
