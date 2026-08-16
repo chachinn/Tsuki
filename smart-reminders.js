@@ -49,5 +49,6 @@
     .then(() => loadScript("./medical-accuracy-hardening.js"))
     .then(() => loadScript("./cycle-milestone-hero.js"))
     .then(() => loadScript("./plans-travel-ux.js"))
+    .then(() => loadScript("./moon-garden-fix.js"))
     .catch(error => console.error("Tsuki runtime enhancement load failed:", error));
 })();
