@@ -1,7 +1,8 @@
 /* ============================================================
    TSUKI 🌙 — VERSION 1.0 PRE-RELEASE
    PHASE QUESTION DE-DUPLICATION
-   Keeps one visible control per stored daily-check-in field.
+   Keeps one visible control per stored daily-check-in field and removes
+   phase-inappropriate generic fields (for example discharge in menstruation).
    ============================================================ */
 (() => {
   "use strict";
@@ -12,7 +13,7 @@
   const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
   const BODY_FIELDS = ["discharge", "appetite", "cravingIntensity", "stress", "libido"];
   const BODY_LABELS = {
-    discharge: "Discharge",
+    discharge: "discharge",
     appetite: "appetite",
     cravingIntensity: "cravings",
     stress: "stress",
@@ -23,6 +24,21 @@
     return $("#phaseSpecificLogContent");
   }
 
+  function currentPhase() {
+    const key = $("#logDate")?.value || (typeof todayKey === "function" ? todayKey() : "");
+    try {
+      if (typeof periodForDate === "function" && periodForDate(key)) return "Period";
+      return typeof phaseForDate === "function" ? phaseForDate(key) : "";
+    }
+    catch (_) { return ""; }
+  }
+
+  function excludedForPhase() {
+    const excluded = new Set();
+    if (currentPhase() === "Period") excluded.add("discharge");
+    return excluded;
+  }
+
   function restoreBodyDetails() {
     const details = $(".body-signal-details");
     if (!details) return;
@@ -30,6 +46,7 @@
     details.querySelectorAll("article.card[data-phase-dedupe-hidden='1']").forEach(card => {
       card.classList.remove("hidden");
       delete card.dataset.phaseDedupeHidden;
+      delete card.dataset.phaseDedupeReason;
     });
   }
 
@@ -50,6 +67,15 @@
     });
   }
 
+  function hideBodyCard(details, name, reason) {
+    const input = details.querySelector(`input[name="${name}"]`);
+    const card = input?.closest("article.card");
+    if (!card) return;
+    card.classList.add("hidden");
+    card.dataset.phaseDedupeHidden = "1";
+    card.dataset.phaseDedupeReason = reason;
+  }
+
   function syncBodyDetails() {
     const content = phaseContent();
     const details = $(".body-signal-details");
@@ -61,14 +87,11 @@
     const promoted = new Set(
       BODY_FIELDS.filter(name => content.querySelector(`input[name="${name}"]`))
     );
+    const excluded = excludedForPhase();
 
     BODY_FIELDS.forEach(name => {
-      if (!promoted.has(name)) return;
-      const input = details.querySelector(`input[name="${name}"]`);
-      const card = input?.closest("article.card");
-      if (!card) return;
-      card.classList.add("hidden");
-      card.dataset.phaseDedupeHidden = "1";
+      if (promoted.has(name)) hideBodyCard(details, name, "promoted");
+      else if (excluded.has(name)) hideBodyCard(details, name, "phase-inappropriate");
     });
 
     const bodyCards = BODY_FIELDS
@@ -146,7 +169,7 @@
 
     window.TsukiCyclePhaseDedupe = {
       installed: true,
-      version: "1.0.0-pre-phase-dedupe-2",
+      version: "1.0.0-pre-phase-dedupe-3",
       apply,
       disconnect: () => observer.disconnect()
     };
