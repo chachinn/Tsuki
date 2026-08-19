@@ -38,16 +38,19 @@
     });
   }
 
-  /* Loaded here as well as through the service-worker shell so an older
-     active worker can still fetch the usability fix on its next online load. */
+  /* Load visual fixes immediately when this parser-blocking bootstrap runs.
+     These are also cached by the service worker for offline launches. */
+  ensureStylesheet("./ui-polish.css", "ui-polish");
   ensureStylesheet("./period-modal-scroll-fix.css", "period-modal-scroll-fix");
 
-  loadScript("./smart-reminders-core.js")
+  /* The Today milestone is intentionally first. It corrects the generic
+     forecast card before the heavier optional intelligence layers load. */
+  loadScript("./cycle-milestone-hero.js")
+    .then(() => loadScript("./smart-reminders-core.js"))
     .then(() => loadScript("./cycle-reproductive-enhancements.js"))
     .then(() => loadScript("./cycle-phase-guidance.js"))
     .then(() => loadScript("./cycle-phase-dedupe.js"))
     .then(() => loadScript("./medical-accuracy-hardening.js"))
-    .then(() => loadScript("./cycle-milestone-hero.js"))
     .then(() => loadScript("./plans-travel-ux.js"))
     .then(() => loadScript("./moon-garden-fix.js"))
     .catch(error => console.error("Tsuki runtime enhancement load failed:", error));
