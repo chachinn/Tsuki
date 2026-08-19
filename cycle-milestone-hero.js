@@ -7,7 +7,7 @@
   "use strict";
   if (window.TsukiCycleMilestoneHero?.installed) return;
 
-  const VERSION = "1.0.0-pre-cycle-milestones-2";
+  const VERSION = "1.0.0-pre-cycle-milestones-3";
   const $ = selector => document.querySelector(selector);
 
   function cyclePattern() {
@@ -205,9 +205,9 @@
     const primary = $("#nextPeriodText");
     const countdown = $("#periodCountdownText");
 
-    if (label) label.textContent = milestone.label;
-    if (primary) primary.textContent = milestone.primary;
-    if (countdown) countdown.textContent = milestone.countdown;
+    if (label && label.textContent !== milestone.label) label.textContent = milestone.label;
+    if (primary && primary.textContent !== milestone.primary) primary.textContent = milestone.primary;
+    if (countdown && countdown.textContent !== milestone.countdown) countdown.textContent = milestone.countdown;
     applyBadge(milestone.badge);
   }
 
@@ -216,7 +216,9 @@
       const base = renderToday;
       const wrapped = function(...args) {
         const result = base.apply(this, args);
-        requestAnimationFrame(apply);
+        /* Apply in the same render turn so the generic forecast never gets a
+           dedicated painted frame before the regular-cycle milestone. */
+        apply();
         return result;
       };
       wrapped.__cycleMilestoneWrapped = true;
@@ -228,7 +230,7 @@
       const base = showScreen;
       const wrapped = function(name, ...args) {
         const result = base.call(this, name, ...args);
-        if (name === "today") requestAnimationFrame(() => requestAnimationFrame(apply));
+        if (name === "today") apply();
         return result;
       };
       wrapped.__cycleMilestoneWrapped = true;
@@ -240,7 +242,7 @@
   function install() {
     if (window.TsukiCycleMilestoneHero?.installed) return;
     wrap();
-    requestAnimationFrame(() => requestAnimationFrame(apply));
+    apply();
     window.TsukiCycleMilestoneHero = {
       installed: true,
       version: VERSION,
