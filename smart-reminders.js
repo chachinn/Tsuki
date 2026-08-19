@@ -38,10 +38,120 @@
     });
   }
 
+  function previousDateKey(key) {
+    try {
+      const date = typeof parseDate === "function" ? parseDate(key) : null;
+      if (!date || typeof addDays !== "function" || typeof dateKey !== "function") return "";
+      return dateKey(addDays(date, -1));
+    }
+    catch (_) {
+      return "";
+    }
+  }
+
+  function nextDateKey(key) {
+    try {
+      const date = typeof parseDate === "function" ? parseDate(key) : null;
+      if (!date || typeof addDays !== "function" || typeof dateKey !== "function") return "";
+      return dateKey(addDays(date, 1));
+    }
+    catch (_) {
+      return "";
+    }
+  }
+
+  function periodDuration(period) {
+    try {
+      const start = typeof parseDate === "function" ? parseDate(period?.start) : null;
+      const end = typeof parseDate === "function" ? parseDate(period?.end) : null;
+      if (!start || !end || typeof daysBetween !== "function") return null;
+      return Math.max(1, daysBetween(start, end) + 1);
+    }
+    catch (_) {
+      return null;
+    }
+  }
+
+  /* Period boundaries should follow what the user actually logs.
+     This runs on document capture so it happens before the form-level
+     phase/save handlers in app.js and body-signals.js. */
+  function installAdaptivePeriodBoundaries() {
+    if (document.documentElement.dataset.tsukiAdaptivePeriodBoundaries === "1") return;
+    document.documentElement.dataset.tsukiAdaptivePeriodBoundaries = "1";
+
+    document.addEventListener("submit", event => {
+      const form = event.target;
+      if (!(form instanceof HTMLFormElement) || form.id !== "dailyLogForm") return;
+      if (typeof data !== "object" || data?.mode !== "cycle" || !Array.isArray(data?.periods)) return;
+
+      const flowInput = form.querySelector('input[name="flow"]:checked');
+      if (!flowInput) return;
+
+      const flow = flowInput.value;
+      const key = document.getElementById("logDate")?.value || (typeof todayKey === "function" ? todayKey() : "");
+      if (!key) return;
+
+      let changedPeriod = null;
+      let action = "";
+
+      if (["None", "Spotting"].includes(flow)) {
+        const containing = data.periods.find(period =>
+          period?.start && period?.end && key >= period.start && key <= period.end
+        );
+
+        /* Never erase a period from its first recorded day automatically.
+           That requires an explicit Cycle History edit. */
+        if (containing && key !== containing.start) {
+          const newEnd = previousDateKey(key);
+          if (newEnd && newEnd >= containing.start && newEnd < containing.end) {
+            containing.end = newEnd;
+            changedPeriod = containing;
+            action = flow === "Spotting" ? "ended-before-spotting" : "ended";
+          }
+        }
+      }
+      else if (["Light", "Medium", "Heavy"].includes(flow)) {
+        /* Only extend through a directly adjacent day. A gap stays separate
+           so Tsuki never silently merges two bleeding episodes. */
+        const candidates = data.periods
+          .filter(period => period?.start && period?.end && nextDateKey(period.end) === key)
+          .sort((a, b) => String(b.start).localeCompare(String(a.start)));
+        const adjacent = candidates[0] || null;
+
+        if (adjacent) {
+          adjacent.end = key;
+          changedPeriod = adjacent;
+          action = "extended";
+        }
+      }
+
+      if (!changedPeriod || typeof saveData !== "function") return;
+
+      saveData();
+      const days = periodDuration(changedPeriod);
+
+      /* The normal submit handlers now save the check-in and render from the
+         corrected period boundary. Toast after that work completes. */
+      setTimeout(() => {
+        if (typeof showToast !== "function") return;
+        if (action === "extended") {
+          showToast(`Period extended${days ? ` to ${days} day${days === 1 ? "" : "s"}` : ""} 🩸`);
+        }
+        else if (action === "ended-before-spotting") {
+          showToast(`Period ended${days ? ` after ${days} day${days === 1 ? "" : "s"}` : ""}; spotting kept separate 🌙`);
+        }
+        else {
+          showToast(`Period ended${days ? ` after ${days} day${days === 1 ? "" : "s"}` : ""} 🌙`);
+        }
+      }, 0);
+    }, true);
+  }
+
   /* Load visual fixes immediately when this parser-blocking bootstrap runs.
      These are also cached by the service worker for offline launches. */
   ensureStylesheet("./ui-polish.css", "ui-polish");
   ensureStylesheet("./period-modal-scroll-fix.css", "period-modal-scroll-fix");
+  installAdaptivePeriodBoundaries();
 
   /* The Today milestone is intentionally first. It corrects the generic
      forecast card before the heavier optional intelligence layers load. */
