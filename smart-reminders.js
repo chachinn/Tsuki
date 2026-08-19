@@ -111,6 +111,11 @@
         }
       }
       else if (["Light", "Medium", "Heavy"].includes(flow)) {
+        /* Respect a bleeding episode the user explicitly marked as separate.
+           Re-saving that day's check-in must not silently merge it later. */
+        const existingLog = data.logs?.[key] || null;
+        if (existingLog?.bleedingContext === "not-period") return;
+
         /* Only extend through a directly adjacent day. A gap stays separate
            so Tsuki never silently merges two bleeding episodes. */
         const candidates = data.periods
