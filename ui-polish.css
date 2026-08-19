@@ -130,6 +130,135 @@ textarea.input,
 .tsuki-risk { border-radius: 16px !important; }
 
 /* ============================================================
+   DAILY CHECK-IN / SYMPTOM POLISH
+   ============================================================ */
+
+#symptomChoiceGrid {
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+#symptomChoiceGrid label,
+#customSymptomGrid label,
+#symptomChoiceGrid ~ label:has(input[name="symptom"]) {
+  position: relative;
+  display: inline-flex;
+  max-width: 100%;
+  margin: 0 6px 8px 0;
+  vertical-align: top;
+}
+
+#symptomChoiceGrid ~ label:has(input[name="symptom"]) > input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+#symptomChoiceGrid ~ label:has(input[name="symptom"]) > span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 42px;
+  max-width: 100%;
+  padding: 9px 12px;
+  border: 1px solid rgba(230,113,155,.14);
+  border-radius: 999px;
+  background: rgba(255,249,251,.88);
+  color: var(--text);
+  font-size: 12px;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+#symptomChoiceGrid ~ label:has(input[name="symptom"]:checked) > span {
+  background: var(--pink-200);
+  border-color: var(--pink-400);
+  box-shadow: inset 0 0 0 1px rgba(217,87,136,.06);
+}
+
+#symptomChoiceGrid ~ .symptom-section-label {
+  display: block;
+  width: 100%;
+  clear: both;
+  margin: 15px 0 9px;
+  padding-top: 11px;
+  border-top: 1px solid rgba(198,118,151,.09);
+  color: var(--muted);
+  font-size: 10px;
+  letter-spacing: .14em;
+}
+
+#symptomChoiceGrid + .symptom-section-label { margin-top: 11px; }
+
+.custom-symptom-grid:not(:empty) {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(198,118,151,.09);
+}
+
+.custom-symptom-add {
+  display: grid;
+  grid-template-columns: minmax(0,1fr) 48px;
+  gap: 8px;
+  align-items: center;
+  margin-top: 12px !important;
+}
+
+.custom-symptom-add .input { min-width: 0; }
+.custom-symptom-add .round-button {
+  width: 48px;
+  height: 48px;
+  min-width: 48px;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 16px;
+  font-size: 25px;
+}
+
+.symptom-severity-list:not(:empty) {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(198,118,151,.10);
+}
+
+.symptom-severity-list:not(:empty)::before {
+  content: "Intensity for selected symptoms";
+  display: block;
+  margin: 0 0 9px 2px;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .10em;
+  text-transform: uppercase;
+}
+
+.symptom-severity-row {
+  padding: 12px !important;
+  border-radius: 17px !important;
+  background: rgba(255,250,252,.74) !important;
+  border-color: rgba(198,118,151,.11) !important;
+}
+
+.symptom-severity-row > strong {
+  margin-bottom: 9px !important;
+  font-size: 13px !important;
+}
+
+.symptom-severity-row .segmented {
+  gap: 7px;
+}
+
+.symptom-severity-row .segmented span {
+  min-height: 43px;
+  display: grid;
+  place-items: center;
+  padding: 8px 7px;
+  border-radius: 14px;
+  font-size: 12px;
+}
+
+/* ============================================================
    PLANS + TRAVEL WORKSPACE
    ============================================================ */
 [data-screen="going-out"].active {
@@ -353,6 +482,11 @@ textarea.input,
   .travel-grid .wide { grid-column: auto !important; }
   .tsuki-workspace-tabs { top: calc(62px + env(safe-area-inset-top,0px)); }
   .tsuki-workspace-tabs button span { display: block; margin-top: 2px; }
+  #symptomChoiceGrid ~ label:has(input[name="symptom"]) > span {
+    min-height: 40px;
+    padding: 8px 11px;
+    font-size: 11px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
