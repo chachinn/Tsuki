@@ -12,6 +12,7 @@ const APP_SHELL = [
   "./body-signals.css",
   "./ui-polish.css",
   "./period-modal-scroll-fix.css",
+  "./firebase-backup.css",
   "./body-signals.js",
   "./adaptive-intelligence.js",
   "./life-mode-intelligence.js",
@@ -35,6 +36,7 @@ const APP_SHELL = [
   "./cycle-milestone-hero.js",
   "./plans-travel-ux.js",
   "./moon-garden-fix.js",
+  "./firebase-backup.js",
   "./app.js",
   "./firebase-tsuki.js",
   "./manifest.json",
@@ -50,6 +52,7 @@ const UPDATE_FIRST = new Set([
   "./body-signals.css",
   "./ui-polish.css",
   "./period-modal-scroll-fix.css",
+  "./firebase-backup.css",
   "./body-signals.js",
   "./adaptive-intelligence.js",
   "./life-mode-intelligence.js",
@@ -73,6 +76,7 @@ const UPDATE_FIRST = new Set([
   "./cycle-milestone-hero.js",
   "./plans-travel-ux.js",
   "./moon-garden-fix.js",
+  "./firebase-backup.js",
   "./app.js",
   "./manifest.json"
 ]);
