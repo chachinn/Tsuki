@@ -1,0 +1,44 @@
+/* TSUKI CLOUD BACKUP — account sheet UI */
+.tsuki-cloud-panel{
+  margin:16px 0 4px;
+  padding:16px;
+  border:1px solid rgba(217,87,136,.14);
+  border-radius:22px;
+  background:linear-gradient(180deg,rgba(255,250,252,.94),rgba(255,247,250,.78));
+  box-shadow:0 6px 20px rgba(184,95,130,.07);
+}
+.tsuki-cloud-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
+.tsuki-cloud-head h3{margin:0;font-family:Georgia,"Times New Roman",serif;font-size:20px}
+.tsuki-cloud-pill{display:inline-flex;align-items:center;justify-content:center;min-height:28px;padding:5px 10px;border:1px solid rgba(137,117,127,.14);border-radius:999px;background:rgba(255,255,255,.84);color:var(--muted);font-size:10px;font-weight:800;white-space:nowrap}
+.tsuki-cloud-pill.active{border-color:rgba(80,151,104,.18);background:rgba(225,244,230,.82);color:#4e7f5e}
+.tsuki-cloud-pill.protected{border-color:rgba(217,87,136,.20);background:var(--pink-100);color:var(--pink-600)}
+.tsuki-cloud-guard{display:grid;grid-template-columns:auto minmax(0,1fr);gap:9px 10px;margin:0 0 14px;padding:13px;border:1px solid rgba(217,87,136,.18);border-radius:17px;background:linear-gradient(145deg,var(--pink-100),rgba(244,239,251,.75))}
+.tsuki-cloud-guard>span{font-size:23px;line-height:1}
+.tsuki-cloud-guard strong{display:block;margin-bottom:3px;font-size:13px}
+.tsuki-cloud-guard p{margin:0;color:var(--muted);font-size:11px;line-height:1.45}
+.tsuki-cloud-guard button{grid-column:1/-1;margin:0!important;min-height:43px;padding:10px 12px}
+.tsuki-cloud-guard .secondary-button{margin-top:-2px!important}
+.tsuki-cloud-toggle{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:12px;margin:4px 0 12px;padding:12px 13px;border:1px solid rgba(217,87,136,.10);border-radius:16px;background:rgba(255,255,255,.72)}
+.tsuki-cloud-toggle strong{display:block;font-size:12px}
+.tsuki-cloud-toggle small{display:block;margin-top:3px;color:var(--muted);font-size:9px;line-height:1.4}
+.tsuki-cloud-toggle input{width:43px;height:24px;accent-color:var(--pink-500)}
+.tsuki-cloud-panel>.primary-button,.tsuki-cloud-panel>.secondary-button{min-height:46px;margin:8px 0 0}
+.tsuki-cloud-panel .field-label{margin-top:14px}
+.tsuki-cloud-preview{margin-top:12px;padding:13px;border:1px solid rgba(217,87,136,.12);border-radius:17px;background:rgba(255,255,255,.78)}
+.tsuki-cloud-preview p{margin:0 0 10px;font-size:11px;line-height:1.45}
+.tsuki-cloud-counts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin:8px 0 11px}
+.tsuki-cloud-counts span{display:grid;place-items:center;min-width:0;padding:8px 4px;border-radius:12px;background:var(--pink-50);text-align:center}
+.tsuki-cloud-counts b{font-size:15px;color:var(--pink-600)}
+.tsuki-cloud-counts small{margin-top:2px;color:var(--muted);font-size:8px}
+.tsuki-cloud-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.tsuki-cloud-actions button{min-width:0;min-height:44px;margin:0!important;padding:10px}
+.tsuki-cloud-panel #tsukiCloudLast{margin:11px 2px 7px;line-height:1.45}
+.tsuki-cloud-privacy{margin:13px 2px 4px;color:var(--muted);font-size:9px;line-height:1.5}
+.tsuki-cloud-panel .danger-text{margin-top:8px}
+.tsuki-cloud-panel button:disabled,.tsuki-cloud-panel input:disabled{opacity:.48;cursor:not-allowed}
+.firebase-auth-modal{overscroll-behavior:contain}
+@media(max-width:390px){
+  .tsuki-cloud-panel{padding:14px}
+  .tsuki-cloud-counts{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(prefers-reduced-motion:reduce){.tsuki-cloud-panel *{scroll-behavior:auto!important}}
