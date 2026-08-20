@@ -170,3 +170,10 @@
     .then(() => loadScript("./moon-garden-fix.js"))
     .catch(error => console.error("Tsuki runtime enhancement load failed:", error));
 })();
+
+/* Cloud Backup is intentionally separate from authentication. Loading this
+   module never uploads data by itself; it only installs the opt-in backup UI,
+   restore-first protection, and new-device cloud inspection. */
+import("./firebase-backup.js").catch(error => {
+  console.error("Tsuki Cloud Backup could not load:", error);
+});
